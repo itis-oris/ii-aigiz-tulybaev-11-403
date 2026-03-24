@@ -1,5 +1,11 @@
-import {IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches} from "class-validator";
-
+import {
+    IsDateString,
+    IsInt,
+    IsOptional,
+    IsString,
+    IsUUID,
+    Matches,
+} from 'class-validator';
 
 export class UpdateTaskDto {
     @IsString()
@@ -27,7 +33,9 @@ export class UpdateTaskDto {
     columnId?: string;
 
     @IsOptional()
-    @Matches(/^\d+$/, { message: 'position must be a non-negative integer string' })
+    @Matches(/^\d+$/, {
+        message: 'position must be a non-negative integer string',
+    })
     position?: string;
 
     @IsUUID()
