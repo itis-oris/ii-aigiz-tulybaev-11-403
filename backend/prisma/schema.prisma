@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Workspace {
+  id             String           @id @default(uuid())
+  name           String
+  ownerId        String           @map("owner_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  projects       Project[]
+  activityLogs   ActivityLog[]
+  notes          Notes[]
+  developerStats DeveloperStats[]
+
+  @@unique([ownerId, name])
+  @@map("workspaces")
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  storyPoints Int?       @map("story_points")
+  priority    Int?
+  dueDate     DateTime?  @map("due_date")
+  columnId    String     @map("column_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime?  @updatedAt @map("updated_at")
+  position    BigInt?
+  completedAt DateTime?  @map("completed_at")
+  deletedAt   DateTime?  @map("deleted_at")
+  projectId   String?    @map("project_id")
+  boardId     String?    @map("board_id")
+  assigneeId  String?    @map("assignee_id")
+  createdById String     @map("created_by")
+  column      Column     @relation(fields: [columnId], references: [id])
+
+  project Project? @relation(fields: [projectId], references: [id])
+  board   Board?   @relation(fields: [boardId], references: [id])
+
+  comments TaskComment[]
+  history  TaskHistory[]
+
+  assignee User? @relation(name: "TaskAssignee", fields: [assigneeId], references: [id])
+  creator  User  @relation("TaskCreator", fields: [createdById], references: [id])
+
+  @@index([columnId, position])
+  @@index([assigneeId, status])
+  @@index([projectId, status])
+  @@index([createdById])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model User {
+  id             String           @id @default(uuid())
+  firstname      String?
+  lastname       String?
+  middlename     String?
+  email          String           @unique
+  createdAt      DateTime         @default(now()) @map("created_at")
+  passwordHash   String           @map("password_hash")
+  assignedTasks  Task[]           @relation("TaskAssignee")
+  createdTasks   Task[]           @relation("TaskCreator")
+  comments       TaskComment[]
+  history        TaskHistory[]
+  activityLogs   ActivityLog[]
+  notes          Notes[]
+  developerStats DeveloperStats[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String    @id @default(uuid())
+  name        String
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+  workspaceId String    @map("workspace_id")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  boards      Board[]
+  tasks       Task[]
+
+  @@index([workspaceId])
+  @@map("projects")
+}
+
+model Board {
+  id        String    @id @default(uuid())
+  name      String
+  projectId String    @map("project_id")
+  position  BigInt?
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+  project   Project   @relation(fields: [projectId], references: [id])
+  columns   Column[]
+  tasks     Task[]
+
+  @@index([projectId])
+  @@map("boards")
+}
+
+model Column {
+  id        String    @id @default(uuid())
+  name      String
+  position  BigInt?
+  boardId   String    @map("board_id")
+  deletedAt DateTime? @map("deleted_at")
+  board     Board     @relation(fields: [boardId], references: [id])
+  tasks     Task[]
+
+  @@index([boardId, position])
+  @@map("columns")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+  task      Task     @relation(fields: [taskId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+model TaskHistory {
+  id           String     @id @default(uuid())
+  taskId       String     @map("task_id")
+  userId       String     @map("user_id")
+  fromColumnId String     @map("from_column_id")
+  metadata     Json?
+  eventType    TaskEvent? @map("event_type")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  task         Task       @relation(fields: [taskId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@index([taskId, createdAt])
+  @@map("task_history")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  entityType  String?  @map("entity_type")
+  entityId    String   @map("entity_id")
+  action      String?
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  workspaceId String   @map("workspace_id")
+  userId      String   @map("user_id")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([workspaceId])
+  @@index([entityType, entityId])
+  @@index([workspaceId, createdAt])
+  @@map("activity_logs")
+}
+
+model Notes {
+  id          String    @id @default(uuid())
+  title       String?
+  content     String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String    @map("created_by")
+  workspaceId String    @map("workspace_id")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  creator     User      @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@map("notes")
+}
+
+model DeveloperStats {
+  id                String    @id @default(uuid())
+  tasksCompleted    Int?      @map("tasks_completed")
+  avgCompletionTime Int?      @map("avg_completion_time")
+  weekStart         DateTime? @map("week_start")
+  userId            String
+  workspaceId       String    @map("workspace_id")
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
+  user              User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, weekStart, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("developer_stats")
+}
+
+enum TaskEvent {
+  CREATED
+  MOVED
+  ASSIGNED
+  COMPLETED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+
+  @@map("task_status")
+}
