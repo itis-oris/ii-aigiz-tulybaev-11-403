@@ -1,17 +1,21 @@
-import {Body, Controller, Delete, Param, ParseUUIDPipe, Patch, Post} from '@nestjs/common';
+import {Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req} from '@nestjs/common';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import {AssignTaskDto} from "./dto/assign-task.dto";
 import {MoveTaskDto} from "./dto/move-task.dto";
+import {GetTasksDto} from "./dto/get-tasks.dto";
+import {AssigneeTaskDto} from "./dto/assignee-task.dto";
 
 @Controller('tasks')
 export class TaskController {
     constructor(private readonly taskService: TaskService) {}
 
     @Post()
-    create(@Body() dto: CreateTaskDto) {
-        return this.taskService.create(dto);
+    create(
+        @Body() dto: CreateTaskDto,
+        @Req() req
+    ) {
+        return this.taskService.create(dto, req.user.id);
     }
 
     @Patch(':id')
@@ -25,15 +29,15 @@ export class TaskController {
     @Patch(':id/assign')
     assign(
         @Param('id', new ParseUUIDPipe()) id: string,
-        @Body() dto: AssignTaskDto,
+        @Body() dto: AssigneeTaskDto,
     ) {
-      return this.taskService.assign(id, dto);
+      return this.taskService.assignee(id, dto);
     }
 
     @Patch(':id/move')
     move(
         @Param('id', new ParseUUIDPipe()) id: string,
-        @Body dto: MoveTaskDto
+        @Body() dto: MoveTaskDto
     ) {
       return this.taskService.move(id, dto);
     }
@@ -41,5 +45,17 @@ export class TaskController {
     @Delete(':id')
     remove(@Param('id', new ParseUUIDPipe()) id: string) {
       return this.taskService.remove(id);
+    }
+
+    @Get()
+    findAll(
+        @Query() filterDto: GetTasksDto
+    ) {
+        return this.taskService.findAll(filterDto);
+    }
+
+    @Get(':id')
+    findById(@Param('id', new ParseUUIDPipe()) id: string) {
+        return this.taskService.findById(id);
     }
 }
