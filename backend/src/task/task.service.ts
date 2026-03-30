@@ -5,7 +5,7 @@ import {UpdateTaskDto} from "./dto/update-task.dto";
 import {MoveTaskDto} from "./dto/move-task.dto";
 import {AssigneeTaskDto} from "./dto/assignee-task.dto";
 import {GetTasksDto} from "./dto/get-tasks.dto";
-import {Prisma} from "../../generated/prisma/client";
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TaskService {
