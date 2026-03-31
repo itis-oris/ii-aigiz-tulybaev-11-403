@@ -1,6 +1,8 @@
 import {ConflictException, Injectable} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
 import {RegisterRequest} from "./dto/register.dto";
+import * as argon2 from 'argon2'
+import {Prisma} from "@prisma/client";
 
 @Injectable()
 export class AuthService {
@@ -8,26 +10,39 @@ export class AuthService {
     }
 
     async register(dto: RegisterRequest) {
-        const {name, email, password} = dto;
+        let {firstname, lastname, middlename, email, password} = dto;
 
-        const existUser = await this.prismaService.user.findUnique({
-            where: {
-                email
+        email = email.trim().toLowerCase();
+
+        const passwordHash = await argon2.hash(password);
+
+        try {
+            return await this.prismaService.user.create({
+                data: {
+                    firstname,
+                    lastname,
+                    middlename,
+                    email,
+                    passwordHash,
+                },
+                select: {
+                    id: true,
+                    firstname: true,
+                    email: true,
+                    middlename: true,
+                    lastname: true,
+                    createdAt: true
+                }
+            });
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                throw new ConflictException('Пользователь с такой почтой уже существует')
             }
-        });
 
-        if (existUser) {
-            throw new ConflictException('Пользователь с такой почтой уже существует')
+            throw error;
         }
-
-        const user = await this.prismaService.user.create({
-            data: {
-                firstname: name,
-                email,
-                passwordHash: password,
-            }
-        });
-
-        return user;
     }
 }
