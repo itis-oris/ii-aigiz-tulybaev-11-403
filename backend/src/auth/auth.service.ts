@@ -9,7 +9,7 @@ import type {JwtPayload} from "./interfaces/jwt.interfaces";
 import {LoginRequest} from "./dto/login.dto";
 import {verify} from "argon2";
 import type { Response, Request } from 'express';
-import {isDev} from "../utils/is-dev.utils";
+import {isDev} from "../utils/is-dev.util";
 import ms from 'ms';
 
 type TokenTtl = number | import('ms').StringValue;
@@ -105,7 +105,7 @@ export class AuthService {
         const refreshToken = req.cookies['refreshToken'];
 
         if (!refreshToken) {
-            throw new UnauthorizedException('Недействительный refresh-token')
+            throw new UnauthorizedException('Недействительный refresh-token');
         }
 
         const payload: JwtPayload = await this.jwtService.verifyAsync(refreshToken);
@@ -121,11 +121,25 @@ export class AuthService {
             });
 
             if (!user) {
-                throw new NotFoundException('Пользователь не найден')
+                throw new NotFoundException('Пользователь не найден');
             }
 
             return this.auth(res, user.id);
         }
+    }
+
+    async validate(id: string) {
+        const user = await this.prismaService.user.findUnique({
+            where: {
+                id
+            }
+        });
+
+        if (!user) {
+            throw new NotFoundException('Пользователь не найден');
+        }
+
+        return user;
     }
 
     private auth(res: Response, id: string) {
