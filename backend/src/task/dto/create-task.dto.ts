@@ -9,55 +9,55 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaskDto {
-    @ApiProperty({ example: 'Implement task API' })
+    @ApiProperty({ example: 'Реализовать API для задач', description: 'Краткий заголовок задачи' })
     @IsString()
     title: string;
 
-    @ApiPropertyOptional({ example: 'Create controller, service and DTO validation' })
+    @ApiPropertyOptional({ example: 'Создать контроллер, сервис и валидацию DTO', description: 'Подробное описание задачи' })
     @IsString()
     @IsOptional()
     description?: string;
 
-    @ApiPropertyOptional({ example: 5 })
+    @ApiPropertyOptional({ example: 5, description: 'Оценка задачи в story points' })
     @IsInt()
     @IsOptional()
     storyPoints?: number;
 
-    @ApiPropertyOptional({ example: 2 })
+    @ApiPropertyOptional({ example: 2, description: 'Приоритет задачи' })
     @IsInt()
     @IsOptional()
     priority?: number;
 
-    @ApiPropertyOptional({ example: '2026-03-25T12:00:00.000Z' })
+    @ApiPropertyOptional({ example: '2026-03-25T12:00:00.000Z', description: 'Срок выполнения в формате ISO 8601' })
     @IsOptional()
     @IsDateString()
     dueDate?: string;
 
-    @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+    @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Идентификатор колонки, в которую создаётся задача' })
     @IsUUID()
     columnId: string;
 
     @ApiPropertyOptional({
         example: '1000',
-        description: 'Task position inside the column as a non-negative integer string',
+        description: 'Позиция задачи внутри колонки в виде строки с неотрицательным целым числом',
     })
     @IsOptional()
     @Matches(/^\d+$/, {
-        message: 'position must be a non-negative integer string',
+        message: 'position должно быть строкой с неотрицательным целым числом',
     })
     position?: string;
 
-    @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440001' })
+    @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440001', description: 'Идентификатор проекта' })
     @IsUUID()
     @IsOptional()
     projectId?: string;
 
-    @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440002' })
+    @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440002', description: 'Идентификатор доски' })
     @IsUUID()
     @IsOptional()
     boardId?: string;
 
-    @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440003' })
+    @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440003', description: 'Идентификатор исполнителя' })
     @IsUUID()
     @IsOptional()
     assigneeId?: string;

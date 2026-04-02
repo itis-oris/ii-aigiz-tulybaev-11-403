@@ -15,15 +15,15 @@ import {
     ApiTags,
 } from "@nestjs/swagger";
 
-@ApiTags('tasks')
+@ApiTags('Задачи')
 @Controller('tasks')
 export class TaskController {
     constructor(private readonly taskService: TaskService) {}
 
     @Post()
-    @ApiOperation({ summary: 'Create task' })
+    @ApiOperation({ summary: 'Создать задачу' })
     @ApiBody({ type: CreateTaskDto })
-    @ApiBadRequestResponse({ description: 'Invalid payload or invalid task relations' })
+    @ApiBadRequestResponse({ description: 'Некорректные данные или неверные связи задачи' })
     create(
         @Body() dto: CreateTaskDto,
         @Req() req
@@ -32,11 +32,11 @@ export class TaskController {
     }
 
     @Patch(':id')
-    @ApiOperation({ summary: 'Update task' })
-    @ApiParam({ name: 'id', description: 'Task id', format: 'uuid' })
+    @ApiOperation({ summary: 'Обновить задачу' })
+    @ApiParam({ name: 'id', description: 'Идентификатор задачи', format: 'uuid' })
     @ApiBody({ type: UpdateTaskDto })
-    @ApiBadRequestResponse({ description: 'Invalid payload or invalid task relations' })
-    @ApiNotFoundResponse({ description: 'Task not found' })
+    @ApiBadRequestResponse({ description: 'Некорректные данные или неверные связи задачи' })
+    @ApiNotFoundResponse({ description: 'Задача не найдена' })
     update(
         @Param('id', new ParseUUIDPipe()) id: string,
         @Body() dto: UpdateTaskDto
@@ -45,11 +45,11 @@ export class TaskController {
     }
 
     @Patch(':id/assign')
-    @ApiOperation({ summary: 'Assign or unassign task' })
-    @ApiParam({ name: 'id', description: 'Task id', format: 'uuid' })
+    @ApiOperation({ summary: 'Назначить или снять исполнителя' })
+    @ApiParam({ name: 'id', description: 'Идентификатор задачи', format: 'uuid' })
     @ApiBody({ type: AssigneeTaskDto })
-    @ApiBadRequestResponse({ description: 'Invalid assignee id' })
-    @ApiNotFoundResponse({ description: 'Task or user not found' })
+    @ApiBadRequestResponse({ description: 'Некорректный идентификатор исполнителя' })
+    @ApiNotFoundResponse({ description: 'Задача или пользователь не найдены' })
     assign(
         @Param('id', new ParseUUIDPipe()) id: string,
         @Body() dto: AssigneeTaskDto,
@@ -58,11 +58,11 @@ export class TaskController {
     }
 
     @Patch(':id/move')
-    @ApiOperation({ summary: 'Move task to another column' })
-    @ApiParam({ name: 'id', description: 'Task id', format: 'uuid' })
+    @ApiOperation({ summary: 'Переместить задачу в другую колонку' })
+    @ApiParam({ name: 'id', description: 'Идентификатор задачи', format: 'uuid' })
     @ApiBody({ type: MoveTaskDto })
-    @ApiBadRequestResponse({ description: 'Invalid target column or position' })
-    @ApiNotFoundResponse({ description: 'Task not found' })
+    @ApiBadRequestResponse({ description: 'Некорректная колонка назначения или позиция' })
+    @ApiNotFoundResponse({ description: 'Задача не найдена' })
     move(
         @Param('id', new ParseUUIDPipe()) id: string,
         @Body() dto: MoveTaskDto
@@ -71,20 +71,20 @@ export class TaskController {
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: 'Soft delete task' })
-    @ApiParam({ name: 'id', description: 'Task id', format: 'uuid' })
-    @ApiBadRequestResponse({ description: 'Task already deleted' })
-    @ApiNotFoundResponse({ description: 'Task not found' })
+    @ApiOperation({ summary: 'Мягко удалить задачу' })
+    @ApiParam({ name: 'id', description: 'Идентификатор задачи', format: 'uuid' })
+    @ApiBadRequestResponse({ description: 'Задача уже удалена' })
+    @ApiNotFoundResponse({ description: 'Задача не найдена' })
     remove(@Param('id', new ParseUUIDPipe()) id: string) {
       return this.taskService.remove(id);
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get tasks list with filters' })
-    @ApiQuery({ name: 'storyPoints', required: false, type: Number })
-    @ApiQuery({ name: 'status', required: false, enum: ['TODO', 'IN_PROGRESS', 'DONE'] })
-    @ApiQuery({ name: 'search', required: false, type: String })
-    @ApiQuery({ name: 'priority', required: false, type: Number })
+    @ApiOperation({ summary: 'Получить список задач с фильтрами' })
+    @ApiQuery({ name: 'storyPoints', required: false, type: Number, description: 'Фильтр по story points' })
+    @ApiQuery({ name: 'status', required: false, enum: ['TODO', 'IN_PROGRESS', 'DONE'], description: 'Фильтр по статусу' })
+    @ApiQuery({ name: 'search', required: false, type: String, description: 'Поиск по названию задачи' })
+    @ApiQuery({ name: 'priority', required: false, type: Number, description: 'Фильтр по приоритету' })
     findAll(
         @Query() filterDto: GetTasksDto
     ) {
@@ -92,9 +92,9 @@ export class TaskController {
     }
 
     @Get(':id')
-    @ApiOperation({ summary: 'Get task by id' })
-    @ApiParam({ name: 'id', description: 'Task id', format: 'uuid' })
-    @ApiNotFoundResponse({ description: 'Task not found' })
+    @ApiOperation({ summary: 'Получить задачу по идентификатору' })
+    @ApiParam({ name: 'id', description: 'Идентификатор задачи', format: 'uuid' })
+    @ApiNotFoundResponse({ description: 'Задача не найдена' })
     findById(@Param('id', new ParseUUIDPipe()) id: string) {
         return this.taskService.findById(id);
     }

@@ -64,6 +64,7 @@ model User {
   middlename     String?
   email          String           @unique
   createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
   passwordHash   String           @map("password_hash")
   assignedTasks  Task[]           @relation("TaskAssignee")
   createdTasks   Task[]           @relation("TaskCreator")

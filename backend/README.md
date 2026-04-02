@@ -1,98 +1,112 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend Sprintly
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend-часть Sprintly построена на `NestJS`, `Prisma` и `PostgreSQL`. Сервис отвечает за аутентификацию, управление задачами и подготовку API для клиентского приложения.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Стек
 
-## Description
+- `NestJS`
+- `Prisma ORM`
+- `PostgreSQL`
+- `JWT` для access и refresh токенов
+- `class-validator` для валидации входных данных
+- `Swagger` для документации API
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Подготовка окружения
 
-## Project setup
+1. Установи зависимости:
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+2. Убедись, что PostgreSQL запущен и доступен по параметрам из `.env`.
+
+3. Примени миграции:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npx prisma migrate dev
 ```
 
-## Run tests
+## Запуск проекта
 
 ```bash
-# unit tests
-$ npm run test
+# обычный запуск
+npm run start
 
-# e2e tests
-$ npm run test:e2e
+# режим разработки с отслеживанием изменений
+npm run start:dev
 
-# test coverage
-$ npm run test:cov
+# production-сборка
+npm run build
+npm run start:prod
 ```
 
-## Deployment
+## Prisma
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Полезные команды для работы с базой данных:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# применить миграции в dev-окружении
+npx prisma migrate dev
+
+# открыть Prisma Studio
+npx prisma studio
+
+# пересоздать Prisma Client
+npx prisma generate
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Тесты и качество кода
 
-## Resources
+```bash
+# unit-тесты
+npm run test
 
-Check out a few resources that may come in handy when working with NestJS:
+# e2e-тесты
+npm run test:e2e
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# покрытие тестами
+npm run test:cov
 
-## Support
+# линтер
+npm run lint
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Документация API
 
-## Stay in touch
+Swagger доступен после запуска приложения по адресу:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```text
+/api/docs
+```
 
-## License
+Что уже отражено в Swagger UI:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- теги по модулям API, включая отдельный раздел аутентификации
+- схемы авторизации для `Bearer` access token и cookie `refreshToken`
+- DTO-поля, примеры значений и базовые ограничения валидации
+- описания основных ответов и типовых ошибок для контроллеров
+
+Как работать с авторизацией в Swagger:
+
+1. Выполни `POST /api/auth/login` или `POST /api/auth/register`.
+2. Скопируй `accessToken` из ответа.
+3. Нажми `Authorize` и вставь токен в схему `access-token`.
+4. Для `refresh` и `logout` учитывай, что эти маршруты используют cookie `refreshToken`, а не bearer token.
+
+Ограничения Swagger UI:
+
+- `refreshToken` хранится в `httpOnly` cookie, поэтому удобнее всего тестировать `refresh` и `logout` после реального login/register запроса из того же браузера
+- если cookie не установлена в браузере, `POST /api/auth/refresh` и `POST /api/auth/logout` вернут ошибку авторизации
+
+## Основные модули
+
+- `auth` — регистрация, вход, обновление токена и выход из системы
+- `task` — создание, изменение, назначение, перемещение и удаление задач
+- `prisma` — доступ к базе данных
+- `config` — конфигурация JWT и Swagger
+
+## Замечания по разработке
+
+- Для `Prisma Studio` лучше использовать `Node.js 20` или `22` LTS, если на текущей версии Node возникают ошибки совместимости.
+- Перед ручным изменением SQL-файлов миграций убедись, что миграция ещё не была применена, иначе Prisma обнаружит drift.
