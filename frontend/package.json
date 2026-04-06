@@ -12,7 +12,9 @@
         "format:check": "prettier --check .",
         "stylelint": "stylelint \"**/*.{css,scss}\" --allow-empty-input",
         "lint-staged": "lint-staged",
-        "prepare": "cd .. && ./frontend/node_modules/.bin/husky frontend/.husky"
+        "prepare": "cd .. && ./frontend/node_modules/.bin/husky frontend/.husky",
+        "steiger": "npx steiger .",
+        "steiger:fix": "npx steiger . --fix"
     },
     "dependencies": {
         "@hugeicons/core-free-icons": "^4.1.1",
@@ -30,6 +32,7 @@
         "zustand": "^5.0.12"
     },
     "devDependencies": {
+        "@feature-sliced/steiger-plugin": "^0.5.7",
         "@tailwindcss/postcss": "^4",
         "@types/node": "^20",
         "@types/react": "^19",
@@ -39,6 +42,7 @@
         "husky": "^9.1.7",
         "lint-staged": "^16.2.1",
         "prettier": "^3.6.2",
+        "steiger": "^0.5.11",
         "stylelint": "^16.24.0",
         "stylelint-config-standard": "^39.0.1",
         "tailwindcss": "^4",
