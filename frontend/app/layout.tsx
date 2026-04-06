@@ -1,15 +1,17 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Manrope, IBM_Plex_Mono, Inter } from 'next/font/google';
-import './globals.css';
+import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import { AppProviders } from '@/app/providers';
-import { siteConfig } from '@/shared/config/site';
-import { cn } from "@/lib/utils";
+import './globals.css';
+import { siteConfig } from '@/shared/config';
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({
+    subsets: ['latin', 'cyrillic'],
+    variable: '--font-inter',
+});
 
 const ibmPlexMono = IBM_Plex_Mono({
-    variable: '--font-mono',
+    variable: '--font-ibm-plex-mono',
     subsets: ['latin', 'cyrillic'],
     weight: ['400', '500'],
 });
@@ -25,11 +27,8 @@ export default function RootLayout({
     children: ReactNode;
 }>) {
     return (
-        <html
-            lang="ru"
-            className={cn("h-full", "antialiased", ibmPlexMono.variable, "font-sans", inter.variable)}
-        >
-            <body className="min-h-full bg-app text-foreground">
+        <html lang="ru" className={`${inter.variable} ${ibmPlexMono.variable}`}>
+            <body className="min-h-full">
                 <AppProviders>{children}</AppProviders>
             </body>
         </html>
