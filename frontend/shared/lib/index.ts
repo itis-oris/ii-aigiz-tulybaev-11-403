@@ -1,2 +1,4 @@
 import { cn } from './utils';
-export { cn };
+import { useIsMobile } from './use-mobile';
+
+export { cn, useIsMobile };
