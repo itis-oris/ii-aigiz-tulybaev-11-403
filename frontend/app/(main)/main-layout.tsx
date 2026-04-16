@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import Header from '@/shared/ui/header';
-import { Sidebar, SidebarInset, SidebarProvider } from '@/shared/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '@/shared/ui/sidebar';
+import { AppSidebar } from '@/app/(main)/app-sidebar';
 
 type Props = {
     children: ReactNode;
@@ -9,10 +10,10 @@ type Props = {
 const MainLayout = ({ children }: Props) => {
     return (
         <SidebarProvider>
-            <Sidebar />
-            <SidebarInset>
+            <AppSidebar />
+            <SidebarInset className="h-svh min-h-0 overflow-hidden">
                 <Header />
-                <div className="flex-1">{children}</div>
+                <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
             </SidebarInset>
         </SidebarProvider>
     );

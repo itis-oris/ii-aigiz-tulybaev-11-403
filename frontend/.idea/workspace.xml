@@ -4,32 +4,31 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bbe298e5-62ec-48ab-838b-98fe74b5a987" name="Changes" comment="feat: add main layout">
-      <change afterPath="$PROJECT_DIR$/.idea/ShadcnHelperSettings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/(main)/layout.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/(main)/main-layout.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/utils.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/lib/use-mobile.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/ui/header.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/ui/input.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/ui/separator.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/ui/sheet.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/ui/sidebar.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/ui/skeleton.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shared/ui/tooltip.tsx" afterDir="false" />
+    <list default="true" id="bbe298e5-62ec-48ab-838b-98fe74b5a987" name="Changes" comment="feat: add cards">
+      <change afterPath="$PROJECT_DIR$/app/(main)/app-sidebar.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pages/home/model/mock.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pages/home/model/types.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(main)/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(main)/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(main)/main-layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(main)/main-layout.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/globals.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/layout.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(main)/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/providers/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/providers/index.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components.json" beforeDir="false" afterPath="$PROJECT_DIR$/components.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/utils.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/home/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/pages/home/index.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/home/ui/home-page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/pages/home/ui/home-page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shared/lib/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/shared/lib/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/lib/use-mobile.ts" beforeDir="false" afterPath="$PROJECT_DIR$/shared/lib/use-mobile.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shared/lib/utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/shared/lib/utils.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shared/ui/button.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/button.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shared/ui/card.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/card.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/ui/header.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/header.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/ui/input.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/input.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/ui/separator.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/separator.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/ui/sheet.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/sheet.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/ui/sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/sidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/ui/skeleton.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/skeleton.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/ui/tooltip.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/shared/ui/tooltip.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,13 +36,13 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="56" />
+    <option name="cachedIndexableFilesCount" value="73" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="TypeScript JSX File" />
         <option value="TypeScript File" />
+        <option value="TypeScript JSX File" />
       </list>
     </option>
   </component>
@@ -114,13 +113,13 @@
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/shared/lib" />
       <recent name="$PROJECT_DIR$/app/(main)" />
+      <recent name="$PROJECT_DIR$/shared/lib" />
       <recent name="$PROJECT_DIR$/pages/home/ui" />
       <recent name="$PROJECT_DIR$/app/(main)/ui" />
     </key>
   </component>
-  <component name="RunManager" selected="npm.Next.js: server-side">
+  <component name="RunManager" selected="npm.format">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
     </configuration>
@@ -186,10 +185,10 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="npm.format" />
         <item itemvalue="npm.steiger" />
         <item itemvalue="npm.lint-staged" />
         <item itemvalue="npm.stylelint" />
-        <item itemvalue="npm.format" />
         <item itemvalue="npm.lint" />
       </list>
     </recent_temporary>
@@ -212,7 +211,8 @@
       <workItem from="1775456297577" duration="3041000" />
       <workItem from="1776010960635" duration="6064000" />
       <workItem from="1776053330320" duration="626000" />
-      <workItem from="1776101920501" duration="5546000" />
+      <workItem from="1776101920501" duration="20371000" />
+      <workItem from="1776314181018" duration="1556000" />
     </task>
     <task id="LOCAL-00001" summary="feat: add initial setup">
       <option name="closed" value="true" />
@@ -230,7 +230,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775456135271</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="feat: add main layout">
+      <option name="closed" value="true" />
+      <created>1776107535300</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1776107535300</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -254,6 +262,7 @@
     <MESSAGE value="feat: add initial setup" />
     <MESSAGE value="feat: add vsc" />
     <MESSAGE value="feat: add main layout" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: add main layout" />
+    <MESSAGE value="feat: add cards" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: add cards" />
   </component>
 </project>
