@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Input } from '@/shared/ui/input';
 import { mockDays } from '@/pages/home/model/mock';
-import { Task } from '@/pages/home/model/types';
+import { DayTasks, Task } from '@/pages/home/model/types';
 import {
     Card,
     CardAction,
@@ -22,8 +22,45 @@ import {
 } from '@/shared/ui/sheet';
 
 const HomePage = () => {
+    type Column = Pick<DayTasks, 'day' | 'date' | 'columnId'>;
+
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [column, setColumn] = useState<Column[]>(() =>
+        mockDays.map((dayTask) => ({
+            day: dayTask.day,
+            date: dayTask.date,
+            columnId: dayTask.columnId,
+            tasks: dayTask.tasks,
+        })),
+    );
+    const [tasks, setTasks] = useState<Task[]>(() =>
+        mockDays.flatMap((dayTask) => dayTask.tasks),
+    );
+    const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+    const [overColumnId, setOverColumnId] = useState<string | null>(null);
+    const [overTaskId, setOverTaskId] = useState<number | null>(null);
+
+    const getTasks = () => {
+        const allTasks = mockDays.flatMap((dayTask) => dayTask.tasks);
+        setTasks(allTasks);
+    };
+
+    const getColumn = () => {
+        const allColumn = mockDays.map((dayTask) => ({
+            day: dayTask.day,
+            date: dayTask.date,
+            columnId: dayTask.columnId,
+            tasks: dayTask.tasks,
+        }));
+
+        setColumn(allColumn);
+    };
+
+    // useEffect(() => {
+    //     getTasks();
+    //     getColumn();
+    // }, []);
 
     const handleOpen = (task: Task) => {
         setIsOpen(true);
@@ -104,8 +141,11 @@ const HomePage = () => {
 
     return (
         <div className="flex h-full min-h-0 gap-1 overflow-x-auto overflow-y-hidden bg-background px-2 py-3 text-foreground">
-            {mockDays.map((elem, index) => (
-                <div key={index} className="flex h-full min-h-0 min-w-72 flex-col p-2">
+            {column.map((elem, index) => (
+                <div
+                    key={index}
+                    className="flex h-full min-h-0 min-w-72 flex-col p-2"
+                >
                     <div className="mb-3 shrink-0">
                         <div className="mb-2 flex flex-col">
                             <span className="text-sm font-semibold text-foreground">
@@ -120,44 +160,51 @@ const HomePage = () => {
                             className="px-3 py-5 border-border bg-background text-foreground placeholder:text-muted-foreground"
                         />
                     </div>
-                    <div className="scrollbar-thin-transparent min-h-0 flex-1 overflow-y-auto pr-1">
-                        {elem.tasks.map((task) => (
-                            <Card
-                                key={task.id}
-                                onClick={() => handleOpen(task)}
-                                className="mb-3 cursor-pointer border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md"
-                            >
-                                <CardHeader>
-                                    <CardTitle>{task.title}</CardTitle>
-                                    <CardDescription>
-                                        {task.project}
-                                    </CardDescription>
-                                    <CardAction>
-                                        <span className="rounded-md bg-accent px-2 py-1 text-[10px] font-medium text-accent-foreground">
-                                            {task.dueInDays} дн.
-                                        </span>
-                                    </CardAction>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>#{task.id}</span>
-                                        <span className="rounded-md bg-secondary px-2 py-1 text-secondary-foreground">
-                                            {task.status}
-                                        </span>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="flex flex-wrap gap-2">
-                                    {task.tags.map((tag) => (
-                                        <span
-                                            key={tag}
-                                            className="rounded-md bg-sidebar px-2 py-1 text-[10px] font-medium text-sidebar-foreground"
-                                        >
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </CardFooter>
-                            </Card>
-                        ))}
+                    <div className="scrollbar-thin-transparent min-h-0 flex-1 overflow-y-auto pr-1 pt-2">
+                        {tasks
+                            ?.filter((task) => task.columnId === elem.columnId)
+                            .sort(
+                                (a, b) =>
+                                    Number(a.position ?? 0) -
+                                    Number(b.position ?? 0),
+                            )
+                            .map((task) => (
+                                <Card
+                                    key={task.id}
+                                    onClick={() => handleOpen(task)}
+                                    className="mb-3 cursor-pointer border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md"
+                                >
+                                    <CardHeader>
+                                        <CardTitle>{task.title}</CardTitle>
+                                        <CardDescription>
+                                            {task.project}
+                                        </CardDescription>
+                                        <CardAction>
+                                            <span className="rounded-md bg-accent px-2 py-1 text-[10px] font-medium text-accent-foreground">
+                                                {task.dueInDays} дн.
+                                            </span>
+                                        </CardAction>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span>#{task.id}</span>
+                                            <span className="rounded-md bg-secondary px-2 py-1 text-secondary-foreground">
+                                                {task.status}
+                                            </span>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="flex flex-wrap gap-2">
+                                        {task.tags.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                className="rounded-md bg-sidebar px-2 py-1 text-[10px] font-medium text-sidebar-foreground"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </CardFooter>
+                                </Card>
+                            ))}
                     </div>
                 </div>
             ))}

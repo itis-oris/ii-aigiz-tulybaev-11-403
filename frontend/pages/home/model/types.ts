@@ -19,5 +19,6 @@ export type Task = {
 export type DayTasks = {
     day: string;
     date: string;
+    columnId: string;
     tasks: Task[];
 };

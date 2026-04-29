@@ -4,6 +4,7 @@ export const mockDays: DayTasks[] = [
     {
         day: 'Понедельник',
         date: '13 апреля',
+        columnId: '550e8400-e29b-41d4-a716-446655440000',
         tasks: [
             {
                 id: 25,
@@ -100,6 +101,7 @@ export const mockDays: DayTasks[] = [
     {
         day: 'Вторник',
         date: '14 апреля',
+        columnId: '550e8400-e29b-41d4-a716-446655440010',
         tasks: [
             {
                 id: 41,
@@ -142,6 +144,7 @@ export const mockDays: DayTasks[] = [
     {
         day: 'Среда',
         date: '15 апреля',
+        columnId: '550e8400-e29b-41d4-a716-446655440020',
         tasks: [
             {
                 id: 43,
@@ -166,6 +169,7 @@ export const mockDays: DayTasks[] = [
     {
         day: 'Четверг',
         date: '16 апреля',
+        columnId: '550e8400-e29b-41d4-a716-446655440030',
         tasks: [
             {
                 id: 44,
@@ -208,6 +212,7 @@ export const mockDays: DayTasks[] = [
     {
         day: 'Пятница',
         date: '17 апреля',
+        columnId: '550e8400-e29b-41d4-a716-446655440040',
         tasks: [
             {
                 id: 46,
@@ -232,6 +237,7 @@ export const mockDays: DayTasks[] = [
     {
         day: 'Суббота',
         date: '18 апреля',
+        columnId: '550e8400-e29b-41d4-a716-446655440050',
         tasks: [
             {
                 id: 47,
@@ -256,6 +262,7 @@ export const mockDays: DayTasks[] = [
     {
         day: 'Воскресенье',
         date: '19 апреля',
+        columnId: '550e8400-e29b-41d4-a716-446655440060',
         tasks: [
             {
                 id: 48,
