@@ -156,7 +156,8 @@ a {
 @layer utilities {
     .scrollbar-thin-transparent {
         scrollbar-width: thin;
-        scrollbar-color: color-mix(in oklab, var(--foreground) 14%, transparent) transparent;
+        scrollbar-color: color-mix(in oklab, var(--foreground) 14%, transparent)
+            transparent;
     }
 
     .scrollbar-thin-transparent::-webkit-scrollbar {
@@ -175,5 +176,44 @@ a {
 
     .scrollbar-thin-transparent::-webkit-scrollbar-thumb:hover {
         background: color-mix(in oklab, var(--foreground) 20%, transparent);
+    }
+
+    .scrollbar-hover-overlay {
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+    }
+
+    @supports (overflow: overlay) {
+        .scrollbar-hover-overlay {
+            overflow-y: auto;
+        }
+    }
+
+    .scrollbar-hover-overlay:hover {
+        scrollbar-color: color-mix(in oklab, var(--foreground) 16%, transparent)
+            transparent;
+    }
+
+    .scrollbar-hover-overlay::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .scrollbar-hover-overlay::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollbar-hover-overlay::-webkit-scrollbar-thumb {
+        background: transparent;
+        border-radius: 999px;
+    }
+
+    .scrollbar-hover-overlay:hover::-webkit-scrollbar-thumb {
+        background: color-mix(in oklab, var(--foreground) 16%, transparent);
+    }
+
+    .scrollbar-hover-overlay:hover::-webkit-scrollbar-thumb:hover {
+        background: color-mix(in oklab, var(--foreground) 24%, transparent);
     }
 }

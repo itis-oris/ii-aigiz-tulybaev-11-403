@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import Header from '@/shared/ui/header';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/sidebar';
-import { AppSidebar } from '@/app/(main)/app-sidebar';
+import { AppSidebar } from '@/widgets/app-sidebar';
 
 type Props = {
     children: ReactNode;

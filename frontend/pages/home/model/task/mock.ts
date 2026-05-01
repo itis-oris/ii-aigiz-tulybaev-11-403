@@ -1,4 +1,4 @@
-import { DayTasks } from '@/pages/home/model/types';
+import { DayTasks } from './types';
 
 export const mockDays: DayTasks[] = [
     {
@@ -187,7 +187,7 @@ export const mockDays: DayTasks[] = [
                 project: 'Campus',
                 dueInDays: 5,
                 status: 'in progress',
-                tags: ['ui', 'frontend'],
+                tags: ['ui-sheet-header-board', 'frontend'],
             },
             {
                 id: 45,
