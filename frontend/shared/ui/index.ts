@@ -8,6 +8,7 @@ import {
     CardDescription,
     CardContent,
 } from './card';
+import { Input } from './input';
 
 export {
     Button,
@@ -19,4 +20,5 @@ export {
     CardAction,
     CardDescription,
     CardContent,
+    Input,
 };
