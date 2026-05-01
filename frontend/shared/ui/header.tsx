@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { EllipsisVertical } from 'lucide-react';
 
-import { cn } from '@/shared/lib/utils';
+import { cn, projectTabs, type ProjectTab } from '@/shared/lib';
 
 type HeaderProps = React.ComponentProps<'header'>;
 
@@ -31,11 +31,30 @@ const projectMembers = [
 ];
 
 const boardTabs = ['DIGITAL', 'TRADE', 'OUTDOOR'];
-const projectTabs = ['Обзор', 'Задачи'];
+type HeaderViewProps = HeaderProps & {
+    activeProjectTab?: ProjectTab;
+    onProjectTabChange?: (tab: ProjectTab) => void;
+};
 
-const Header = ({ className, children, ...props }: HeaderProps) => {
+const Header = ({
+    className,
+    children,
+    activeProjectTab: controlledProjectTab,
+    onProjectTabChange,
+    ...props
+}: HeaderViewProps) => {
     const [activeBoard, setActiveBoard] = useState(boardTabs[0]);
-    const [activeProjectTab, setActiveProjectTab] = useState(projectTabs[1]);
+    const [projectTab, setProjectTab] = useState<ProjectTab>('Задачи');
+
+    const activeProjectTab = controlledProjectTab ?? projectTab;
+
+    const handleProjectTabChange = (tab: ProjectTab) => {
+        onProjectTabChange?.(tab);
+
+        if (controlledProjectTab === undefined) {
+            setProjectTab(tab);
+        }
+    };
 
     return (
         <header
@@ -93,7 +112,7 @@ const Header = ({ className, children, ...props }: HeaderProps) => {
                             <button
                                 key={tab}
                                 type="button"
-                                onClick={() => setActiveProjectTab(tab)}
+                                onClick={() => handleProjectTabChange(tab)}
                                 className={cn(
                                     'cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                     activeProjectTab === tab
