@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Avatar, Button } from '@/shared/ui';
 import {
     Sidebar,
@@ -16,9 +17,7 @@ import {
     SidebarTrigger,
 } from '@/shared/ui/sidebar';
 import {
-    BriefcaseBusiness,
     ChevronDown,
-    FolderKanban,
     FolderOpen,
     LayoutGrid,
     Plus,
@@ -27,6 +26,7 @@ import {
     UserPlus,
 } from 'lucide-react';
 import { cn } from '@/shared/lib';
+import SidebarProfileMenu from './sidebar-profile-menu';
 
 const primaryItems = [
     { title: 'Мои задачи', icon: Target, isActive: false },
@@ -79,37 +79,6 @@ function WorkspaceSwitcher({ label, shortLabel }: WorkspaceSwitcherProps) {
                 </div>
             </div>
             <ChevronDown className="ml-auto size-4 text-sidebar-foreground/65 group-data-[collapsible=icon]:hidden" />
-        </button>
-    );
-}
-
-type SidebarProfileButtonProps = {
-    email: string;
-    initials: string;
-    label: string;
-};
-
-function SidebarProfileButton({
-    email,
-    initials,
-    label,
-}: SidebarProfileButtonProps) {
-    return (
-        <button className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-            <Avatar
-                size="md"
-                className="bg-[linear-gradient(135deg,#171717,#525252)] text-white"
-            >
-                {initials}
-            </Avatar>
-            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-                <div className="truncate text-left text-sm font-medium">
-                    {label}
-                </div>
-                <div className="truncate text-xs text-muted-foreground">
-                    {email}
-                </div>
-            </div>
         </button>
     );
 }
@@ -177,20 +146,23 @@ export function AppSidebar() {
                             {projectItems.map((project) => (
                                 <SidebarMenuItem key={project.title}>
                                     <SidebarMenuButton
+                                        asChild
                                         tooltip={project.title}
                                         isActive={project.isActive}
                                         className={sidebarMenuItemClassName}
                                     >
-                                        <Avatar
-                                            size="xs"
-                                            shape="square"
-                                            className={cn(
-                                                project.avatarClassName,
-                                            )}
-                                        >
-                                            {project.avatar}
-                                        </Avatar>
-                                        <span>{project.title}</span>
+                                        <Link href="/">
+                                            <Avatar
+                                                size="xs"
+                                                shape="square"
+                                                className={cn(
+                                                    project.avatarClassName,
+                                                )}
+                                            >
+                                                {project.avatar}
+                                            </Avatar>
+                                            <span>{project.title}</span>
+                                        </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                             ))}
@@ -211,29 +183,12 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                 </SidebarMenu>
 
-                <div className="flex items-center gap-2 rounded-xl px-1 py-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
-                    <SidebarProfileButton
+                <div className="w-full rounded-xl px-1 py-1">
+                    <SidebarProfileMenu
                         email="artem@sprintly.app"
                         initials="AR"
                         label="Профиль"
                     />
-
-                    <div className="hidden items-center gap-1 group-data-[collapsible=icon]:hidden">
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Проекты"
-                        >
-                            <BriefcaseBusiness className="size-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Рабочее пространство"
-                        >
-                            <FolderKanban className="size-4" />
-                        </Button>
-                    </div>
                 </div>
             </SidebarFooter>
             <SidebarRail />
