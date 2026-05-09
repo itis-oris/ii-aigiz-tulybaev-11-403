@@ -1,3 +1,4 @@
+import { Avatar, Button } from '@/shared/ui';
 import {
     Sidebar,
     SidebarContent,
@@ -25,7 +26,7 @@ import {
     Target,
     UserPlus,
 } from 'lucide-react';
-import { Button } from '@/shared/ui/button';
+import { cn } from '@/shared/lib';
 
 const primaryItems = [
     { title: 'Мои задачи', icon: Target, isActive: false },
@@ -54,22 +55,71 @@ const projectItems = [
     },
 ];
 
+const sidebarMenuItemClassName = 'h-10 rounded-xl px-3 text-sm';
+const sidebarActionIconClassName = 'size-4.5 text-sidebar-foreground/75';
+
+type WorkspaceSwitcherProps = {
+    label: string;
+    shortLabel: string;
+};
+
+function WorkspaceSwitcher({ label, shortLabel }: WorkspaceSwitcherProps) {
+    return (
+        <button className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <Avatar
+                size="sm"
+                shape="square"
+                className="bg-sidebar-accent text-sidebar-foreground"
+            >
+                {shortLabel}
+            </Avatar>
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+                <div className="truncate text-sm font-semibold text-sidebar-foreground">
+                    {label}
+                </div>
+            </div>
+            <ChevronDown className="ml-auto size-4 text-sidebar-foreground/65 group-data-[collapsible=icon]:hidden" />
+        </button>
+    );
+}
+
+type SidebarProfileButtonProps = {
+    email: string;
+    initials: string;
+    label: string;
+};
+
+function SidebarProfileButton({
+    email,
+    initials,
+    label,
+}: SidebarProfileButtonProps) {
+    return (
+        <button className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <Avatar
+                size="md"
+                className="bg-[linear-gradient(135deg,#171717,#525252)] text-white"
+            >
+                {initials}
+            </Avatar>
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+                <div className="truncate text-left text-sm font-medium">
+                    {label}
+                </div>
+                <div className="truncate text-xs text-muted-foreground">
+                    {email}
+                </div>
+            </div>
+        </button>
+    );
+}
+
 export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" className="border-r border-sidebar-border">
             <SidebarHeader className="gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
                 <div className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
-                    <button className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-                        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-[11px] font-semibold text-sidebar-foreground">
-                            C
-                        </div>
-                        <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-                            <div className="truncate text-sm font-semibold text-sidebar-foreground">
-                                Campus
-                            </div>
-                        </div>
-                        <ChevronDown className="ml-auto size-4 text-sidebar-foreground/65 group-data-[collapsible=icon]:hidden" />
-                    </button>
+                    <WorkspaceSwitcher label="Campus" shortLabel="C" />
 
                     <SidebarTrigger className="shrink-0 text-sidebar-foreground/70 group-data-[collapsible=icon]:size-8" />
                 </div>
@@ -91,9 +141,13 @@ export function AppSidebar() {
                                     <SidebarMenuButton
                                         tooltip={item.title}
                                         isActive={item.isActive}
-                                        className="h-10 rounded-xl px-3 text-sm"
+                                        className={sidebarMenuItemClassName}
                                     >
-                                        <item.icon className="size-4.5 text-sidebar-foreground/75" />
+                                        <item.icon
+                                            className={
+                                                sidebarActionIconClassName
+                                            }
+                                        />
                                         <span>{item.title}</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
@@ -125,13 +179,17 @@ export function AppSidebar() {
                                     <SidebarMenuButton
                                         tooltip={project.title}
                                         isActive={project.isActive}
-                                        className="h-10 rounded-xl px-3 text-sm"
+                                        className={sidebarMenuItemClassName}
                                     >
-                                        <span
-                                            className={`flex size-6 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold ${project.avatarClassName}`}
+                                        <Avatar
+                                            size="xs"
+                                            shape="square"
+                                            className={cn(
+                                                project.avatarClassName,
+                                            )}
                                         >
                                             {project.avatar}
-                                        </span>
+                                        </Avatar>
                                         <span>{project.title}</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
@@ -145,28 +203,20 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             tooltip="Пригласить"
-                            className="h-10 rounded-xl px-3 text-sm"
+                            className={sidebarMenuItemClassName}
                         >
-                            <UserPlus className="size-4.5 text-sidebar-foreground/75" />
+                            <UserPlus className={sidebarActionIconClassName} />
                             <span>Пригласить</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
 
                 <div className="flex items-center gap-2 rounded-xl px-1 py-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
-                    <button className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#171717,#525252)] text-xs font-semibold text-white">
-                            AR
-                        </div>
-                        <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-                            <div className="truncate text-sm font-medium text-left">
-                                Профиль
-                            </div>
-                            <div className="truncate text-xs text-muted-foreground">
-                                artem@sprintly.app
-                            </div>
-                        </div>
-                    </button>
+                    <SidebarProfileButton
+                        email="artem@sprintly.app"
+                        initials="AR"
+                        label="Профиль"
+                    />
 
                     <div className="hidden items-center gap-1 group-data-[collapsible=icon]:hidden">
                         <Button

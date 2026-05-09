@@ -4,6 +4,7 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
+        "dev:mock": "API_PROXY_TARGET=http://127.0.0.1:4010 next dev",
         "build": "next build",
         "start": "next start",
         "lint": "eslint .",
@@ -12,9 +13,11 @@
         "format:check": "prettier --check .",
         "stylelint": "stylelint \"**/*.{css,scss}\" --allow-empty-input",
         "lint-staged": "lint-staged",
-        "prepare": "cd .. && ./frontend/node_modules/.bin/husky frontend/.husky",
+        "prepare": "test -d ../.git && (cd .. && ./frontend/node_modules/.bin/husky frontend/.husky) || true",
         "steiger": "npx steiger .",
-        "steiger:fix": "npx steiger . --fix"
+        "steiger:fix": "npx steiger . --fix",
+        "storybook": "storybook dev -p 6006",
+        "build-storybook": "storybook build"
     },
     "dependencies": {
         "@dnd-kit/react": "^0.4.0",
@@ -35,6 +38,7 @@
     },
     "devDependencies": {
         "@feature-sliced/steiger-plugin": "^0.5.7",
+        "@stoplight/prism-cli": "^5.14.2",
         "@tailwindcss/postcss": "^4",
         "@types/node": "^20",
         "@types/react": "^19",
@@ -48,6 +52,19 @@
         "stylelint": "^16.24.0",
         "stylelint-config-standard": "^39.0.1",
         "tailwindcss": "^4",
-        "typescript": "^5"
+        "typescript": "^5",
+        "storybook": "^10.3.6",
+        "@storybook/nextjs-vite": "^10.3.6",
+        "@chromatic-com/storybook": "^5.1.2",
+        "@storybook/addon-vitest": "^10.3.6",
+        "@storybook/addon-a11y": "^10.3.6",
+        "@storybook/addon-docs": "^10.3.6",
+        "@storybook/addon-onboarding": "^10.3.6",
+        "vite": "^8.0.11",
+        "eslint-plugin-storybook": "^10.3.6",
+        "vitest": "^4.1.5",
+        "playwright": "^1.59.1",
+        "@vitest/browser-playwright": "^4.1.5",
+        "@vitest/coverage-v8": "^4.1.5"
     }
 }

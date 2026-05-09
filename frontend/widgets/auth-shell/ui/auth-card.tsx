@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui';
 
 type AuthCardProps = {
     children: ReactNode;
@@ -8,14 +9,16 @@ type AuthCardProps = {
 
 export const AuthCard = ({ children, description, title }: AuthCardProps) => {
     return (
-        <div className="relative w-full max-w-md rounded-lg border border-border bg-card shadow-[0_18px_48px_-24px_rgba(15,23,42,0.24)]">
-            <div className="border-b border-border px-5 py-4 sm:px-6">
-                <h1 className="text-2xl font-semibold">{title}</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+        <Card className="relative w-full max-w-md border border-border py-0 shadow-[0_18px_48px_-24px_rgba(15,23,42,0.24)]">
+            <CardHeader className="gap-2 border-b border-border px-5 py-4 sm:px-6">
+                <CardTitle className="text-2xl font-semibold">
+                    {title}
+                </CardTitle>
+                <CardDescription className="text-sm">
                     {description}
-                </p>
-            </div>
+                </CardDescription>
+            </CardHeader>
             {children}
-        </div>
+        </Card>
     );
 };

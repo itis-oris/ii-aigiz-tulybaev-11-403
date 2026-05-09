@@ -66,15 +66,13 @@ export const LoginForm = () => {
                     <Button
                         type="button"
                         variant="outline"
-                        className="h-10 flex-1 rounded-md text-sm text-muted-foreground"
+                        size="xl"
+                        className="flex-1 text-muted-foreground"
                         onClick={resetForm}
                     >
                         Очистить
                     </Button>
-                    <Button
-                        type="submit"
-                        className="h-10 flex-1 rounded-md text-sm"
-                    >
+                    <Button type="submit" size="xl" className="flex-1">
                         Войти
                     </Button>
                 </div>

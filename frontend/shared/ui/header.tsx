@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { EllipsisVertical } from 'lucide-react';
 
 import { cn, projectTabs, type ProjectTab } from '@/shared/lib';
+import { Avatar, Badge } from '@/shared/ui';
 
 type HeaderProps = React.ComponentProps<'header'>;
 
@@ -67,18 +68,25 @@ const Header = ({
             <div className="flex w-full flex-col gap-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-xs font-semibold text-sidebar-foreground">
+                        <Avatar
+                            size="md"
+                            shape="soft"
+                            className="bg-sidebar-accent text-sidebar-foreground"
+                        >
                             MB
-                        </div>
+                        </Avatar>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <div className="truncate text-base font-semibold leading-none">
-                                    Marlboro
+                                    Sprintly
                                 </div>
-                                <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-sidebar-accent px-2 py-1 text-[10px] font-medium leading-none text-sidebar-foreground/80">
+                                <Badge
+                                    size="sm"
+                                    className="bg-sidebar-accent text-sidebar-foreground/80"
+                                >
                                     <span className="size-1.5 rounded-full bg-green-500" />
                                     В работе
-                                </span>
+                                </Badge>
                             </div>
                             <div className="mt-1 truncate text-xs leading-none text-sidebar-foreground/60">
                                 Проект
@@ -88,21 +96,21 @@ const Header = ({
 
                     <div className="flex items-center">
                         {projectMembers.slice(0, 5).map((member, index) => (
-                            <div
+                            <Avatar
                                 key={member.id}
                                 title={member.name}
                                 className={cn(
-                                    'flex size-7 items-center justify-center rounded-full border-2 border-sidebar text-[9px] font-semibold',
+                                    'border-2 border-sidebar',
                                     member.color,
                                     index > 0 && '-ml-2',
                                 )}
                             >
                                 {member.avatar}
-                            </div>
+                            </Avatar>
                         ))}
-                        <div className="-ml-2 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-sidebar bg-sidebar-accent px-1.5 text-[9px] font-semibold text-sidebar-foreground">
+                        <Avatar className="-ml-2 min-w-7 border-2 border-sidebar bg-sidebar-accent px-1.5 text-sidebar-foreground">
                             +2
-                        </div>
+                        </Avatar>
                     </div>
                 </div>
 

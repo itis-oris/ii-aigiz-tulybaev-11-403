@@ -19,11 +19,11 @@ export const AuthField = ({
             <Input
                 aria-invalid={Boolean(error)}
                 className={cn(
-                    'h-10 rounded-md px-3 text-sm md:text-sm',
                     error &&
                         'border-destructive focus-visible:ring-destructive/20',
                     className,
                 )}
+                uiSize="lg"
                 {...props}
             />
             {error && <span className="text-xs text-destructive">{error}</span>}
