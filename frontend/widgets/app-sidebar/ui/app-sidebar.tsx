@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Avatar, Button } from '@/shared/ui';
 import {
     Sidebar,
@@ -29,9 +32,9 @@ import { cn } from '@/shared/lib';
 import SidebarProfileMenu from './sidebar-profile-menu';
 
 const primaryItems = [
-    { title: 'Мои задачи', icon: Target, isActive: false },
-    { title: 'Все задачи', icon: LayoutGrid, isActive: false },
-    { title: 'Все проекты', icon: FolderOpen, isActive: false },
+    { title: 'Мои задачи', icon: Target, href: '/my-tasks' },
+    { title: 'Все задачи', icon: LayoutGrid },
+    { title: 'Все проекты', icon: FolderOpen },
 ];
 
 const projectItems = [
@@ -84,6 +87,8 @@ function WorkspaceSwitcher({ label, shortLabel }: WorkspaceSwitcherProps) {
 }
 
 export function AppSidebar() {
+    const pathname = usePathname();
+
     return (
         <Sidebar collapsible="icon" className="border-r border-sidebar-border">
             <SidebarHeader className="gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
@@ -107,18 +112,35 @@ export function AppSidebar() {
                         <SidebarMenu>
                             {primaryItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton
-                                        tooltip={item.title}
-                                        isActive={item.isActive}
-                                        className={sidebarMenuItemClassName}
-                                    >
-                                        <item.icon
-                                            className={
-                                                sidebarActionIconClassName
-                                            }
-                                        />
-                                        <span>{item.title}</span>
-                                    </SidebarMenuButton>
+                                    {item.href ? (
+                                        <SidebarMenuButton
+                                            asChild
+                                            tooltip={item.title}
+                                            isActive={pathname === item.href}
+                                            className={sidebarMenuItemClassName}
+                                        >
+                                            <Link href={item.href}>
+                                                <item.icon
+                                                    className={
+                                                        sidebarActionIconClassName
+                                                    }
+                                                />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    ) : (
+                                        <SidebarMenuButton
+                                            tooltip={item.title}
+                                            className={sidebarMenuItemClassName}
+                                        >
+                                            <item.icon
+                                                className={
+                                                    sidebarActionIconClassName
+                                                }
+                                            />
+                                            <span>{item.title}</span>
+                                        </SidebarMenuButton>
+                                    )}
                                 </SidebarMenuItem>
                             ))}
                         </SidebarMenu>

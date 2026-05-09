@@ -25,6 +25,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
     title: siteConfig.title,
     description: siteConfig.description,
+    icons: {
+        icon: '/img/favicon.webp',
+    },
 };
 
 export default function RootLayout({
