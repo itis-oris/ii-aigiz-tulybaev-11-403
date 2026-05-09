@@ -1,0 +1,21 @@
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { projectOverview } from '@/views/home/model/project-overview';
+import OverviewMembersList from './OverviewMembersList';
+
+const meta = {
+    title: 'Views/Home/OverviewMembersList',
+    component: OverviewMembersList,
+    tags: ['autodocs'],
+    args: {
+        members: projectOverview.members,
+    },
+    parameters: {
+        layout: 'padded',
+    },
+} satisfies Meta<typeof OverviewMembersList>;
+
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};
