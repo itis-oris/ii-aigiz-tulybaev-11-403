@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { EllipsisVertical } from 'lucide-react';
 
-import { cn, projectTabs, type ProjectTab } from '@/shared/lib';
+import {
+    cn,
+    projectTabs,
+    type ProjectSummary,
+    type ProjectTab,
+} from '@/shared/lib';
 import { Avatar, Badge } from '@/shared/ui';
 
 type HeaderProps = React.ComponentProps<'header'>;
@@ -31,8 +36,8 @@ const projectMembers = [
     },
 ];
 
-const boardTabs = ['DIGITAL', 'TRADE', 'OUTDOOR'];
 type HeaderViewProps = HeaderProps & {
+    project: ProjectSummary;
     activeProjectTab?: ProjectTab;
     onProjectTabChange?: (tab: ProjectTab) => void;
 };
@@ -40,12 +45,17 @@ type HeaderViewProps = HeaderProps & {
 const Header = ({
     className,
     children,
+    project,
     activeProjectTab: controlledProjectTab,
     onProjectTabChange,
     ...props
 }: HeaderViewProps) => {
-    const [activeBoard, setActiveBoard] = useState(boardTabs[0]);
+    const [activeBoard, setActiveBoard] = useState(project.boardTabs[0]);
     const [projectTab, setProjectTab] = useState<ProjectTab>('Задачи');
+
+    useEffect(() => {
+        setActiveBoard(project.boardTabs[0]);
+    }, [project]);
 
     const activeProjectTab = controlledProjectTab ?? projectTab;
 
@@ -71,14 +81,14 @@ const Header = ({
                         <Avatar
                             size="md"
                             shape="soft"
-                            className="bg-sidebar-accent text-sidebar-foreground"
+                            className={project.avatarClassName}
                         >
-                            MB
+                            {project.avatar}
                         </Avatar>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <div className="truncate text-base font-semibold leading-none">
-                                    Sprintly
+                                    {project.name}
                                 </div>
                                 <Badge
                                     size="sm"
@@ -89,7 +99,7 @@ const Header = ({
                                 </Badge>
                             </div>
                             <div className="mt-1 truncate text-xs leading-none text-sidebar-foreground/60">
-                                Проект
+                                {project.description}
                             </div>
                         </div>
                     </div>
@@ -108,9 +118,11 @@ const Header = ({
                                 {member.avatar}
                             </Avatar>
                         ))}
-                        <Avatar className="-ml-2 min-w-7 border-2 border-sidebar bg-sidebar-accent px-1.5 text-sidebar-foreground">
-                            +2
-                        </Avatar>
+                        {project.memberCount > 5 ? (
+                            <Avatar className="-ml-2 min-w-7 border-2 border-sidebar bg-sidebar-accent px-1.5 text-sidebar-foreground">
+                                +{project.memberCount - 5}
+                            </Avatar>
+                        ) : null}
                     </div>
                 </div>
 
@@ -134,7 +146,7 @@ const Header = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {boardTabs.map((tab) => (
+                        {project.boardTabs.map((tab) => (
                             <button
                                 key={tab}
                                 type="button"

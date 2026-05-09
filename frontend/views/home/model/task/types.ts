@@ -10,6 +10,7 @@ export type Task = {
     projectId?: string;
     boardId?: string;
     assigneeId?: string;
+    projectSlug?: string;
     project: string;
     dueInDays: number;
     status: string;

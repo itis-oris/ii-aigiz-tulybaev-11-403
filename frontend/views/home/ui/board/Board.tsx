@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Input } from '@/shared/ui/input';
 import {
     Badge,
@@ -11,16 +11,17 @@ import {
     CardTitle,
 } from '@/shared/ui';
 import { useDraggable } from '@dnd-kit/react';
-import { mockDays, type Task } from '@/views/home/model/task';
+import { type DayTasks, type Task } from '@/views/home/model/task';
 import type { Column } from '@/views/home/ui/board/types';
 import { cn } from '@/shared/lib';
 
 interface BoardProps {
+    days: DayTasks[];
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
 }
 
-const Board = ({ setIsOpen, setSelectedTask }: BoardProps) => {
+const Board = ({ days, setIsOpen, setSelectedTask }: BoardProps) => {
     const { ref } = useDraggable({
         id: 'draggable',
     });
@@ -30,16 +31,19 @@ const Board = ({ setIsOpen, setSelectedTask }: BoardProps) => {
         setSelectedTask(task);
     };
 
-    const [column] = useState<Column[]>(() =>
-        mockDays.map((dayTask) => ({
-            day: dayTask.day,
-            date: dayTask.date,
-            columnId: dayTask.columnId,
-            tasks: dayTask.tasks,
-        })),
+    const column = useMemo<Column[]>(
+        () =>
+            days.map((dayTask) => ({
+                day: dayTask.day,
+                date: dayTask.date,
+                columnId: dayTask.columnId,
+                tasks: dayTask.tasks,
+            })),
+        [days],
     );
-    const [tasks] = useState<Task[]>(() =>
-        mockDays.flatMap((dayTask) => dayTask.tasks),
+    const tasks = useMemo<Task[]>(
+        () => days.flatMap((dayTask) => dayTask.tasks),
+        [days],
     );
     const [draggingTaskId] = useState<number | null>(null);
     const [overColumnId] = useState<string | null>(null);

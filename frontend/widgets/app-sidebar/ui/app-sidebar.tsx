@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { organizationProjects, useActiveProject } from '@/shared/lib';
 import { Avatar, Button } from '@/shared/ui';
 import {
     Sidebar,
@@ -33,29 +34,8 @@ import SidebarProfileMenu from './sidebar-profile-menu';
 
 const primaryItems = [
     { title: 'Мои задачи', icon: Target, href: '/my-tasks' },
-    { title: 'Все задачи', icon: LayoutGrid },
+    { title: 'Все задачи', icon: LayoutGrid, href: '/all-tasks' },
     { title: 'Все проекты', icon: FolderOpen },
-];
-
-const projectItems = [
-    {
-        title: 'Develop',
-        avatar: 'DE',
-        avatarClassName: 'bg-amber-100 text-amber-700',
-        isActive: true,
-    },
-    {
-        title: 'Mobile App',
-        avatar: 'MA',
-        avatarClassName: 'bg-sky-100 text-sky-700',
-        isActive: false,
-    },
-    {
-        title: 'Marketing Site',
-        avatar: 'MS',
-        avatarClassName: 'bg-emerald-100 text-emerald-700',
-        isActive: false,
-    },
 ];
 
 const sidebarMenuItemClassName = 'h-10 rounded-xl px-3 text-sm';
@@ -88,6 +68,7 @@ function WorkspaceSwitcher({ label, shortLabel }: WorkspaceSwitcherProps) {
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const { activeProjectId, setActiveProjectId } = useActiveProject();
 
     return (
         <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -165,15 +146,23 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {projectItems.map((project) => (
-                                <SidebarMenuItem key={project.title}>
+                            {organizationProjects.map((project) => (
+                                <SidebarMenuItem key={project.id}>
                                     <SidebarMenuButton
                                         asChild
-                                        tooltip={project.title}
-                                        isActive={project.isActive}
+                                        tooltip={project.name}
+                                        isActive={
+                                            pathname === '/' &&
+                                            activeProjectId === project.id
+                                        }
                                         className={sidebarMenuItemClassName}
                                     >
-                                        <Link href="/">
+                                        <Link
+                                            href="/"
+                                            onClick={() =>
+                                                setActiveProjectId(project.id)
+                                            }
+                                        >
                                             <Avatar
                                                 size="xs"
                                                 shape="square"
@@ -183,7 +172,7 @@ export function AppSidebar() {
                                             >
                                                 {project.avatar}
                                             </Avatar>
-                                            <span>{project.title}</span>
+                                            <span>{project.name}</span>
                                         </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>

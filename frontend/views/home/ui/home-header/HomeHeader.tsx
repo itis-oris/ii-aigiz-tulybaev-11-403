@@ -8,9 +8,20 @@ import {
     Settings2,
 } from 'lucide-react';
 import { Button } from '@/shared/ui';
+import type { ProjectSummary } from '@/shared/lib';
 import { viewModes } from '@/views/home/ui/home-header/view-mode';
 
-const Header = () => {
+type HomeHeaderProps = {
+    projectOptions?: ProjectSummary[];
+    selectedProjectId?: string;
+    onProjectChange?: (projectId: string) => void;
+};
+
+const Header = ({
+    projectOptions = [],
+    selectedProjectId,
+    onProjectChange,
+}: HomeHeaderProps) => {
     const [activeViewMode, setActiveViewMode] =
         useState<(typeof viewModes)[number]>('Неделя');
 
@@ -41,6 +52,25 @@ const Header = () => {
                     <FunnelPlus className="size-4" />
                     Добавить фильтр
                 </button>
+                {projectOptions.length > 0 ? (
+                    <div className="relative">
+                        <select
+                            value={selectedProjectId}
+                            onChange={(event) =>
+                                onProjectChange?.(event.target.value)
+                            }
+                            className="h-8 cursor-pointer appearance-none rounded-lg border border-border bg-card pr-8 pl-3 text-xs font-medium text-foreground outline-none transition-colors hover:border-ring"
+                        >
+                            <option value="all">Все проекты</option>
+                            {projectOptions.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                    {project.name}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronsUpDown className="pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    </div>
+                ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">

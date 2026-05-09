@@ -1,5 +1,5 @@
 import { HomePage } from '@/views/home';
 
 export default function Home() {
-    return <HomePage />;
+    return <HomePage scope="project" />;
 }
