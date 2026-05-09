@@ -35,7 +35,7 @@ import SidebarProfileMenu from './sidebar-profile-menu';
 const primaryItems = [
     { title: 'Мои задачи', icon: Target, href: '/my-tasks' },
     { title: 'Все задачи', icon: LayoutGrid, href: '/all-tasks' },
-    { title: 'Все проекты', icon: FolderOpen },
+    { title: 'Все проекты', icon: FolderOpen, href: '/all-projects' },
 ];
 
 const sidebarMenuItemClassName = 'h-10 rounded-xl px-3 text-sm';
