@@ -1,5 +1,7 @@
 'use client';
 
+import type { ComponentProps } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/ui';
 import {
     AuthCard,
@@ -15,6 +17,7 @@ import {
 } from '@/app/login/_lib/login-form';
 
 export const LoginForm = () => {
+    const router = useRouter();
     const {
         errors,
         handleBlur,
@@ -26,11 +29,19 @@ export const LoginForm = () => {
         values,
     } = useValidatedForm(initialLoginValues, validateLoginForm);
 
+    const handleLoginSubmit: ComponentProps<'form'>['onSubmit'] = (event) => {
+        handleSubmit(event);
+
+        if (isValid) {
+            router.push('/');
+        }
+    };
+
     return (
         <AuthCard title="Вход" description="Авторизация в рабочем пространстве">
             <form
                 className="space-y-5 px-5 py-5 sm:px-6 sm:py-6"
-                onSubmit={handleSubmit}
+                onSubmit={handleLoginSubmit}
                 noValidate
             >
                 {loginFields.map((field: (typeof loginFields)[number]) => {

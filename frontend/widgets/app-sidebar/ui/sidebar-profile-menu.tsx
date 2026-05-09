@@ -88,9 +88,17 @@ function SidebarProfileMenuContent({
                         </SidebarMenuItem>
                     ))}
                     <SidebarMenuItem>
-                        <SidebarMenuButton className="h-10 rounded-xl px-3 text-sm text-destructive hover:text-destructive">
-                            <LogOut className="size-4" />
-                            <span>Выход</span>
+                        <SidebarMenuButton
+                            asChild
+                            className="h-10 rounded-xl px-3 text-sm text-destructive hover:text-destructive"
+                        >
+                            <Link
+                                href="/landing"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <LogOut className="size-4" />
+                                <span>Выход</span>
+                            </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
