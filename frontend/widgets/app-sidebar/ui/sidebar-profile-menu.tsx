@@ -109,11 +109,19 @@ function SidebarProfileMenuContent({
                 onClick={() => setIsOpen((open) => !open)}
                 aria-expanded={isOpen}
                 aria-label="Открыть меню профиля"
-                className="flex size-10 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-sidebar-accent"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
             >
                 <Avatar size="md" className="bg-black text-white">
                     {initials}
                 </Avatar>
+                <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                    <div className="truncate text-sm font-medium text-sidebar-foreground">
+                        {label}
+                    </div>
+                    <div className="truncate text-xs text-sidebar-foreground/55">
+                        Супер-админ
+                    </div>
+                </div>
                 <span className="sr-only">
                     {isOpen ? 'Закрыть меню профиля' : 'Открыть меню профиля'}
                 </span>
