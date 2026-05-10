@@ -17,6 +17,19 @@ export type ProjectSummary = {
     description: string;
     boardTabs: string[];
     memberCount: number;
+    folderId?: string;
+};
+
+export type ProjectFolder = {
+    id: string;
+    name: string;
+    shortLabel: string;
+    avatarClassName: string;
+    description: string;
+    ownerName: string;
+    ownerInitials: string;
+    ownerClassName: string;
+    dateLabel: string;
 };
 
 export const organizationProjects: ProjectSummary[] = [
@@ -63,6 +76,12 @@ export const organizationProjects: ProjectSummary[] = [
 ];
 
 type ActiveProjectContextValue = {
+    projects: ProjectSummary[];
+    setProjects: Dispatch<SetStateAction<ProjectSummary[]>>;
+    folders: ProjectFolder[];
+    setFolders: Dispatch<SetStateAction<ProjectFolder[]>>;
+    collapsedFolderIds: string[];
+    setCollapsedFolderIds: Dispatch<SetStateAction<string[]>>;
     activeProjectId: string;
     setActiveProjectId: Dispatch<SetStateAction<string>>;
 };
