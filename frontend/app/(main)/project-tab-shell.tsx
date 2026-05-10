@@ -8,6 +8,7 @@ import {
     ActiveProjectProvider,
     ProjectTabProvider,
     organizationProjects,
+    type ProjectFolder,
     type ProjectTab,
 } from '@/shared/lib';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/sidebar';
@@ -18,20 +19,31 @@ type ProjectTabShellProps = {
 };
 
 const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
+    const [projects, setProjects] = useState(organizationProjects);
+    const [folders, setFolders] = useState<ProjectFolder[]>([]);
+    const [collapsedFolderIds, setCollapsedFolderIds] = useState<string[]>([]);
     const [activeProjectTab, setActiveProjectTab] =
         useState<ProjectTab>('Задачи');
-    const [activeProjectId, setActiveProjectId] = useState(
-        organizationProjects[0].id,
-    );
+    const [activeProjectId, setActiveProjectId] = useState(projects[0].id);
     const pathname = usePathname();
     const showHeader = pathname === '/';
     const activeProject =
-        organizationProjects.find(
-            (project) => project.id === activeProjectId,
-        ) ?? organizationProjects[0];
+        projects.find((project) => project.id === activeProjectId) ??
+        projects[0];
 
     return (
-        <ActiveProjectProvider value={{ activeProjectId, setActiveProjectId }}>
+        <ActiveProjectProvider
+            value={{
+                projects,
+                setProjects,
+                folders,
+                setFolders,
+                collapsedFolderIds,
+                setCollapsedFolderIds,
+                activeProjectId,
+                setActiveProjectId,
+            }}
+        >
             <ProjectTabProvider
                 value={{ activeProjectTab, setActiveProjectTab }}
             >

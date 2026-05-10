@@ -6,6 +6,10 @@ export type ProjectParticipant = {
     accentClassName: string;
 };
 
+export type WorkspaceMember = ProjectParticipant & {
+    email: string;
+};
+
 export type ProjectOverview = {
     name: string;
     status: string;
@@ -66,3 +70,36 @@ export const projectOverview: ProjectOverview = {
         },
     ],
 };
+
+export const workspaceMembers: WorkspaceMember[] = [
+    ...projectOverview.members.map((member) => ({
+        ...member,
+        email: `${member.name.toLowerCase().replace(/\s+/g, '.')}@sprintly.app`,
+    })),
+    {
+        id: 'member-6',
+        name: 'Nora Six',
+        role: 'Product Designer',
+        initials: 'NS',
+        email: 'nora.six@sprintly.app',
+        accentClassName: 'bg-cyan-500/12 text-cyan-700 ring-1 ring-cyan-500/20',
+    },
+    {
+        id: 'member-7',
+        name: 'Ethan Seven',
+        role: 'Frontend Developer',
+        initials: 'ES',
+        email: 'ethan.seven@sprintly.app',
+        accentClassName:
+            'bg-indigo-500/12 text-indigo-700 ring-1 ring-indigo-500/20',
+    },
+    {
+        id: 'member-8',
+        name: 'Mia Eight',
+        role: 'QA Engineer',
+        initials: 'ME',
+        email: 'mia.eight@sprintly.app',
+        accentClassName:
+            'bg-fuchsia-500/12 text-fuchsia-700 ring-1 ring-fuchsia-500/20',
+    },
+];

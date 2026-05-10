@@ -5,8 +5,11 @@ import {
 } from './active-project';
 import { cn } from './utils';
 import { projectTabs, ProjectTabProvider, useProjectTab } from './project-tab';
+import { useProjectFolderTree } from './use-project-folder-tree';
+import { useProjectFolderDndController } from './use-project-folder-dnd-controller';
 import { useValidatedForm } from './use-validated-form';
 import { useIsMobile } from './use-mobile';
+import { useWorkspaceProjectsController } from './use-workspace-projects-controller';
 
 export {
     ActiveProjectProvider,
@@ -17,7 +20,11 @@ export {
     useActiveProject,
     useIsMobile,
     useProjectTab,
+    useProjectFolderTree,
+    useProjectFolderDndController,
     useValidatedForm,
+    useWorkspaceProjectsController,
 };
 export type { ProjectTab } from './project-tab';
-export type { ProjectSummary } from './active-project';
+export type { ProjectFolder, ProjectSummary } from './active-project';
+export type { GroupedFolderProjects } from './use-project-folder-tree';

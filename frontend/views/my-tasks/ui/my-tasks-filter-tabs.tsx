@@ -22,7 +22,7 @@ const MyTasksFilterTabs = ({
                     type="button"
                     onClick={() => onFilterChange?.(filter)}
                     className={cn(
-                        'rounded-lg px-4 py-2 text-sm transition-colors',
+                        'cursor-pointer rounded-lg px-4 py-2 text-sm transition-colors',
                         activeFilter === filter
                             ? 'bg-background text-primary shadow-sm'
                             : 'text-foreground/80 hover:text-foreground',

@@ -1,11 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import {
-    organizationProjects,
-    useActiveProject,
-    useProjectTab,
-} from '@/shared/lib';
+import { useActiveProject, useProjectTab } from '@/shared/lib';
 import {
     organizationTaskDays,
     type DayTasks,
@@ -22,7 +18,7 @@ type HomePageProps = {
 
 const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const { activeProjectTab } = useProjectTab();
-    const { activeProjectId } = useActiveProject();
+    const { activeProjectId, projects } = useActiveProject();
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const isOrganizationScope = scope === 'organization';
@@ -79,9 +75,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                         ) : null}
                         <Header
                             projectOptions={
-                                isOrganizationScope
-                                    ? organizationProjects
-                                    : undefined
+                                isOrganizationScope ? projects : undefined
                             }
                             selectedProjectId={
                                 isOrganizationScope
