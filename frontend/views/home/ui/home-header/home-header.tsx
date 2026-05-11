@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { Settings2 } from 'lucide-react';
-import { Button } from '@/shared/ui';
 import {
     viewModes,
     type ViewMode,
@@ -11,6 +9,7 @@ import {
 } from '@/views/home/ui/home-header/sort-mode';
 import HomeHeaderFilters from './home-header-filters';
 import HomeHeaderPeriodControl from './home-header-period-control';
+import HomeHeaderSettings from './home-header-settings';
 import HomeHeaderSelect from './home-header-select';
 import type { HomeHeaderProps } from './home-header.types';
 
@@ -40,6 +39,8 @@ const Header = ({
     onPreviousPeriod,
     onNextPeriod,
     onResetPeriod,
+    settings,
+    onSettingsChange,
 }: HomeHeaderProps) => {
     const [viewMode, setViewMode] = useState<ViewMode>('Неделя');
     const activeViewMode = controlledViewMode ?? viewMode;
@@ -112,15 +113,12 @@ const Header = ({
                     onNextPeriod={onNextPeriod}
                     onResetPeriod={onResetPeriod}
                 />
-
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8 rounded-lg text-muted-foreground"
-                    aria-label="Настройки"
-                >
-                    <Settings2 className="size-4" />
-                </Button>
+                {settings ? (
+                    <HomeHeaderSettings
+                        settings={settings}
+                        onChange={onSettingsChange}
+                    />
+                ) : null}
             </div>
         </div>
     );

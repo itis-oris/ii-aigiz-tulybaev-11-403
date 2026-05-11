@@ -13,6 +13,7 @@ import { Header } from '@/views/home/ui/home-header';
 import { Board, MonthBoard, TasksBoard } from '@/views/home/ui/board';
 import type { ViewMode } from '@/views/home/ui/home-header/view-mode';
 import type { SortMode } from '@/views/home/ui/home-header/sort-mode';
+import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-header.types';
 import { Overview } from '@/views/home/ui/overview';
 
 type HomePageProps = {
@@ -161,6 +162,12 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('all');
     const [selectedTag, setSelectedTag] = useState('all');
+    const [headerSettings, setHeaderSettings] =
+        useState<HomeHeaderSettingsValue>({
+            density: 'standard',
+            showProjectName: true,
+            showTaskCounters: true,
+        });
     const isOrganizationScope = scope === 'organization';
     const [organizationProjectFilter, setOrganizationProjectFilter] =
         useState<string>('all');
@@ -615,6 +622,8 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             onPreviousPeriod={handlePreviousPeriod}
                             onNextPeriod={handleNextPeriod}
                             onResetPeriod={handleResetPeriod}
+                            settings={headerSettings}
+                            onSettingsChange={setHeaderSettings}
                         />
                     </div>
                     {activeViewMode === 'Доски' ? (
@@ -623,6 +632,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             setIsOpen={setIsOpen}
                             setSelectedTask={setSelectedTask}
                             onCreateTask={handleCreateBoardTask}
+                            settings={headerSettings}
                         />
                     ) : activeViewMode === 'Месяц' ? (
                         <MonthBoard
@@ -630,6 +640,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             anchorDate={anchorDate}
                             setIsOpen={setIsOpen}
                             setSelectedTask={setSelectedTask}
+                            settings={headerSettings}
                         />
                     ) : (
                         <Board
@@ -637,6 +648,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             setIsOpen={setIsOpen}
                             setSelectedTask={setSelectedTask}
                             onCreateTask={handleCreateWeeklyTask}
+                            settings={headerSettings}
                         />
                     )}
                     <TaskSheet

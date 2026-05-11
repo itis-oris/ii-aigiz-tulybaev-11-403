@@ -21,6 +21,7 @@ import {
 } from '@/views/home/model/use-board-dnd';
 import type { Column } from '@/views/home/ui/board/types';
 import { cn } from '@/shared/lib';
+import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-header.types';
 
 interface BoardProps {
     days: DayTasks[];
@@ -28,6 +29,7 @@ interface BoardProps {
     setSelectedTask: (task: Task | null) => void;
     extraColumn?: React.ReactNode;
     onCreateTask?: (columnId: string, title: string) => void;
+    settings?: HomeHeaderSettingsValue;
 }
 
 type BoardColumnProps = {
@@ -38,6 +40,7 @@ type BoardColumnProps = {
     onOpen: (task: Task) => void;
     overColumnId: string | null;
     overTaskId: number | null;
+    settings?: HomeHeaderSettingsValue;
 };
 
 const BoardColumn = ({
@@ -48,6 +51,7 @@ const BoardColumn = ({
     onOpen,
     overColumnId,
     overTaskId,
+    settings,
 }: BoardColumnProps) => {
     const { ref, isDropTarget } = useDroppable({
         id: getBoardColumnDropId(column.columnId),
@@ -69,7 +73,8 @@ const BoardColumn = ({
         <div
             ref={ref}
             className={cn(
-                'flex h-full min-h-0 min-w-72 flex-col rounded-xl p-2 transition-colors',
+                'flex h-full min-h-0 min-w-72 flex-col rounded-xl transition-colors',
+                settings?.density === 'compact' ? 'p-1.5' : 'p-2',
                 (isDropTarget || overColumnId === column.columnId) &&
                     'bg-accent/5',
             )}
@@ -93,7 +98,10 @@ const BoardColumn = ({
                     }}
                     placeholder="Добавить задачу"
                     uiSize="md"
-                    className="border-border bg-background text-foreground placeholder:text-muted-foreground"
+                    className={cn(
+                        'border-border bg-background text-foreground placeholder:text-muted-foreground',
+                        settings?.density === 'compact' && 'h-8 text-xs',
+                    )}
                 />
             </div>
             <div className="scrollbar-hover-overlay min-h-0 flex-1 pt-1">
@@ -105,6 +113,7 @@ const BoardColumn = ({
                         dropPosition={dropPosition}
                         isOver={overTaskId === task.id}
                         onOpen={onOpen}
+                        settings={settings}
                     />
                 ))}
             </div>
@@ -118,6 +127,7 @@ type BoardTaskCardProps = {
     dropPosition: DropPosition;
     isOver: boolean;
     onOpen: (task: Task) => void;
+    settings?: HomeHeaderSettingsValue;
 };
 
 const BoardTaskCard = ({
@@ -126,6 +136,7 @@ const BoardTaskCard = ({
     dropPosition,
     isOver,
     onOpen,
+    settings,
 }: BoardTaskCardProps) => {
     const { ref: dropRef } = useDroppable({
         id: getBoardTaskDropId(task.id),
@@ -150,7 +161,8 @@ const BoardTaskCard = ({
                 onOpen(task);
             }}
             className={cn(
-                'relative mb-3 cursor-grab border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md',
+                'relative cursor-grab border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md',
+                settings?.density === 'compact' ? 'mb-2' : 'mb-3',
                 (isDragging || draggingTaskId === task.id) && 'opacity-50',
                 isOver && 'border-accent/70 bg-accent/5',
                 isOver &&
@@ -163,7 +175,9 @@ const BoardTaskCard = ({
         >
             <CardHeader>
                 <CardTitle>{task.title}</CardTitle>
-                <CardDescription>{task.project}</CardDescription>
+                {settings?.showProjectName !== false ? (
+                    <CardDescription>{task.project}</CardDescription>
+                ) : null}
                 <CardAction>
                     <Badge variant="accent" size="sm">
                         {task.dueInDays} дн.
@@ -195,6 +209,7 @@ const Board = ({
     setSelectedTask,
     extraColumn,
     onCreateTask,
+    settings,
 }: BoardProps) => {
     const {
         columns,
@@ -231,6 +246,7 @@ const Board = ({
                         onOpen={handleOpen}
                         overColumnId={overColumnId}
                         overTaskId={overTaskId}
+                        settings={settings}
                     />
                 ))}
                 {extraColumn}

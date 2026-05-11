@@ -16,6 +16,7 @@ const MonthBoard = ({
     anchorDate,
     setIsOpen,
     setSelectedTask,
+    settings,
 }: MonthBoardProps) => {
     const monthStart = useMemo(
         () =>
@@ -59,6 +60,7 @@ const MonthBoard = ({
             onDragMove={handleDragMove}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            settings={settings}
         />
     );
 };

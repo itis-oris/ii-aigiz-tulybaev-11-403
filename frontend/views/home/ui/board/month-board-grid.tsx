@@ -12,6 +12,7 @@ import {
 } from '@/views/home/model/use-month-board-dnd';
 import { dayFormatter, monthFormatter, weekDayLabels } from './month-board.lib';
 import type { CalendarCell } from './month-board.types';
+import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-header.types';
 
 type MonthBoardGridProps = {
     monthStart: Date;
@@ -25,6 +26,7 @@ type MonthBoardGridProps = {
     onDragMove: React.ComponentProps<typeof DragDropProvider>['onDragMove'];
     onDragOver: React.ComponentProps<typeof DragDropProvider>['onDragOver'];
     onDragEnd: React.ComponentProps<typeof DragDropProvider>['onDragEnd'];
+    settings?: HomeHeaderSettingsValue;
 };
 
 type MonthTaskCardProps = {
@@ -33,6 +35,7 @@ type MonthTaskCardProps = {
     dropPosition: DropPosition;
     isOver: boolean;
     onOpen: (task: Task) => void;
+    settings?: HomeHeaderSettingsValue;
 };
 
 const MonthTaskCard = ({
@@ -41,6 +44,7 @@ const MonthTaskCard = ({
     dropPosition,
     isOver,
     onOpen,
+    settings,
 }: MonthTaskCardProps) => {
     const { ref: dropRef } = useDroppable({
         id: getMonthTaskDropId(task.id),
@@ -66,7 +70,8 @@ const MonthTaskCard = ({
                 onOpen(task);
             }}
             className={cn(
-                'relative w-full cursor-grab touch-none select-none rounded-md border border-border bg-card px-2 py-1 text-left transition-colors hover:border-ring hover:bg-accent/5',
+                'relative w-full cursor-grab touch-none select-none rounded-md border border-border bg-card text-left transition-colors hover:border-ring hover:bg-accent/5',
+                settings?.density === 'compact' ? 'px-1.5 py-1' : 'px-2 py-1',
                 (isDragging || draggingTaskId === task.id) && 'opacity-50',
                 isOver && 'border-accent/70 bg-accent/5',
                 isOver &&
@@ -81,8 +86,12 @@ const MonthTaskCard = ({
                 {task.title}
             </div>
             <div className="pointer-events-none mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                <span className="truncate">{task.project}</span>
-                <span>·</span>
+                {settings?.showProjectName !== false ? (
+                    <>
+                        <span className="truncate">{task.project}</span>
+                        <span>·</span>
+                    </>
+                ) : null}
                 <span>
                     {task.dueDate
                         ? dayFormatter.format(new Date(task.dueDate))
@@ -100,6 +109,7 @@ type MonthDayCellProps = {
     overDateKey: string | null;
     overTaskId: number | null;
     onOpen: (task: Task) => void;
+    settings?: HomeHeaderSettingsValue;
 };
 
 const MonthDayCell = ({
@@ -109,6 +119,7 @@ const MonthDayCell = ({
     overDateKey,
     overTaskId,
     onOpen,
+    settings,
 }: MonthDayCellProps) => {
     const { ref, isDropTarget } = useDroppable({
         id: getMonthDayDropId(cell.dateKey),
@@ -118,7 +129,8 @@ const MonthDayCell = ({
         <div
             ref={ref}
             className={cn(
-                'flex min-h-32 flex-col bg-background p-2 align-top transition-colors',
+                'flex min-h-32 flex-col bg-background align-top transition-colors',
+                settings?.density === 'compact' ? 'p-1.5' : 'p-2',
                 !cell.isCurrentMonth && 'bg-muted/35',
                 (isDropTarget || overDateKey === cell.dateKey) && 'bg-accent/5',
             )}
@@ -132,7 +144,8 @@ const MonthDayCell = ({
                 >
                     {cell.date.getDate()}
                 </span>
-                {cell.tasks.length > 0 ? (
+                {settings?.showTaskCounters !== false &&
+                cell.tasks.length > 0 ? (
                     <Badge variant="sidebar" size="sm">
                         {cell.tasks.length}
                     </Badge>
@@ -147,6 +160,7 @@ const MonthDayCell = ({
                         dropPosition={dropPosition}
                         isOver={overTaskId === task.id}
                         onOpen={onOpen}
+                        settings={settings}
                     />
                 ))}
             </div>
@@ -166,6 +180,7 @@ const MonthBoardGrid = ({
     onDragMove,
     onDragOver,
     onDragEnd,
+    settings,
 }: MonthBoardGridProps) => (
     <DragDropProvider
         onDragStart={onDragStart}
@@ -208,6 +223,7 @@ const MonthBoardGrid = ({
                                     overDateKey={overDateKey}
                                     overTaskId={overTaskId}
                                     onOpen={onOpen}
+                                    settings={settings}
                                 />
                             ))}
                         </div>

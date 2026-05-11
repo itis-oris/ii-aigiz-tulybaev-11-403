@@ -8,6 +8,12 @@ export type HomeHeaderSelectOption<T extends string = string> = {
     value: T;
 };
 
+export type HomeHeaderSettingsValue = {
+    density: 'standard' | 'compact';
+    showProjectName: boolean;
+    showTaskCounters: boolean;
+};
+
 export type HomeHeaderProps = {
     activeViewMode?: ViewMode;
     onViewModeChange?: (mode: ViewMode) => void;
@@ -34,6 +40,8 @@ export type HomeHeaderProps = {
     onPreviousPeriod?: () => void;
     onNextPeriod?: () => void;
     onResetPeriod?: () => void;
+    settings?: HomeHeaderSettingsValue;
+    onSettingsChange?: (settings: HomeHeaderSettingsValue) => void;
 };
 
 export type HomeHeaderFiltersProps = {
@@ -59,4 +67,9 @@ export type HomeHeaderPeriodControlProps = {
     onPreviousPeriod?: () => void;
     onNextPeriod?: () => void;
     onResetPeriod?: () => void;
+};
+
+export type HomeHeaderSettingsProps = {
+    settings: HomeHeaderSettingsValue;
+    onChange?: (settings: HomeHeaderSettingsValue) => void;
 };

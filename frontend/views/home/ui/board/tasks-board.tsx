@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import { type DayTasks, type Task } from '@/views/home/model/task';
 import { Button, Input } from '@/shared/ui';
+import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-header.types';
 import Board from './Board';
 
 type TasksBoardProps = {
@@ -9,6 +10,7 @@ type TasksBoardProps = {
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
     onCreateTask?: (columnId: string, title: string) => void;
+    settings?: HomeHeaderSettingsValue;
 };
 
 const boardModeColumns = [
@@ -44,6 +46,7 @@ const TasksBoard = ({
     setIsOpen,
     setSelectedTask,
     onCreateTask,
+    settings,
 }: TasksBoardProps) => {
     const [customColumns, setCustomColumns] = useState<
         Array<{ day: string; date: string; columnId: string }>
@@ -70,13 +73,19 @@ const TasksBoard = ({
                     day: column.day,
                     date:
                         column.date in statusLabels
-                            ? `${getTaskCountLabel(columnTasks.length)} · ${statusLabels[column.date as keyof typeof statusLabels]}`
-                            : `${getTaskCountLabel(columnTasks.length)} · Пользовательская колонка`,
+                            ? settings?.showTaskCounters === false
+                                ? statusLabels[
+                                      column.date as keyof typeof statusLabels
+                                  ]
+                                : `${getTaskCountLabel(columnTasks.length)} · ${statusLabels[column.date as keyof typeof statusLabels]}`
+                            : settings?.showTaskCounters === false
+                              ? 'Пользовательская колонка'
+                              : `${getTaskCountLabel(columnTasks.length)} · Пользовательская колонка`,
                     columnId: column.columnId,
                     tasks: columnTasks,
                 };
             }),
-        [customColumns, tasks],
+        [customColumns, settings?.showTaskCounters, tasks],
     );
 
     const handleCreateColumn = () => {
@@ -177,6 +186,7 @@ const TasksBoard = ({
             setSelectedTask={setSelectedTask}
             extraColumn={extraColumn}
             onCreateTask={onCreateTask}
+            settings={settings}
         />
     );
 };
