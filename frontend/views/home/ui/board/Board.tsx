@@ -27,12 +27,14 @@ interface BoardProps {
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
     extraColumn?: React.ReactNode;
+    onCreateTask?: (columnId: string, title: string) => void;
 }
 
 type BoardColumnProps = {
     column: Column;
     draggingTaskId: number | null;
     dropPosition: DropPosition;
+    onCreateTask?: (columnId: string, title: string) => void;
     onOpen: (task: Task) => void;
     overColumnId: string | null;
     overTaskId: number | null;
@@ -42,6 +44,7 @@ const BoardColumn = ({
     column,
     draggingTaskId,
     dropPosition,
+    onCreateTask,
     onOpen,
     overColumnId,
     overTaskId,
@@ -49,6 +52,18 @@ const BoardColumn = ({
     const { ref, isDropTarget } = useDroppable({
         id: getBoardColumnDropId(column.columnId),
     });
+    const [newTaskTitle, setNewTaskTitle] = React.useState('');
+
+    const handleCreateTask = () => {
+        const trimmedTitle = newTaskTitle.trim();
+
+        if (!trimmedTitle) {
+            return;
+        }
+
+        onCreateTask?.(column.columnId, trimmedTitle);
+        setNewTaskTitle('');
+    };
 
     return (
         <div
@@ -69,6 +84,13 @@ const BoardColumn = ({
                     </span>
                 </div>
                 <Input
+                    value={newTaskTitle}
+                    onChange={(event) => setNewTaskTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            handleCreateTask();
+                        }
+                    }}
                     placeholder="Добавить задачу"
                     uiSize="md"
                     className="border-border bg-background text-foreground placeholder:text-muted-foreground"
@@ -172,6 +194,7 @@ const Board = ({
     setIsOpen,
     setSelectedTask,
     extraColumn,
+    onCreateTask,
 }: BoardProps) => {
     const {
         columns,
@@ -204,6 +227,7 @@ const Board = ({
                         column={column}
                         draggingTaskId={draggingTaskId}
                         dropPosition={dropPosition}
+                        onCreateTask={onCreateTask}
                         onOpen={handleOpen}
                         overColumnId={overColumnId}
                         overTaskId={overTaskId}

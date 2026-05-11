@@ -246,6 +246,7 @@ const CreateProjectDialog = ({
                                     description.trim() ||
                                     'Новый проект в рабочем пространстве.',
                                 boardTabs: normalizeBoardTabs(trimmedName),
+                                lifecycleStatus: 'active',
                                 memberCount: 1,
                                 folderId:
                                     folderId === 'none' ? undefined : folderId,

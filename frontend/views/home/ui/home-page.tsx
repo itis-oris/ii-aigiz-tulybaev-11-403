@@ -151,9 +151,10 @@ const sortTasks = (tasks: Task[], sortMode: SortMode) => {
 
 const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const { activeProjectTab } = useProjectTab();
-    const { activeProjectId, projects } = useActiveProject();
+    const { activeBoardId, activeProjectId, projects } = useActiveProject();
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [customTasks, setCustomTasks] = useState<Task[]>([]);
     const [activeViewMode, setActiveViewMode] = useState<ViewMode>('Неделя');
     const [activeSortMode, setActiveSortMode] =
         useState<SortMode>('По умолчанию');
@@ -182,8 +183,14 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         }));
     }, [activeProjectId, isOrganizationScope, organizationProjectFilter]);
     const allTasks = useMemo(
-        () => filteredDays.flatMap((day) => day.tasks),
-        [filteredDays],
+        () =>
+            [
+                ...filteredDays.flatMap((day) => day.tasks),
+                ...customTasks,
+            ].filter((task) =>
+                isOrganizationScope ? true : task.boardId === activeBoardId,
+            ),
+        [activeBoardId, customTasks, filteredDays, isOrganizationScope],
     );
     const [anchorDate, setAnchorDate] = useState<Date>(() =>
         getInitialAnchorDate(allTasks),
@@ -244,7 +251,13 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                 isSameOrBefore(dueDate, monthEnd)
             );
         });
-    }, [activeViewMode, anchorDate, sortedTasks]);
+    }, [
+        activeViewMode,
+        anchorDate,
+        selectedRange.from,
+        selectedRange.to,
+        sortedTasks,
+    ]);
     const days = useMemo<DayTasks[]>(() => {
         const weekStart = startOfWeek(anchorDate);
 
@@ -324,6 +337,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         setSelectedRange(getInitialRange(allTasks));
     }, [
         activeProjectId,
+        allTasks,
         allTasks.length,
         isOrganizationScope,
         organizationProjectFilter,
@@ -396,6 +410,94 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         }
 
         setAnchorDate(getInitialAnchorDate(allTasks));
+    };
+
+    const createTask = (
+        title: string,
+        overrides: Partial<Task> &
+            Pick<Task, 'columnId' | 'project' | 'projectSlug'>,
+    ) => {
+        const dueDate =
+            overrides.dueDate ?? `${overrides.columnId}T09:00:00.000Z`;
+        const dueDateValue = normalizeDate(dueDate);
+        const nextId =
+            Math.max(
+                0,
+                ...organizationTaskDays.flatMap((day) =>
+                    day.tasks.map((task) => task.id),
+                ),
+                ...customTasks.map((task) => task.id),
+            ) + 1;
+
+        setCustomTasks((currentTasks) => [
+            ...currentTasks,
+            {
+                id: nextId,
+                title,
+                columnId: overrides.columnId,
+                position: overrides.position ?? '1000',
+                project: overrides.project,
+                projectSlug: overrides.projectSlug,
+                boardId: overrides.boardId ?? activeBoardId,
+                dueDate,
+                dueInDays:
+                    dueDateValue === null
+                        ? 0
+                        : Math.max(
+                              0,
+                              Math.ceil(
+                                  (dueDateValue.getTime() - Date.now()) /
+                                      (24 * 60 * 60 * 1000),
+                              ),
+                          ),
+                status: overrides.status ?? 'todo',
+                tags: overrides.tags ?? ['new'],
+                priority: overrides.priority ?? 3,
+                description: overrides.description,
+                projectId: overrides.projectId,
+                assigneeId: overrides.assigneeId,
+                storyPoints: overrides.storyPoints,
+            },
+        ]);
+    };
+
+    const handleCreateWeeklyTask = (columnId: string, title: string) => {
+        const visibleProject = projects.find(
+            (project) => project.id === activeProjectId,
+        );
+
+        createTask(title, {
+            columnId,
+            dueDate: `${columnId}T09:00:00.000Z`,
+            boardId: activeBoardId,
+            project: visibleProject?.name ?? 'Project',
+            projectSlug: activeProjectId,
+            status: 'todo',
+            tags: ['new'],
+        });
+    };
+
+    const handleCreateBoardTask = (columnId: string, title: string) => {
+        const visibleProject = projects.find(
+            (project) => project.id === activeProjectId,
+        );
+        const monthAnchor = startOfMonth(anchorDate);
+        const dueDate = `${monthAnchor.toISOString().slice(0, 10)}T09:00:00.000Z`;
+
+        createTask(title, {
+            columnId,
+            dueDate,
+            boardId: activeBoardId,
+            project: visibleProject?.name ?? 'Project',
+            projectSlug: activeProjectId,
+            status:
+                columnId === 'todo' ||
+                columnId === 'in progress' ||
+                columnId === 'review'
+                    ? columnId
+                    : 'todo',
+            tags: ['new'],
+        });
     };
 
     return (
@@ -473,6 +575,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             tasks={boardTasks}
                             setIsOpen={setIsOpen}
                             setSelectedTask={setSelectedTask}
+                            onCreateTask={handleCreateBoardTask}
                         />
                     ) : activeViewMode === 'Месяц' ? (
                         <MonthBoard
@@ -486,6 +589,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             days={days}
                             setIsOpen={setIsOpen}
                             setSelectedTask={setSelectedTask}
+                            onCreateTask={handleCreateWeeklyTask}
                         />
                     )}
                     <TaskSheet

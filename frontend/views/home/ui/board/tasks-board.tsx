@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import { type DayTasks, type Task } from '@/views/home/model/task';
 import { Button, Input } from '@/shared/ui';
-import Board from './board';
+import Board from './Board';
 
 type TasksBoardProps = {
     tasks: Task[];
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
+    onCreateTask?: (columnId: string, title: string) => void;
 };
 
 const boardModeColumns = [
@@ -38,7 +39,12 @@ const getTaskCountLabel = (count: number) => {
     return `${count} задач`;
 };
 
-const TasksBoard = ({ tasks, setIsOpen, setSelectedTask }: TasksBoardProps) => {
+const TasksBoard = ({
+    tasks,
+    setIsOpen,
+    setSelectedTask,
+    onCreateTask,
+}: TasksBoardProps) => {
     const [customColumns, setCustomColumns] = useState<
         Array<{ day: string; date: string; columnId: string }>
     >([]);
@@ -170,6 +176,7 @@ const TasksBoard = ({ tasks, setIsOpen, setSelectedTask }: TasksBoardProps) => {
             setIsOpen={setIsOpen}
             setSelectedTask={setSelectedTask}
             extraColumn={extraColumn}
+            onCreateTask={onCreateTask}
         />
     );
 };

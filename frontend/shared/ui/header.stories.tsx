@@ -27,6 +27,9 @@ const HeaderWithProvider = (args: React.ComponentProps<typeof Header>) => {
     const [activeProjectId, setActiveProjectId] = useState(
         organizationProjects[0].id,
     );
+    const [activeBoardId, setActiveBoardId] = useState(
+        organizationProjects[0].boardTabs[0],
+    );
 
     return (
         <ActiveProjectProvider
@@ -39,6 +42,8 @@ const HeaderWithProvider = (args: React.ComponentProps<typeof Header>) => {
                 setCollapsedFolderIds,
                 activeProjectId,
                 setActiveProjectId,
+                activeBoardId,
+                setActiveBoardId,
             }}
         >
             <Header {...args} />

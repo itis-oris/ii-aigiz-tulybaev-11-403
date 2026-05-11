@@ -25,11 +25,19 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
     const [activeProjectTab, setActiveProjectTab] =
         useState<ProjectTab>('Задачи');
     const [activeProjectId, setActiveProjectId] = useState(projects[0].id);
+    const [activeBoardId, setActiveBoardId] = useState(
+        projects[0].boardTabs[0],
+    );
     const pathname = usePathname();
     const showHeader = pathname === '/';
     const activeProject =
         projects.find((project) => project.id === activeProjectId) ??
         projects[0];
+    const effectiveActiveBoardId = activeProject.boardTabs.includes(
+        activeBoardId,
+    )
+        ? activeBoardId
+        : activeProject.boardTabs[0];
 
     return (
         <ActiveProjectProvider
@@ -42,6 +50,8 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
                 setCollapsedFolderIds,
                 activeProjectId,
                 setActiveProjectId,
+                activeBoardId: effectiveActiveBoardId,
+                setActiveBoardId,
             }}
         >
             <ProjectTabProvider

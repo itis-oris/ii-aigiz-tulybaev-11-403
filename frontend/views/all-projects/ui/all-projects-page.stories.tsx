@@ -30,6 +30,9 @@ export const Default: Story = {
         const [activeProjectId, setActiveProjectId] = useState(
             organizationProjects[0].id,
         );
+        const [activeBoardId, setActiveBoardId] = useState(
+            organizationProjects[0].boardTabs[0],
+        );
 
         return (
             <ActiveProjectProvider
@@ -42,6 +45,8 @@ export const Default: Story = {
                     setCollapsedFolderIds,
                     activeProjectId,
                     setActiveProjectId,
+                    activeBoardId,
+                    setActiveBoardId,
                 }}
             >
                 <AllProjectsPage />
