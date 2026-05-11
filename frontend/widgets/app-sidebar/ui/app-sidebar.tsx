@@ -306,6 +306,21 @@ export function AppSidebar() {
                                                 </SidebarMenuItem>
                                             ))}
                                         </SidebarRootDropZone>
+                                    ) : folders.length && draggedProjectId ? (
+                                        <SidebarRootDropZone>
+                                            <div className="px-2 pt-1 pb-2 group-data-[collapsible=icon]:hidden">
+                                                <div className="rounded-xl border border-dashed border-sidebar-border/80 bg-sidebar-accent/30 px-3 py-3 text-xs text-sidebar-foreground/60 transition-colors">
+                                                    <div className="font-medium text-sidebar-foreground/72">
+                                                        Вне папок
+                                                    </div>
+                                                    <div className="mt-1 leading-relaxed">
+                                                        Перетащите сюда проект,
+                                                        чтобы вынести его из
+                                                        папки в общий список.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </SidebarRootDropZone>
                                     ) : null}
                                 </SidebarMenu>
                             </SidebarGroupContent>
