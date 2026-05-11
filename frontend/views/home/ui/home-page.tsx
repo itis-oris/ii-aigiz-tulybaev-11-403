@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 import { useActiveProject, useProjectTab } from '@/shared/lib';
 import {
     organizationTaskDays,
@@ -9,12 +10,143 @@ import {
 } from '@/views/home/model/task';
 import { TaskSheet } from '@/views/home/ui/task-sheet';
 import { Header } from '@/views/home/ui/home-header';
-import { Board, TasksBoard } from '@/views/home/ui/board';
+import { Board, MonthBoard, TasksBoard } from '@/views/home/ui/board';
 import type { ViewMode } from '@/views/home/ui/home-header/view-mode';
+import type { SortMode } from '@/views/home/ui/home-header/sort-mode';
 import { Overview } from '@/views/home/ui/overview';
 
 type HomePageProps = {
     scope?: 'project' | 'organization';
+};
+
+const shortDayMonthFormatter = new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'short',
+});
+const fullDayFormatter = new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+});
+const monthTitleFormatter = new Intl.DateTimeFormat('ru-RU', {
+    month: 'long',
+    year: 'numeric',
+});
+const weekDayTitleFormatter = new Intl.DateTimeFormat('ru-RU', {
+    weekday: 'long',
+});
+const boardDayFormatter = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+});
+
+const normalizeDate = (value: string) => {
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const startOfWeek = (date: Date) => {
+    const nextDate = new Date(date);
+    const day = nextDate.getDay();
+    const offset = day === 0 ? 6 : day - 1;
+    nextDate.setDate(nextDate.getDate() - offset);
+    nextDate.setHours(0, 0, 0, 0);
+
+    return nextDate;
+};
+
+const startOfMonth = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), 1);
+
+const endOfMonth = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+
+const addDays = (date: Date, days: number) => {
+    const nextDate = new Date(date);
+    nextDate.setDate(nextDate.getDate() + days);
+
+    return nextDate;
+};
+
+const addMonths = (date: Date, months: number) =>
+    new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const isSameOrAfter = (left: Date, right: Date) =>
+    left.getTime() >= right.getTime();
+
+const isSameOrBefore = (left: Date, right: Date) =>
+    left.getTime() <= right.getTime();
+
+const capitalize = (value: string) =>
+    value.charAt(0).toUpperCase() + value.slice(1);
+
+const getInitialAnchorDate = (tasks: Task[]) => {
+    const datedTasks = tasks
+        .map((task) => (task.dueDate ? normalizeDate(task.dueDate) : null))
+        .filter((date): date is Date => date !== null)
+        .sort((left, right) => left.getTime() - right.getTime());
+
+    return datedTasks[0] ?? new Date();
+};
+
+const getInitialRange = (tasks: Task[]): DateRange => {
+    const anchorDate = getInitialAnchorDate(tasks);
+
+    return {
+        from: startOfMonth(anchorDate),
+        to: endOfMonth(anchorDate),
+    };
+};
+
+const getResolvedRange = (range: DateRange | undefined, tasks: Task[]) => {
+    const fallbackRange = getInitialRange(tasks);
+    const from = range?.from ?? fallbackRange.from ?? new Date();
+    const to = range?.to ?? from;
+
+    return { from, to };
+};
+
+const sortTasks = (tasks: Task[], sortMode: SortMode) => {
+    const sortedTasks = [...tasks];
+
+    sortedTasks.sort((left, right) => {
+        if (sortMode === 'По умолчанию') {
+            return (
+                Number(left.position ?? 0) - Number(right.position ?? 0) ||
+                left.id - right.id
+            );
+        }
+
+        if (sortMode === 'Дедлайн ближе') {
+            return (
+                (normalizeDate(left.dueDate ?? '')?.getTime() ??
+                    Number.MAX_SAFE_INTEGER) -
+                (normalizeDate(right.dueDate ?? '')?.getTime() ??
+                    Number.MAX_SAFE_INTEGER)
+            );
+        }
+
+        if (sortMode === 'Дедлайн дальше') {
+            return (
+                (normalizeDate(right.dueDate ?? '')?.getTime() ??
+                    Number.MIN_SAFE_INTEGER) -
+                (normalizeDate(left.dueDate ?? '')?.getTime() ??
+                    Number.MIN_SAFE_INTEGER)
+            );
+        }
+
+        if (sortMode === 'Приоритет выше') {
+            return (
+                (left.priority ?? Number.MAX_SAFE_INTEGER) -
+                (right.priority ?? Number.MAX_SAFE_INTEGER)
+            );
+        }
+
+        return left.title.localeCompare(right.title, 'ru-RU');
+    });
+
+    return sortedTasks;
 };
 
 const HomePage = ({ scope = 'project' }: HomePageProps) => {
@@ -23,10 +155,12 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [activeViewMode, setActiveViewMode] = useState<ViewMode>('Неделя');
+    const [activeSortMode, setActiveSortMode] =
+        useState<SortMode>('По умолчанию');
     const isOrganizationScope = scope === 'organization';
     const [organizationProjectFilter, setOrganizationProjectFilter] =
         useState<string>('all');
-    const days = useMemo<DayTasks[]>(() => {
+    const filteredDays = useMemo<DayTasks[]>(() => {
         if (isOrganizationScope) {
             if (organizationProjectFilter === 'all') {
                 return organizationTaskDays;
@@ -47,11 +181,222 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
             ),
         }));
     }, [activeProjectId, isOrganizationScope, organizationProjectFilter]);
-    const totalTasks = useMemo(
-        () => days.flatMap((day) => day.tasks).length,
-        [days],
+    const allTasks = useMemo(
+        () => filteredDays.flatMap((day) => day.tasks),
+        [filteredDays],
     );
-    const boardTasks = useMemo(() => days.flatMap((day) => day.tasks), [days]);
+    const [anchorDate, setAnchorDate] = useState<Date>(() =>
+        getInitialAnchorDate(allTasks),
+    );
+    const [selectedRange, setSelectedRange] = useState<DateRange>(() =>
+        getInitialRange(allTasks),
+    );
+    const sortedTasks = useMemo(
+        () => sortTasks(allTasks, activeSortMode),
+        [activeSortMode, allTasks],
+    );
+    const periodTasks = useMemo(() => {
+        if (activeViewMode === 'Неделя') {
+            const weekStart = startOfWeek(anchorDate);
+            const weekEnd = addDays(weekStart, 6);
+
+            return sortedTasks.filter((task) => {
+                const dueDate = task.dueDate
+                    ? normalizeDate(task.dueDate)
+                    : null;
+
+                return (
+                    dueDate !== null &&
+                    isSameOrAfter(dueDate, weekStart) &&
+                    isSameOrBefore(dueDate, weekEnd)
+                );
+            });
+        }
+
+        if (activeViewMode === 'Доски') {
+            const rangeStart = selectedRange.from;
+            const rangeEnd = selectedRange.to ?? selectedRange.from;
+
+            return sortedTasks.filter((task) => {
+                const dueDate = task.dueDate
+                    ? normalizeDate(task.dueDate)
+                    : null;
+
+                return (
+                    dueDate !== null &&
+                    rangeStart !== undefined &&
+                    isSameOrAfter(dueDate, rangeStart) &&
+                    rangeEnd !== undefined &&
+                    isSameOrBefore(dueDate, rangeEnd)
+                );
+            });
+        }
+
+        const monthStart = startOfMonth(anchorDate);
+        const monthEnd = endOfMonth(anchorDate);
+
+        return sortedTasks.filter((task) => {
+            const dueDate = task.dueDate ? normalizeDate(task.dueDate) : null;
+
+            return (
+                dueDate !== null &&
+                isSameOrAfter(dueDate, monthStart) &&
+                isSameOrBefore(dueDate, monthEnd)
+            );
+        });
+    }, [activeViewMode, anchorDate, sortedTasks]);
+    const days = useMemo<DayTasks[]>(() => {
+        const weekStart = startOfWeek(anchorDate);
+
+        return Array.from({ length: 7 }, (_, index) => {
+            const date = addDays(weekStart, index);
+            const columnId = date.toISOString().slice(0, 10);
+            const dayTasks = periodTasks
+                .filter((task) => {
+                    const dueDate = task.dueDate
+                        ? normalizeDate(task.dueDate)
+                        : null;
+
+                    return (
+                        dueDate !== null &&
+                        dueDate.toISOString().slice(0, 10) === columnId
+                    );
+                })
+                .map((task, taskIndex) => ({
+                    ...task,
+                    columnId,
+                    position: String((taskIndex + 1) * 1000),
+                }));
+
+            return {
+                day: capitalize(weekDayTitleFormatter.format(date)),
+                date: boardDayFormatter.format(date),
+                columnId,
+                tasks: dayTasks,
+            };
+        });
+    }, [anchorDate, periodTasks]);
+    const totalTasks = useMemo(() => periodTasks.length, [periodTasks]);
+    const boardTasks = useMemo(() => periodTasks, [periodTasks]);
+    const periodInfo = useMemo(() => {
+        if (activeViewMode === 'Неделя') {
+            const weekStart = startOfWeek(anchorDate);
+            const weekEnd = addDays(weekStart, 6);
+
+            return {
+                title: `${shortDayMonthFormatter.format(weekStart)} - ${shortDayMonthFormatter.format(weekEnd)}`,
+                subtitle: `${fullDayFormatter.format(weekStart)} - ${fullDayFormatter.format(weekEnd)}`,
+            };
+        }
+
+        if (activeViewMode === 'Доски') {
+            const rangeStart = selectedRange.from;
+            const rangeEnd = selectedRange.to ?? selectedRange.from;
+
+            if (!rangeStart || !rangeEnd) {
+                return {
+                    title: 'Диапазон не выбран',
+                    subtitle: 'Выберите даты в календаре',
+                };
+            }
+
+            return {
+                title: `${shortDayMonthFormatter.format(rangeStart)} - ${shortDayMonthFormatter.format(rangeEnd)}`,
+                subtitle: `${fullDayFormatter.format(rangeStart)} - ${fullDayFormatter.format(rangeEnd)}`,
+            };
+        }
+
+        const monthStart = startOfMonth(anchorDate);
+        const monthEnd = new Date(
+            monthStart.getFullYear(),
+            monthStart.getMonth() + 1,
+            0,
+        );
+
+        return {
+            title: capitalize(monthTitleFormatter.format(monthStart)),
+            subtitle: `${fullDayFormatter.format(monthStart)} - ${fullDayFormatter.format(monthEnd)}`,
+        };
+    }, [activeViewMode, anchorDate, selectedRange.from, selectedRange.to]);
+
+    React.useEffect(() => {
+        setAnchorDate(getInitialAnchorDate(allTasks));
+        setSelectedRange(getInitialRange(allTasks));
+    }, [
+        activeProjectId,
+        allTasks.length,
+        isOrganizationScope,
+        organizationProjectFilter,
+    ]);
+
+    const handlePreviousPeriod = () => {
+        if (activeViewMode === 'Доски') {
+            setSelectedRange((currentRange) => {
+                const { from: fromDate, to: toDate } = getResolvedRange(
+                    currentRange,
+                    allTasks,
+                );
+                const rangeLength = Math.max(
+                    1,
+                    Math.round(
+                        (toDate.getTime() - fromDate.getTime()) /
+                            (24 * 60 * 60 * 1000),
+                    ) + 1,
+                );
+
+                return {
+                    from: addDays(fromDate, -rangeLength),
+                    to: addDays(toDate, -rangeLength),
+                };
+            });
+            return;
+        }
+
+        setAnchorDate((currentDate) =>
+            activeViewMode === 'Неделя'
+                ? addDays(currentDate, -7)
+                : addMonths(currentDate, -1),
+        );
+    };
+
+    const handleNextPeriod = () => {
+        if (activeViewMode === 'Доски') {
+            setSelectedRange((currentRange) => {
+                const { from: fromDate, to: toDate } = getResolvedRange(
+                    currentRange,
+                    allTasks,
+                );
+                const rangeLength = Math.max(
+                    1,
+                    Math.round(
+                        (toDate.getTime() - fromDate.getTime()) /
+                            (24 * 60 * 60 * 1000),
+                    ) + 1,
+                );
+
+                return {
+                    from: addDays(fromDate, rangeLength),
+                    to: addDays(toDate, rangeLength),
+                };
+            });
+            return;
+        }
+
+        setAnchorDate((currentDate) =>
+            activeViewMode === 'Неделя'
+                ? addDays(currentDate, 7)
+                : addMonths(currentDate, 1),
+        );
+    };
+
+    const handleResetPeriod = () => {
+        if (activeViewMode === 'Доски') {
+            setSelectedRange(getInitialRange(allTasks));
+            return;
+        }
+
+        setAnchorDate(getInitialAnchorDate(allTasks));
+    };
 
     return (
         <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
@@ -79,6 +424,8 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                         <Header
                             activeViewMode={activeViewMode}
                             onViewModeChange={setActiveViewMode}
+                            activeSortMode={activeSortMode}
+                            onSortModeChange={setActiveSortMode}
                             projectOptions={
                                 isOrganizationScope ? projects : undefined
                             }
@@ -92,11 +439,45 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                                     ? setOrganizationProjectFilter
                                     : undefined
                             }
+                            periodTitle={periodInfo.title}
+                            periodSubtitle={periodInfo.subtitle}
+                            selectedDate={anchorDate}
+                            selectedRange={selectedRange}
+                            onSelectedDateChange={(date) => {
+                                if (date) {
+                                    if (activeViewMode === 'Месяц') {
+                                        setAnchorDate(startOfMonth(date));
+                                        return;
+                                    }
+
+                                    setAnchorDate(date);
+                                }
+                            }}
+                            onSelectedRangeChange={(range) => {
+                                if (range?.from) {
+                                    setSelectedRange({
+                                        from: range.from,
+                                        to: range.to ?? range.from,
+                                    });
+                                } else {
+                                    setSelectedRange(getInitialRange(allTasks));
+                                }
+                            }}
+                            onPreviousPeriod={handlePreviousPeriod}
+                            onNextPeriod={handleNextPeriod}
+                            onResetPeriod={handleResetPeriod}
                         />
                     </div>
                     {activeViewMode === 'Доски' ? (
                         <TasksBoard
                             tasks={boardTasks}
+                            setIsOpen={setIsOpen}
+                            setSelectedTask={setSelectedTask}
+                        />
+                    ) : activeViewMode === 'Месяц' ? (
+                        <MonthBoard
+                            tasks={boardTasks}
+                            anchorDate={anchorDate}
                             setIsOpen={setIsOpen}
                             setSelectedTask={setSelectedTask}
                         />

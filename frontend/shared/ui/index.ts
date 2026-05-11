@@ -11,6 +11,8 @@ import {
     CardContent,
 } from './card';
 import { Input } from './input';
+import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { Calendar } from './calendar';
 
 export {
     Avatar,
@@ -27,4 +29,8 @@ export {
     CardDescription,
     CardContent,
     Input,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+    Calendar,
 };

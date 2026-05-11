@@ -1,15 +1,24 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { EllipsisVertical } from 'lucide-react';
+import { EllipsisVertical, Plus } from 'lucide-react';
 
 import {
     cn,
     projectTabs,
     type ProjectSummary,
     type ProjectTab,
+    useActiveProject,
 } from '@/shared/lib';
-import { Avatar, Badge } from '@/shared/ui';
+import {
+    Avatar,
+    Badge,
+    Button,
+    Input,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/shared/ui';
 
 type HeaderProps = React.ComponentProps<'header'>;
 
@@ -50,12 +59,20 @@ const Header = ({
     onProjectTabChange,
     ...props
 }: HeaderViewProps) => {
+    const { setProjects } = useActiveProject();
     const [activeBoard, setActiveBoard] = useState(project.boardTabs[0]);
     const [projectTab, setProjectTab] = useState<ProjectTab>('Задачи');
+    const [newBoardName, setNewBoardName] = useState('');
 
     useEffect(() => {
         setActiveBoard(project.boardTabs[0]);
     }, [project]);
+
+    useEffect(() => {
+        if (!project.boardTabs.includes(activeBoard)) {
+            setActiveBoard(project.boardTabs[0]);
+        }
+    }, [activeBoard, project.boardTabs]);
 
     const activeProjectTab = controlledProjectTab ?? projectTab;
 
@@ -65,6 +82,30 @@ const Header = ({
         if (controlledProjectTab === undefined) {
             setProjectTab(tab);
         }
+    };
+
+    const handleCreateBoard = () => {
+        const trimmedName = newBoardName.trim();
+
+        if (!trimmedName) {
+            return;
+        }
+
+        setProjects((currentProjects) =>
+            currentProjects.map((currentProject) =>
+                currentProject.id === project.id
+                    ? {
+                          ...currentProject,
+                          boardTabs: [
+                              ...currentProject.boardTabs,
+                              trimmedName.toUpperCase(),
+                          ],
+                      }
+                    : currentProject,
+            ),
+        );
+        setActiveBoard(trimmedName.toUpperCase());
+        setNewBoardName('');
     };
 
     return (
@@ -164,6 +205,57 @@ const Header = ({
                                 )}
                             </button>
                         ))}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="size-7 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                    aria-label="Создать таблицу"
+                                >
+                                    <Plus className="size-4" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="end"
+                                className="w-72 border-sidebar-border bg-sidebar p-3 text-sidebar-foreground"
+                            >
+                                <div className="space-y-3">
+                                    <div>
+                                        <div className="text-sm font-medium">
+                                            Новая таблица
+                                        </div>
+                                        <div className="mt-1 text-xs text-sidebar-foreground/60">
+                                            Добавьте новую таблицу в текущий
+                                            проект.
+                                        </div>
+                                    </div>
+                                    <Input
+                                        value={newBoardName}
+                                        onChange={(event) =>
+                                            setNewBoardName(event.target.value)
+                                        }
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter') {
+                                                handleCreateBoard();
+                                            }
+                                        }}
+                                        placeholder="Например, SUPPORT"
+                                        uiSize="md"
+                                        className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-sidebar-foreground/45"
+                                    />
+                                    <Button
+                                        type="button"
+                                        className="w-full bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"
+                                        onClick={handleCreateBoard}
+                                        disabled={!newBoardName.trim()}
+                                    >
+                                        Создать таблицу
+                                    </Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
 
