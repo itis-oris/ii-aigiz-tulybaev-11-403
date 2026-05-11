@@ -158,6 +158,9 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const [activeViewMode, setActiveViewMode] = useState<ViewMode>('Неделя');
     const [activeSortMode, setActiveSortMode] =
         useState<SortMode>('По умолчанию');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState('all');
+    const [selectedTag, setSelectedTag] = useState('all');
     const isOrganizationScope = scope === 'organization';
     const [organizationProjectFilter, setOrganizationProjectFilter] =
         useState<string>('all');
@@ -192,15 +195,44 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
             ),
         [activeBoardId, customTasks, filteredDays, isOrganizationScope],
     );
+    const filteredTasks = useMemo(
+        () =>
+            allTasks.filter((task) => {
+                const matchesSearch = searchQuery.trim()
+                    ? task.title
+                          .toLowerCase()
+                          .includes(searchQuery.trim().toLowerCase())
+                    : true;
+                const matchesStatus =
+                    selectedStatus === 'all'
+                        ? true
+                        : task.status === selectedStatus;
+                const matchesTag =
+                    selectedTag === 'all'
+                        ? true
+                        : task.tags.includes(selectedTag);
+
+                return matchesSearch && matchesStatus && matchesTag;
+            }),
+        [allTasks, searchQuery, selectedStatus, selectedTag],
+    );
+    const statusOptions = useMemo(
+        () => [...new Set(allTasks.map((task) => task.status))].sort(),
+        [allTasks],
+    );
+    const tagOptions = useMemo(
+        () => [...new Set(allTasks.flatMap((task) => task.tags))].sort(),
+        [allTasks],
+    );
     const [anchorDate, setAnchorDate] = useState<Date>(() =>
-        getInitialAnchorDate(allTasks),
+        getInitialAnchorDate(filteredTasks),
     );
     const [selectedRange, setSelectedRange] = useState<DateRange>(() =>
-        getInitialRange(allTasks),
+        getInitialRange(filteredTasks),
     );
     const sortedTasks = useMemo(
-        () => sortTasks(allTasks, activeSortMode),
-        [activeSortMode, allTasks],
+        () => sortTasks(filteredTasks, activeSortMode),
+        [activeSortMode, filteredTasks],
     );
     const periodTasks = useMemo(() => {
         if (activeViewMode === 'Неделя') {
@@ -342,6 +374,12 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         isOrganizationScope,
         organizationProjectFilter,
     ]);
+
+    const handleResetFilters = () => {
+        setSearchQuery('');
+        setSelectedStatus('all');
+        setSelectedTag('all');
+    };
 
     const handlePreviousPeriod = () => {
         if (activeViewMode === 'Доски') {
@@ -528,6 +566,15 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             onViewModeChange={setActiveViewMode}
                             activeSortMode={activeSortMode}
                             onSortModeChange={setActiveSortMode}
+                            searchQuery={searchQuery}
+                            onSearchQueryChange={setSearchQuery}
+                            selectedStatus={selectedStatus}
+                            onSelectedStatusChange={setSelectedStatus}
+                            selectedTag={selectedTag}
+                            onSelectedTagChange={setSelectedTag}
+                            statusOptions={statusOptions}
+                            tagOptions={tagOptions}
+                            onResetFilters={handleResetFilters}
                             projectOptions={
                                 isOrganizationScope ? projects : undefined
                             }
