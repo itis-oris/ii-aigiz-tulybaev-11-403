@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
+import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react';
 import { Input } from '@/shared/ui/input';
 import {
     Badge,
@@ -10,8 +11,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/shared/ui';
-import { useDraggable } from '@dnd-kit/react';
-import { type DayTasks, type Task } from '@/views/home/model/task';
+import { type Task, type DayTasks } from '@/views/home/model/task';
+import {
+    getBoardColumnDropId,
+    getBoardTaskDragId,
+    getBoardTaskDropId,
+    type DropPosition,
+    useBoardDnd,
+} from '@/views/home/model/use-board-dnd';
 import type { Column } from '@/views/home/ui/board/types';
 import { cn } from '@/shared/lib';
 
@@ -19,128 +26,192 @@ interface BoardProps {
     days: DayTasks[];
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
+    extraColumn?: React.ReactNode;
 }
 
-const Board = ({ days, setIsOpen, setSelectedTask }: BoardProps) => {
-    const { ref } = useDraggable({
-        id: 'draggable',
+type BoardColumnProps = {
+    column: Column;
+    draggingTaskId: number | null;
+    dropPosition: DropPosition;
+    onOpen: (task: Task) => void;
+    overColumnId: string | null;
+    overTaskId: number | null;
+};
+
+const BoardColumn = ({
+    column,
+    draggingTaskId,
+    dropPosition,
+    onOpen,
+    overColumnId,
+    overTaskId,
+}: BoardColumnProps) => {
+    const { ref, isDropTarget } = useDroppable({
+        id: getBoardColumnDropId(column.columnId),
     });
+
+    return (
+        <div
+            ref={ref}
+            className={cn(
+                'flex h-full min-h-0 min-w-72 flex-col rounded-xl p-2 transition-colors',
+                (isDropTarget || overColumnId === column.columnId) &&
+                    'bg-accent/5',
+            )}
+        >
+            <div className="mb-2 shrink-0">
+                <div className="mb-1.5 flex flex-col">
+                    <span className="text-[13px] font-semibold leading-none text-foreground">
+                        {column.day}
+                    </span>
+                    <span className="mt-1 text-[11px] leading-none text-muted-foreground">
+                        {column.date}
+                    </span>
+                </div>
+                <Input
+                    placeholder="Добавить задачу"
+                    uiSize="md"
+                    className="border-border bg-background text-foreground placeholder:text-muted-foreground"
+                />
+            </div>
+            <div className="scrollbar-hover-overlay min-h-0 flex-1 pt-1">
+                {column.tasks.map((task) => (
+                    <BoardTaskCard
+                        key={task.id}
+                        task={task}
+                        draggingTaskId={draggingTaskId}
+                        dropPosition={dropPosition}
+                        isOver={overTaskId === task.id}
+                        onOpen={onOpen}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+};
+
+type BoardTaskCardProps = {
+    task: Task;
+    draggingTaskId: number | null;
+    dropPosition: DropPosition;
+    isOver: boolean;
+    onOpen: (task: Task) => void;
+};
+
+const BoardTaskCard = ({
+    task,
+    draggingTaskId,
+    dropPosition,
+    isOver,
+    onOpen,
+}: BoardTaskCardProps) => {
+    const { ref: dropRef } = useDroppable({
+        id: getBoardTaskDropId(task.id),
+    });
+    const { ref: dragRef, isDragging } = useDraggable({
+        id: getBoardTaskDragId(task.id),
+    });
+
+    const setRefs = (element: HTMLElement | null) => {
+        dropRef(element);
+        dragRef(element);
+    };
+
+    return (
+        <Card
+            ref={setRefs}
+            onClick={() => {
+                if (draggingTaskId) {
+                    return;
+                }
+
+                onOpen(task);
+            }}
+            className={cn(
+                'relative mb-3 cursor-grab border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md',
+                (isDragging || draggingTaskId === task.id) && 'opacity-50',
+                isOver && 'border-accent/70 bg-accent/5',
+                isOver &&
+                    dropPosition === 'before' &&
+                    'before:absolute before:inset-x-3 before:top-0 before:h-0.5 before:rounded-full before:bg-accent',
+                isOver &&
+                    dropPosition === 'after' &&
+                    'after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent',
+            )}
+        >
+            <CardHeader>
+                <CardTitle>{task.title}</CardTitle>
+                <CardDescription>{task.project}</CardDescription>
+                <CardAction>
+                    <Badge variant="accent" size="sm">
+                        {task.dueInDays} дн.
+                    </Badge>
+                </CardAction>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>#{task.id}</span>
+                    <Badge variant="default" size="sm">
+                        {task.status}
+                    </Badge>
+                </div>
+            </CardContent>
+            <CardFooter className="flex flex-wrap gap-2">
+                {task.tags.map((tag) => (
+                    <Badge key={tag} variant="sidebar" size="sm">
+                        {tag}
+                    </Badge>
+                ))}
+            </CardFooter>
+        </Card>
+    );
+};
+
+const Board = ({
+    days,
+    setIsOpen,
+    setSelectedTask,
+    extraColumn,
+}: BoardProps) => {
+    const {
+        columns,
+        draggingTaskId,
+        dropPosition,
+        overColumnId,
+        overTaskId,
+        handleDragEnd,
+        handleDragMove,
+        handleDragOver,
+        handleDragStart,
+    } = useBoardDnd(days);
 
     const handleOpen = (task: Task) => {
         setIsOpen(true);
         setSelectedTask(task);
     };
 
-    const column = useMemo<Column[]>(
-        () =>
-            days.map((dayTask) => ({
-                day: dayTask.day,
-                date: dayTask.date,
-                columnId: dayTask.columnId,
-                tasks: dayTask.tasks,
-            })),
-        [days],
-    );
-    const tasks = useMemo<Task[]>(
-        () => days.flatMap((dayTask) => dayTask.tasks),
-        [days],
-    );
-    const [draggingTaskId] = useState<number | null>(null);
-    const [overColumnId] = useState<string | null>(null);
-    const [overTaskId] = useState<number | null>(null);
-    const [dropPosition] = useState<'before' | 'after' | null>(null);
-
     return (
-        <div className="flex min-h-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden px-2 py-3">
-            {column.map((elem, index) => (
-                <div
-                    key={index}
-                    className="flex h-full min-h-0 min-w-72 flex-col p-2"
-                >
-                    <div className="mb-2 shrink-0">
-                        <div className="mb-1.5 flex flex-col">
-                            <span className="text-[13px] font-semibold leading-none text-foreground">
-                                {elem.day}
-                            </span>
-                            <span className="mt-1 text-[11px] leading-none text-muted-foreground">
-                                {elem.date}
-                            </span>
-                        </div>
-                        <Input
-                            placeholder="Добавить задачу"
-                            uiSize="md"
-                            className="border-border bg-background text-foreground placeholder:text-muted-foreground"
-                        />
-                    </div>
-                    <div className="scrollbar-hover-overlay min-h-0 flex-1 pt-1">
-                        {tasks
-                            ?.filter((task) => task.columnId === elem.columnId)
-                            .sort(
-                                (a, b) =>
-                                    Number(a.position ?? 0) -
-                                    Number(b.position ?? 0),
-                            )
-                            .map((task) => (
-                                <Card
-                                    ref={ref}
-                                    key={task.id}
-                                    onClick={() => {
-                                        if (draggingTaskId) return;
-                                        handleOpen(task);
-                                    }}
-                                    className={cn(
-                                        'relative mb-3 cursor-grab border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md',
-                                        draggingTaskId === task.id &&
-                                            'opacity-50',
-                                        overTaskId === task.id &&
-                                            overColumnId === elem.columnId &&
-                                            'border-accent/70 bg-accent/5',
-                                        overTaskId === task.id &&
-                                            overColumnId === elem.columnId &&
-                                            dropPosition === 'before' &&
-                                            'before:absolute before:inset-x-3 before:top-0 before:h-0.5 before:rounded-full before:bg-accent',
-                                        overTaskId === task.id &&
-                                            overColumnId === elem.columnId &&
-                                            dropPosition === 'after' &&
-                                            'after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent',
-                                    )}
-                                >
-                                    <CardHeader>
-                                        <CardTitle>{task.title}</CardTitle>
-                                        <CardDescription>
-                                            {task.project}
-                                        </CardDescription>
-                                        <CardAction>
-                                            <Badge variant="accent" size="sm">
-                                                {task.dueInDays} дн.
-                                            </Badge>
-                                        </CardAction>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <span>#{task.id}</span>
-                                            <Badge variant="default" size="sm">
-                                                {task.status}
-                                            </Badge>
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="flex flex-wrap gap-2">
-                                        {task.tags.map((tag) => (
-                                            <Badge
-                                                key={tag}
-                                                variant="sidebar"
-                                                size="sm"
-                                            >
-                                                {tag}
-                                            </Badge>
-                                        ))}
-                                    </CardFooter>
-                                </Card>
-                            ))}
-                    </div>
-                </div>
-            ))}
-        </div>
+        <DragDropProvider
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="flex min-h-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden px-2 py-3">
+                {columns.map((column) => (
+                    <BoardColumn
+                        key={column.columnId}
+                        column={column}
+                        draggingTaskId={draggingTaskId}
+                        dropPosition={dropPosition}
+                        onOpen={handleOpen}
+                        overColumnId={overColumnId}
+                        overTaskId={overTaskId}
+                    />
+                ))}
+                {extraColumn}
+            </div>
+        </DragDropProvider>
     );
 };
 

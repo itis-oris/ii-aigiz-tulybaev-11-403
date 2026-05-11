@@ -9,21 +9,36 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/ui';
 import type { ProjectSummary } from '@/shared/lib';
-import { viewModes } from '@/views/home/ui/home-header/view-mode';
+import {
+    viewModes,
+    type ViewMode,
+} from '@/views/home/ui/home-header/view-mode';
 
 type HomeHeaderProps = {
+    activeViewMode?: ViewMode;
+    onViewModeChange?: (mode: ViewMode) => void;
     projectOptions?: ProjectSummary[];
     selectedProjectId?: string;
     onProjectChange?: (projectId: string) => void;
 };
 
 const Header = ({
+    activeViewMode: controlledViewMode,
+    onViewModeChange,
     projectOptions = [],
     selectedProjectId,
     onProjectChange,
 }: HomeHeaderProps) => {
-    const [activeViewMode, setActiveViewMode] =
-        useState<(typeof viewModes)[number]>('Неделя');
+    const [viewMode, setViewMode] = useState<ViewMode>('Неделя');
+    const activeViewMode = controlledViewMode ?? viewMode;
+
+    const handleViewModeChange = (nextViewMode: ViewMode) => {
+        onViewModeChange?.(nextViewMode);
+
+        if (controlledViewMode === undefined) {
+            setViewMode(nextViewMode);
+        }
+    };
 
     return (
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -32,10 +47,7 @@ const Header = ({
                     <select
                         value={activeViewMode}
                         onChange={(event) =>
-                            setActiveViewMode(
-                                event.target
-                                    .value as (typeof viewModes)[number],
-                            )
+                            handleViewModeChange(event.target.value as ViewMode)
                         }
                         className="h-8 cursor-pointer appearance-none rounded-lg border border-border bg-card pr-8 pl-3 text-xs font-medium text-foreground outline-none transition-colors hover:border-ring"
                     >

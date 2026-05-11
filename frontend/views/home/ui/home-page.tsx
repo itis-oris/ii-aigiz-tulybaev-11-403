@@ -9,7 +9,8 @@ import {
 } from '@/views/home/model/task';
 import { TaskSheet } from '@/views/home/ui/task-sheet';
 import { Header } from '@/views/home/ui/home-header';
-import { Board } from '@/views/home/ui/board';
+import { Board, TasksBoard } from '@/views/home/ui/board';
+import type { ViewMode } from '@/views/home/ui/home-header/view-mode';
 import { Overview } from '@/views/home/ui/overview';
 
 type HomePageProps = {
@@ -21,6 +22,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const { activeProjectId, projects } = useActiveProject();
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [activeViewMode, setActiveViewMode] = useState<ViewMode>('Неделя');
     const isOrganizationScope = scope === 'organization';
     const [organizationProjectFilter, setOrganizationProjectFilter] =
         useState<string>('all');
@@ -49,6 +51,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         () => days.flatMap((day) => day.tasks).length,
         [days],
     );
+    const boardTasks = useMemo(() => days.flatMap((day) => day.tasks), [days]);
 
     return (
         <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
@@ -74,6 +77,8 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             </div>
                         ) : null}
                         <Header
+                            activeViewMode={activeViewMode}
+                            onViewModeChange={setActiveViewMode}
                             projectOptions={
                                 isOrganizationScope ? projects : undefined
                             }
@@ -89,11 +94,19 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                             }
                         />
                     </div>
-                    <Board
-                        days={days}
-                        setIsOpen={setIsOpen}
-                        setSelectedTask={setSelectedTask}
-                    />
+                    {activeViewMode === 'Доски' ? (
+                        <TasksBoard
+                            tasks={boardTasks}
+                            setIsOpen={setIsOpen}
+                            setSelectedTask={setSelectedTask}
+                        />
+                    ) : (
+                        <Board
+                            days={days}
+                            setIsOpen={setIsOpen}
+                            setSelectedTask={setSelectedTask}
+                        />
+                    )}
                     <TaskSheet
                         isOpen={isOpen}
                         selectedTask={selectedTask}
