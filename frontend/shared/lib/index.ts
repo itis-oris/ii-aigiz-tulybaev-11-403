@@ -11,15 +11,19 @@ import { useValidatedForm } from './use-validated-form';
 import { useIsMobile } from './use-mobile';
 import { useWorkspaceProjectsController } from './use-workspace-projects-controller';
 import { THEME_STORAGE_KEY, ThemeProvider, useTheme } from './theme';
+import { LOCALE_STORAGE_KEY, LocaleProvider, useI18n } from './i18n';
 
 export {
     ActiveProjectProvider,
     cn,
+    LOCALE_STORAGE_KEY,
+    LocaleProvider,
     organizationProjects,
     projectTabs,
     ProjectTabProvider,
     ThemeProvider,
     THEME_STORAGE_KEY,
+    useI18n,
     useActiveProject,
     useIsMobile,
     useProjectTab,

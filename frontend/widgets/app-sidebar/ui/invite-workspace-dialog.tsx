@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link2, PlusCircle, X } from 'lucide-react';
 import { Button, Input } from '@/shared/ui';
-import { cn } from '@/shared/lib';
+import { cn, useI18n } from '@/shared/lib';
 
 type InviteWorkspaceDialogProps = {
     open: boolean;
@@ -19,6 +19,7 @@ export function InviteWorkspaceDialog({
     open,
     onOpenChange,
 }: InviteWorkspaceDialogProps) {
+    const { t } = useI18n();
     const [inviteByLink, setInviteByLink] = useState(false);
     const [rows, setRows] = useState<InviteRow[]>([{ id: 1, email: '' }]);
 
@@ -68,11 +69,10 @@ export function InviteWorkspaceDialog({
                                 id="invite-workspace-title"
                                 className="text-[1.75rem] leading-8 font-semibold text-foreground"
                             >
-                                Пригласить людей в рабочее пространство
+                                {t('dialogs.inviteWorkspaceTitle')}
                             </h2>
                             <p className="mt-2 text-base leading-6 text-muted-foreground">
-                                Ваши коллеги по команде получат письмо на почту
-                                или смогут присоединиться по ссылке
+                                {t('dialogs.inviteWorkspaceDescription')}
                             </p>
                         </div>
 
@@ -84,7 +84,9 @@ export function InviteWorkspaceDialog({
                             onClick={() => onOpenChange(false)}
                         >
                             <X className="size-4" />
-                            <span className="sr-only">Закрыть окно</span>
+                            <span className="sr-only">
+                                {t('common.closeDialog')}
+                            </span>
                         </Button>
                     </div>
                 </div>
@@ -93,7 +95,7 @@ export function InviteWorkspaceDialog({
                     <div className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
                             <span className="text-sm font-medium text-foreground">
-                                Ссылка для приглашения
+                                {t('dialogs.inviteLink')}
                             </span>
                             <button
                                 type="button"
@@ -116,7 +118,7 @@ export function InviteWorkspaceDialog({
                                     )}
                                 />
                                 <span className="sr-only">
-                                    Переключить ссылку приглашения
+                                    {t('dialogs.toggleInviteLink')}
                                 </span>
                             </button>
                         </div>
@@ -131,7 +133,7 @@ export function InviteWorkspaceDialog({
                                     }
                                     readOnly
                                     uiSize="lg"
-                                    placeholder="Текст для копирования еще не был сгенерирован"
+                                    placeholder={t('dialogs.linkPending')}
                                     className="pr-10 text-sm text-muted-foreground"
                                 />
                                 <Link2 className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -143,7 +145,7 @@ export function InviteWorkspaceDialog({
                                 disabled={!inviteByLink}
                                 className="min-w-[8.5rem] rounded-xl"
                             >
-                                Копировать
+                                {t('dialogs.copy')}
                             </Button>
                         </div>
                     </div>
@@ -170,7 +172,7 @@ export function InviteWorkspaceDialog({
                                         )
                                     }
                                     uiSize="lg"
-                                    placeholder="Почта..."
+                                    placeholder={t('dialogs.emailPlaceholder')}
                                     className="flex-1"
                                 />
                                 <Button
@@ -201,7 +203,7 @@ export function InviteWorkspaceDialog({
                                 >
                                     <X className="size-4" />
                                     <span className="sr-only">
-                                        Удалить строку приглашения
+                                        {t('dialogs.removeInviteRow')}
                                     </span>
                                 </Button>
                             </div>
@@ -227,7 +229,7 @@ export function InviteWorkspaceDialog({
                             className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                             <PlusCircle className="size-4" />
-                            Добавить ещё
+                            {t('dialogs.addMore')}
                         </button>
                     </div>
                 </div>
@@ -240,7 +242,7 @@ export function InviteWorkspaceDialog({
                         className="rounded-xl px-6"
                         onClick={() => onOpenChange(false)}
                     >
-                        Отмена
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         type="button"
@@ -248,7 +250,7 @@ export function InviteWorkspaceDialog({
                         disabled={!canSubmit}
                         className="rounded-xl px-6"
                     >
-                        Пригласить людей
+                        {t('dialogs.invitePeople')}
                     </Button>
                 </div>
             </div>

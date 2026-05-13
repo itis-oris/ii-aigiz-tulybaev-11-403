@@ -1,3 +1,6 @@
+'use client';
+
+import { useI18n } from '@/shared/lib';
 import {
     Avatar,
     Button,
@@ -10,17 +13,18 @@ import {
 } from '@/shared/ui';
 
 const ProfilePage = () => {
+    const { t } = useI18n();
+
     return (
         <div className="min-h-0 flex-1 overflow-y-auto bg-background">
             <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="flex flex-col gap-6">
                     <div>
                         <h1 className="text-3xl font-semibold text-foreground">
-                            Профиль
+                            {t('profile.title')}
                         </h1>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Управление личными настройками, языком интерфейса и
-                            базовыми параметрами аккаунта.
+                            {t('profile.description')}
                         </p>
                     </div>
 
@@ -47,15 +51,15 @@ const ProfilePage = () => {
 
                     <Card className="bg-transparent py-0 ring-0">
                         <CardHeader className="px-0 py-0">
-                            <CardTitle>Основное</CardTitle>
+                            <CardTitle>{t('profile.general')}</CardTitle>
                             <CardDescription>
-                                Контактные и публичные данные профиля.
+                                {t('profile.generalDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4 px-0 py-0">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">
-                                    Имя
+                                    {t('profile.firstName')}
                                 </label>
                                 <Input uiSize="md" defaultValue="Lorem Ipsum" />
                             </div>
@@ -70,14 +74,14 @@ const ProfilePage = () => {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">
-                                    Роль
+                                    {t('profile.role')}
                                 </label>
                                 <Input
                                     uiSize="md"
                                     defaultValue="Product Owner"
                                 />
                             </div>
-                            <Button size="md">Сохранить изменения</Button>
+                            <Button size="md">{t('common.saveChanges')}</Button>
                         </CardContent>
                     </Card>
                 </div>

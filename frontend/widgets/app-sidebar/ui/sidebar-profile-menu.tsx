@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { cn, useTheme } from '@/shared/lib';
+import { cn, useI18n, useTheme } from '@/shared/lib';
 import { Avatar } from '@/shared/ui';
 import {
     SidebarMenu,
@@ -24,12 +24,14 @@ function SidebarProfileMenuContent({
     label,
 }: SidebarProfileMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const { locale, mounted: localeMounted, t, toggleLocale } = useI18n();
     const { mounted, theme, toggleTheme } = useTheme();
     const themeLabel = !mounted
-        ? 'Светлая'
+        ? t('common.light')
         : theme === 'dark'
-          ? 'Темная'
-          : 'Светлая';
+          ? t('common.dark')
+          : t('common.light');
+    const languageLabel = !localeMounted ? 'RU' : locale === 'en' ? 'EN' : 'RU';
 
     return (
         <div className="relative w-full">
@@ -58,7 +60,7 @@ function SidebarProfileMenuContent({
                                 onClick={() => setIsOpen(false)}
                             >
                                 <Settings2 className="size-4 text-sidebar-foreground/75" />
-                                <span>Настройки</span>
+                                <span>{t('sidebar.settings')}</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -68,18 +70,21 @@ function SidebarProfileMenuContent({
                             onClick={toggleTheme}
                         >
                             <MoonStar className="size-4 text-sidebar-foreground/75" />
-                            <span>Тема</span>
+                            <span>{t('sidebar.theme')}</span>
                             <span className="ml-auto text-xs text-sidebar-foreground/55">
                                 {themeLabel}
                             </span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                        <SidebarMenuButton className="h-10 rounded-xl px-3 text-sm">
+                        <SidebarMenuButton
+                            className="h-10 rounded-xl px-3 text-sm"
+                            onClick={toggleLocale}
+                        >
                             <Languages className="size-4 text-sidebar-foreground/75" />
-                            <span>Язык</span>
+                            <span>{t('sidebar.language')}</span>
                             <span className="ml-auto text-xs text-sidebar-foreground/55">
-                                RU
+                                {languageLabel}
                             </span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -93,7 +98,7 @@ function SidebarProfileMenuContent({
                                 onClick={() => setIsOpen(false)}
                             >
                                 <LogOut className="size-4" />
-                                <span>Выход</span>
+                                <span>{t('sidebar.logout')}</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -104,7 +109,7 @@ function SidebarProfileMenuContent({
                 type="button"
                 onClick={() => setIsOpen((open) => !open)}
                 aria-expanded={isOpen}
-                aria-label="Открыть меню профиля"
+                aria-label={t('sidebar.openProfileMenu')}
                 className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
             >
                 <Avatar
@@ -118,11 +123,13 @@ function SidebarProfileMenuContent({
                         {label}
                     </div>
                     <div className="truncate text-xs text-sidebar-foreground/55">
-                        Супер-админ
+                        {t('sidebar.superAdmin')}
                     </div>
                 </div>
                 <span className="sr-only">
-                    {isOpen ? 'Закрыть меню профиля' : 'Открыть меню профиля'}
+                    {isOpen
+                        ? t('sidebar.closeProfileMenu')
+                        : t('sidebar.openProfileMenu')}
                 </span>
             </button>
         </div>

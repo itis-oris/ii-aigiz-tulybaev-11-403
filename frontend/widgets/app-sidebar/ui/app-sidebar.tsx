@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import {
+    useI18n,
     useProjectFolderDndController,
     useProjectFolderTree,
     useWorkspaceProjectsController,
@@ -47,17 +48,12 @@ import { SidebarRootDropZone } from './sidebar-root-drop-zone';
 import SidebarProfileMenu from './sidebar-profile-menu';
 import WorkspaceSwitcher from './workspace-switcher';
 
-const primaryItems = [
-    { title: 'Мои задачи', icon: Target, href: '/my-tasks' },
-    { title: 'Все задачи', icon: LayoutGrid, href: '/all-tasks' },
-    { title: 'Все проекты', icon: FolderOpen, href: '/all-projects' },
-];
-
 const sidebarMenuItemClassName = 'h-10 rounded-xl px-3 text-sm';
 const sidebarActionIconClassName = 'size-4.5 text-sidebar-foreground/75';
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const { t } = useI18n();
     const {
         activeProjectId,
         collapsedFolderIds,
@@ -88,6 +84,15 @@ export function AppSidebar() {
         parseProjectId: parseSidebarProjectId,
         parseFolderId: parseSidebarFolderId,
     });
+    const primaryItems = [
+        { title: t('sidebar.myTasks'), icon: Target, href: '/my-tasks' },
+        { title: t('sidebar.allTasks'), icon: LayoutGrid, href: '/all-tasks' },
+        {
+            title: t('sidebar.allProjects'),
+            icon: FolderOpen,
+            href: '/all-projects',
+        },
+    ];
 
     return (
         <>
@@ -127,7 +132,7 @@ export function AppSidebar() {
                         <div className="relative group-data-[collapsible=icon]:hidden">
                             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                             <SidebarInput
-                                placeholder="Проект..."
+                                placeholder={t('sidebar.searchProjects')}
                                 className="h-10 rounded-xl border-sidebar-border bg-sidebar pl-9 text-sm"
                             />
                         </div>
@@ -186,13 +191,13 @@ export function AppSidebar() {
                         <SidebarGroup className="px-3 group-data-[collapsible=icon]:px-2">
                             <SidebarGroupContent className="flex items-center justify-between px-2 group-data-[collapsible=icon]:hidden">
                                 <SidebarGroupLabel className="h-7 px-2 text-sm text-sidebar-foreground/55 group-data-[collapsible=icon]:hidden">
-                                    Проекты
+                                    {t('sidebar.projects')}
                                 </SidebarGroupLabel>
                                 <div className="flex items-center gap-1">
                                     <Button
                                         variant="ghost"
                                         size="icon-sm"
-                                        aria-label="Добавить папку"
+                                        aria-label={t('sidebar.addFolder')}
                                         className="size-7 rounded-md text-sidebar-foreground/70"
                                         onClick={() =>
                                             setIsCreateFolderDialogOpen(true)
@@ -203,7 +208,7 @@ export function AppSidebar() {
                                     <Button
                                         variant="ghost"
                                         size="icon-sm"
-                                        aria-label="Добавить проект"
+                                        aria-label={t('sidebar.addProject')}
                                         className="size-7 rounded-md text-sidebar-foreground/70"
                                         onClick={() =>
                                             setIsCreateProjectDialogOpen(true)
@@ -217,8 +222,7 @@ export function AppSidebar() {
                                 <SidebarMenu>
                                     {draggedProjectId ? (
                                         <div className="px-2 py-1 text-xs text-sidebar-foreground/55 group-data-[collapsible=icon]:hidden">
-                                            Перетащите проект в папку или в
-                                            корень.
+                                            {t('sidebar.dragProjectHint')}
                                         </div>
                                     ) : null}
 
@@ -319,12 +323,14 @@ export function AppSidebar() {
                                             <div className="px-2 pt-1 pb-2 group-data-[collapsible=icon]:hidden">
                                                 <div className="rounded-xl border border-dashed border-sidebar-border/80 bg-sidebar-accent/30 px-3 py-3 text-xs text-sidebar-foreground/60 transition-colors">
                                                     <div className="font-medium text-sidebar-foreground/72">
-                                                        Вне папок
+                                                        {t(
+                                                            'sidebar.outsideFolders',
+                                                        )}
                                                     </div>
                                                     <div className="mt-1 leading-relaxed">
-                                                        Перетащите сюда проект,
-                                                        чтобы вынести его из
-                                                        папки в общий список.
+                                                        {t(
+                                                            'sidebar.outsideFoldersDescription',
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -338,14 +344,14 @@ export function AppSidebar() {
                         <SidebarMenu>
                             <SidebarMenuItem>
                                 <SidebarMenuButton
-                                    tooltip="Пригласить"
+                                    tooltip={t('sidebar.invite')}
                                     className={sidebarMenuItemClassName}
                                     onClick={() => setIsInviteDialogOpen(true)}
                                 >
                                     <UserPlus
                                         className={sidebarActionIconClassName}
                                     />
-                                    <span>Пригласить</span>
+                                    <span>{t('sidebar.invite')}</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         </SidebarMenu>
@@ -354,7 +360,7 @@ export function AppSidebar() {
                             <SidebarProfileMenu
                                 email="artem@sprintly.app"
                                 initials="AR"
-                                label="Профиль"
+                                label={t('sidebar.profile')}
                             />
                         </div>
                     </SidebarFooter>

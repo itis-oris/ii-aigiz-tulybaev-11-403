@@ -10,14 +10,17 @@ import {
     AuthFormFooter,
 } from '@/widgets/auth-shell';
 import { useValidatedForm } from '@/shared/lib/use-validated-form';
+import { useI18n } from '@/shared/lib';
 import {
     initialLoginValues,
-    loginFields,
+    getLoginFields,
     validateLoginForm,
 } from '@/app/login/_lib/login-form';
 
 export const LoginForm = () => {
     const router = useRouter();
+    const { locale, t } = useI18n();
+    const loginFields = getLoginFields(locale);
     const {
         errors,
         handleBlur,
@@ -27,7 +30,9 @@ export const LoginForm = () => {
         isValid,
         resetForm,
         values,
-    } = useValidatedForm(initialLoginValues, validateLoginForm);
+    } = useValidatedForm(initialLoginValues, (values) =>
+        validateLoginForm(values, locale),
+    );
 
     const handleLoginSubmit: ComponentProps<'form'>['onSubmit'] = (event) => {
         handleSubmit(event);
@@ -38,7 +43,10 @@ export const LoginForm = () => {
     };
 
     return (
-        <AuthCard title="Вход" description="Авторизация в рабочем пространстве">
+        <AuthCard
+            title={t('auth.loginTitle')}
+            description={t('auth.loginDescription')}
+        >
             <form
                 className="space-y-5 px-5 py-5 sm:px-6 sm:py-6"
                 onSubmit={handleLoginSubmit}
@@ -65,12 +73,12 @@ export const LoginForm = () => {
 
                 <AuthFormFooter
                     href="/register"
-                    linkLabel="страницу регистрации"
-                    text="Нет аккаунта? Перейдите на"
+                    linkLabel={t('auth.loginFooterLink')}
+                    text={t('auth.loginFooterText')}
                 />
 
                 {isSubmitted && !isValid && (
-                    <AuthFormError message="Проверьте корректность введённых данных." />
+                    <AuthFormError message={t('auth.loginError')} />
                 )}
 
                 <div className="flex gap-3 pt-1">
@@ -81,10 +89,10 @@ export const LoginForm = () => {
                         className="flex-1 text-muted-foreground"
                         onClick={resetForm}
                     >
-                        Очистить
+                        {t('auth.clear')}
                     </Button>
                     <Button type="submit" size="xl" className="flex-1">
-                        Войти
+                        {t('auth.loginSubmit')}
                     </Button>
                 </div>
             </form>

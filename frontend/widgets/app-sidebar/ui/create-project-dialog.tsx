@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronsUpDown, FolderPlus, X } from 'lucide-react';
 import { Button, Input } from '@/shared/ui';
-import type { ProjectFolder, ProjectSummary } from '@/shared/lib';
+import { useI18n, type ProjectFolder, type ProjectSummary } from '@/shared/lib';
 
 type CreateProjectDialogProps = {
     open: boolean;
@@ -52,6 +52,7 @@ const CreateProjectDialog = ({
     projectCount,
     folders,
 }: CreateProjectDialogProps) => {
+    const { t } = useI18n();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [folderId, setFolderId] = useState('none');
@@ -90,8 +91,8 @@ const CreateProjectDialog = ({
     const trimmedName = name.trim();
     const canSubmit = trimmedName.length > 0;
     const previewInitials = useMemo(
-        () => normalizeInitials(trimmedName || 'Новый проект'),
-        [trimmedName],
+        () => normalizeInitials(trimmedName || t('dialogs.newProject')),
+        [t, trimmedName],
     );
 
     if (!open) {
@@ -117,11 +118,10 @@ const CreateProjectDialog = ({
                                 id="create-project-title"
                                 className="text-[1.75rem] leading-8 font-semibold text-foreground"
                             >
-                                Создать проект
+                                {t('dialogs.createProjectTitle')}
                             </h2>
                             <p className="mt-2 text-base leading-6 text-muted-foreground">
-                                Новый проект появится в списке проектов в
-                                рабочем пространстве.
+                                {t('dialogs.createProjectDescription')}
                             </p>
                         </div>
 
@@ -133,7 +133,9 @@ const CreateProjectDialog = ({
                             onClick={() => handleOpenChange(false)}
                         >
                             <X className="size-4" />
-                            <span className="sr-only">Закрыть окно</span>
+                            <span className="sr-only">
+                                {t('common.closeDialog')}
+                            </span>
                         </Button>
                     </div>
                 </div>
@@ -145,10 +147,10 @@ const CreateProjectDialog = ({
                         </div>
                         <div className="min-w-0">
                             <div className="text-sm font-medium text-foreground">
-                                {trimmedName || 'Новый проект'}
+                                {trimmedName || t('dialogs.newProject')}
                             </div>
                             <div className="mt-1 text-sm text-muted-foreground">
-                                Предпросмотр карточки проекта в сайдбаре
+                                {t('dialogs.projectPreview')}
                             </div>
                         </div>
                     </div>
@@ -158,14 +160,14 @@ const CreateProjectDialog = ({
                             htmlFor="project-name"
                             className="text-sm font-medium text-foreground"
                         >
-                            Название проекта
+                            {t('dialogs.projectName')}
                         </label>
                         <Input
                             id="project-name"
                             value={name}
                             onChange={(event) => setName(event.target.value)}
                             uiSize="lg"
-                            placeholder="Например, Sprintly Mobile"
+                            placeholder={t('dialogs.projectNamePlaceholder')}
                         />
                     </div>
 
@@ -174,7 +176,7 @@ const CreateProjectDialog = ({
                             htmlFor="project-description"
                             className="text-sm font-medium text-foreground"
                         >
-                            Описание
+                            {t('dialogs.projectDescription')}
                         </label>
                         <textarea
                             id="project-description"
@@ -183,7 +185,9 @@ const CreateProjectDialog = ({
                                 setDescription(event.target.value)
                             }
                             rows={4}
-                            placeholder="Коротко опишите назначение проекта"
+                            placeholder={t(
+                                'dialogs.projectDescriptionPlaceholder',
+                            )}
                             className="w-full resize-none rounded-xl border border-input bg-input/20 px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
                         />
                     </div>
@@ -193,7 +197,7 @@ const CreateProjectDialog = ({
                             htmlFor="project-folder"
                             className="text-sm font-medium text-foreground"
                         >
-                            Папка
+                            {t('dialogs.folder')}
                         </label>
                         <div className="relative">
                             <select
@@ -204,7 +208,9 @@ const CreateProjectDialog = ({
                                 }
                                 className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 pr-10 pl-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
                             >
-                                <option value="none">Без папки</option>
+                                <option value="none">
+                                    {t('dialogs.noFolder')}
+                                </option>
                                 {folders.map((folder) => (
                                     <option key={folder.id} value={folder.id}>
                                         {folder.name}
@@ -224,7 +230,7 @@ const CreateProjectDialog = ({
                         className="rounded-xl px-6"
                         onClick={() => handleOpenChange(false)}
                     >
-                        Отмена
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         type="button"
@@ -244,7 +250,7 @@ const CreateProjectDialog = ({
                                     ],
                                 description:
                                     description.trim() ||
-                                    'Новый проект в рабочем пространстве.',
+                                    t('dialogs.newWorkspaceProject'),
                                 boardTabs: normalizeBoardTabs(trimmedName),
                                 lifecycleStatus: 'active',
                                 memberCount: 1,
@@ -257,7 +263,7 @@ const CreateProjectDialog = ({
                         }}
                     >
                         <FolderPlus className="size-4" />
-                        Создать проект
+                        {t('dialogs.createProject')}
                     </Button>
                 </div>
             </div>

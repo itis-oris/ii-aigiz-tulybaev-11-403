@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Search, X } from 'lucide-react';
-import { cn } from '@/shared/lib';
+import { cn, useI18n } from '@/shared/lib';
 import { Avatar, Button, Input } from '@/shared/ui';
 import type {
     ProjectParticipant,
@@ -38,6 +38,7 @@ const AddProjectMemberDialog = ({
     onOpenChange,
     onSubmit,
 }: AddProjectMemberDialogProps) => {
+    const { t } = useI18n();
     const [query, setQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -122,11 +123,10 @@ const AddProjectMemberDialog = ({
                                 id="add-project-member-title"
                                 className="text-[1.75rem] leading-8 font-semibold text-foreground"
                             >
-                                Добавить участника в проект
+                                {t('overview.addMemberTitle')}
                             </h2>
                             <p className="mt-2 text-base leading-6 text-muted-foreground">
-                                Выберите людей из рабочего пространства, которым
-                                нужен доступ к этому проекту.
+                                {t('overview.addMemberDescription')}
                             </p>
                         </div>
 
@@ -138,7 +138,9 @@ const AddProjectMemberDialog = ({
                             onClick={() => handleOpenChange(false)}
                         >
                             <X className="size-4" />
-                            <span className="sr-only">Закрыть окно</span>
+                            <span className="sr-only">
+                                {t('common.closeDialog')}
+                            </span>
                         </Button>
                     </div>
                 </div>
@@ -150,7 +152,7 @@ const AddProjectMemberDialog = ({
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                             uiSize="lg"
-                            placeholder="Поиск по имени, роли или почте"
+                            placeholder={t('overview.searchMembers')}
                             className="pl-9"
                         />
                     </div>
@@ -217,8 +219,7 @@ const AddProjectMemberDialog = ({
                             })
                         ) : (
                             <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                                Подходящих участников не найдено или все уже
-                                добавлены в проект.
+                                {t('overview.noMembers')}
                             </div>
                         )}
                     </div>
@@ -232,7 +233,7 @@ const AddProjectMemberDialog = ({
                         className="rounded-xl px-6"
                         onClick={() => handleOpenChange(false)}
                     >
-                        Отмена
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         type="button"
@@ -244,7 +245,7 @@ const AddProjectMemberDialog = ({
                             handleOpenChange(false);
                         }}
                     >
-                        Добавить участников
+                        {t('overview.addMembers')}
                     </Button>
                 </div>
             </div>

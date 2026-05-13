@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { FolderPlus, X } from 'lucide-react';
+import { useI18n } from '@/shared/lib';
 import { Button, Input } from '@/shared/ui';
 
 type CreateProjectFolderDialogProps = {
@@ -15,6 +16,7 @@ const CreateProjectFolderDialog = ({
     onOpenChange,
     onSubmit,
 }: CreateProjectFolderDialogProps) => {
+    const { t } = useI18n();
     const [name, setName] = useState('');
 
     const handleOpenChange = useCallback(
@@ -71,11 +73,10 @@ const CreateProjectFolderDialog = ({
                                 id="create-project-folder-title"
                                 className="text-[1.75rem] leading-8 font-semibold text-foreground"
                             >
-                                Создать папку проектов
+                                {t('dialogs.createFolderTitle')}
                             </h2>
                             <p className="mt-2 text-base leading-6 text-muted-foreground">
-                                Папка поможет сгруппировать связанные проекты в
-                                одном месте.
+                                {t('dialogs.createFolderDescription')}
                             </p>
                         </div>
 
@@ -87,7 +88,9 @@ const CreateProjectFolderDialog = ({
                             onClick={() => handleOpenChange(false)}
                         >
                             <X className="size-4" />
-                            <span className="sr-only">Закрыть окно</span>
+                            <span className="sr-only">
+                                {t('common.closeDialog')}
+                            </span>
                         </Button>
                     </div>
                 </div>
@@ -98,14 +101,14 @@ const CreateProjectFolderDialog = ({
                             htmlFor="project-folder-name"
                             className="text-sm font-medium text-foreground"
                         >
-                            Название папки
+                            {t('dialogs.folderName')}
                         </label>
                         <Input
                             id="project-folder-name"
                             value={name}
                             onChange={(event) => setName(event.target.value)}
                             uiSize="lg"
-                            placeholder="Например, Клиентские проекты"
+                            placeholder={t('dialogs.folderNamePlaceholder')}
                         />
                     </div>
                 </div>
@@ -118,7 +121,7 @@ const CreateProjectFolderDialog = ({
                         className="rounded-xl px-6"
                         onClick={() => handleOpenChange(false)}
                     >
-                        Отмена
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         type="button"
@@ -131,7 +134,7 @@ const CreateProjectFolderDialog = ({
                         }}
                     >
                         <FolderPlus className="size-4" />
-                        Создать папку
+                        {t('dialogs.createFolder')}
                     </Button>
                 </div>
             </div>

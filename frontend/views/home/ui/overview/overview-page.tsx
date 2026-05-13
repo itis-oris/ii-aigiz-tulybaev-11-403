@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useI18n } from '@/shared/lib';
 import {
     projectOverview,
     workspaceMembers,
@@ -18,6 +19,7 @@ import AddProjectMemberDialog from './add-project-member-dialog';
 import OverviewMembersList from './overview-members-list';
 
 const Overview = () => {
+    const { t } = useI18n();
     const [members, setMembers] = useState<ProjectParticipant[]>(
         projectOverview.members,
     );
@@ -49,11 +51,10 @@ const Overview = () => {
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-2xl font-semibold text-foreground">
-                                    Участники
+                                    {t('overview.members')}
                                 </h2>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    Команда, которая работает над проектом и
-                                    ведет текущие задачи.
+                                    {t('overview.membersDescription')}
                                 </p>
                             </div>
                             <Button
@@ -61,7 +62,7 @@ const Overview = () => {
                                 onClick={() => setIsAddMemberDialogOpen(true)}
                             >
                                 <Plus className="size-4" />
-                                Добавить участника
+                                {t('overview.addMember')}
                             </Button>
                         </div>
 
