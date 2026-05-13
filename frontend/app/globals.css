@@ -105,6 +105,17 @@ a {
     --sidebar-ring: oklch(0.705 0.015 286.067);
     --background: oklch(1 0 0);
     --foreground: oklch(0.141 0.005 285.823);
+    --scrollbar-track: color-mix(
+        in oklab,
+        var(--background) 96%,
+        var(--foreground) 4%
+    );
+    --scrollbar-thumb: color-mix(in oklab, var(--foreground) 22%, transparent);
+    --scrollbar-thumb-hover: color-mix(
+        in oklab,
+        var(--foreground) 32%,
+        transparent
+    );
 }
 
 .dark {
@@ -139,6 +150,13 @@ a {
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.552 0.016 285.938);
+    --scrollbar-track: color-mix(in oklab, var(--background) 90%, black 10%);
+    --scrollbar-thumb: color-mix(in oklab, var(--foreground) 18%, transparent);
+    --scrollbar-thumb-hover: color-mix(
+        in oklab,
+        var(--foreground) 26%,
+        transparent
+    );
 }
 
 @layer base {
@@ -150,6 +168,28 @@ a {
     }
     html {
         @apply font-sans;
+
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        scrollbar-gutter: stable;
+    }
+
+    html::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    html::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+    }
+
+    html::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border: 2px solid var(--scrollbar-track);
+        border-radius: 999px;
+    }
+
+    html::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover);
     }
 }
 

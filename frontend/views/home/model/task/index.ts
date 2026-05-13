@@ -1,8 +1,4 @@
-import {
-    mockDays,
-    organizationTaskDays,
-    projectTaskDays,
-} from '@/views/home/model/task/mock';
+import { mockDays, organizationTaskDays, projectTaskDays } from './mock';
 
 export { mockDays, organizationTaskDays, projectTaskDays };
-export type { DayTasks, Task } from '@/views/home/model/task/types';
+export type { DayTasks, Task } from './types';

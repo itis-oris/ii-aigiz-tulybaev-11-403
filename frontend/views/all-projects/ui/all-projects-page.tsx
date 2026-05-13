@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import {
     FolderPlus,
@@ -12,7 +12,13 @@ import {
     useProjectFolderDndController,
     useWorkspaceProjectsController,
 } from '@/shared/lib';
-import { Button, Input } from '@/shared/ui';
+import {
+    Button,
+    Input,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/shared/ui';
 import CreateProjectDialog from '@/widgets/app-sidebar/ui/create-project-dialog';
 import { useAllProjectsWorkspace } from '@/views/all-projects/model/use-all-projects-workspace';
 import {
@@ -23,6 +29,12 @@ import { FolderRow } from './folder-row';
 import { ProjectRow } from './project-row';
 import { RootDropZone } from './root-drop-zone';
 import CreateProjectFolderDialog from './create-project-folder-dialog';
+
+const placementOptions = [
+    { label: 'Все проекты', value: 'all' },
+    { label: 'В папках', value: 'foldered' },
+    { label: 'Без папки', value: 'root' },
+] as const;
 
 const AllProjectsPage = () => {
     const {
@@ -37,22 +49,50 @@ const AllProjectsPage = () => {
         toggleFolder,
     } = useWorkspaceProjectsController();
     const [query, setQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<
+        'all' | 'В работе' | 'Планирование'
+    >('all');
+    const [placementFilter, setPlacementFilter] = useState<
+        'all' | 'foldered' | 'root'
+    >('all');
     const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] =
         useState(false);
     const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] =
         useState(false);
-    const { groupedFolders, hasResults, normalizedQuery, rootProjects } =
-        useAllProjectsWorkspace({
-            folders,
-            projects,
-            query,
-        });
+    const {
+        groupedFolders,
+        hasResults,
+        normalizedQuery,
+        rootProjects,
+        statusOptions,
+    } = useAllProjectsWorkspace({
+        folders,
+        projects,
+        query,
+        statusFilter,
+        placementFilter,
+    });
     const { draggedProjectId, handleDragEnd, handleDragStart } =
         useProjectFolderDndController({
             moveProjectToFolder,
             parseProjectId: parseAllProjectsProjectId,
             parseFolderId: parseAllProjectsFolderId,
         });
+    const activeFiltersCount = useMemo(
+        () =>
+            [
+                query.trim().length > 0,
+                statusFilter !== 'all',
+                placementFilter !== 'all',
+            ].filter(Boolean).length,
+        [placementFilter, query, statusFilter],
+    );
+
+    const handleResetFilters = () => {
+        setQuery('');
+        setStatusFilter('all');
+        setPlacementFilter('all');
+    };
 
     return (
         <>
@@ -83,18 +123,141 @@ const AllProjectsPage = () => {
                                             variant="outline"
                                             size="md"
                                             className="text-muted-foreground"
+                                            aria-label="Сбросить поиск и фильтры"
+                                            onClick={handleResetFilters}
+                                            disabled={activeFiltersCount === 0}
                                         >
                                             <SlidersHorizontal className="size-4" />
                                         </Button>
 
-                                        <Button
-                                            variant="outline"
-                                            size="md"
-                                            className="text-muted-foreground"
-                                        >
-                                            <PlusCircle className="size-4" />
-                                            Добавить фильтр
-                                        </Button>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="md"
+                                                    className="text-muted-foreground"
+                                                >
+                                                    <PlusCircle className="size-4" />
+                                                    Добавить фильтр
+                                                    {activeFiltersCount > 0 ? (
+                                                        <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-foreground">
+                                                            {activeFiltersCount}
+                                                        </span>
+                                                    ) : null}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                                align="start"
+                                                className="w-80 p-3"
+                                            >
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <div className="text-sm font-medium text-foreground">
+                                                            Фильтры проектов
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-muted-foreground">
+                                                            Фильтруйте список по
+                                                            статусу и размещению
+                                                            проекта.
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="space-y-1">
+                                                            <div className="text-xs font-medium text-foreground">
+                                                                Статус
+                                                            </div>
+                                                            <select
+                                                                value={
+                                                                    statusFilter
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    setStatusFilter(
+                                                                        event
+                                                                            .target
+                                                                            .value as typeof statusFilter,
+                                                                    )
+                                                                }
+                                                                className="h-9 w-full cursor-pointer appearance-none rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:border-ring"
+                                                            >
+                                                                <option value="all">
+                                                                    Все статусы
+                                                                </option>
+                                                                {statusOptions.map(
+                                                                    (
+                                                                        status,
+                                                                    ) => (
+                                                                        <option
+                                                                            key={
+                                                                                status
+                                                                            }
+                                                                            value={
+                                                                                status
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                status
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
+                                                            </select>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="text-xs font-medium text-foreground">
+                                                                Размещение
+                                                            </div>
+                                                            <select
+                                                                value={
+                                                                    placementFilter
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    setPlacementFilter(
+                                                                        event
+                                                                            .target
+                                                                            .value as typeof placementFilter,
+                                                                    )
+                                                                }
+                                                                className="h-9 w-full cursor-pointer appearance-none rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:border-ring"
+                                                            >
+                                                                {placementOptions.map(
+                                                                    (
+                                                                        option,
+                                                                    ) => (
+                                                                        <option
+                                                                            key={
+                                                                                option.value
+                                                                            }
+                                                                            value={
+                                                                                option.value
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                option.label
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="w-full justify-center text-muted-foreground"
+                                                        onClick={
+                                                            handleResetFilters
+                                                        }
+                                                    >
+                                                        Сбросить фильтры
+                                                    </Button>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">
@@ -212,7 +375,10 @@ const AllProjectsPage = () => {
 
                                 {!hasResults ? (
                                     <div className="px-3 py-10 text-sm text-muted-foreground">
-                                        Ничего не найдено по текущему запросу.
+                                        {normalizedQuery ||
+                                        activeFiltersCount > 0
+                                            ? 'Ничего не найдено по текущему запросу и фильтрам.'
+                                            : 'Проекты не найдены.'}
                                     </div>
                                 ) : null}
                             </div>

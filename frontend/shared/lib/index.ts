@@ -10,6 +10,7 @@ import { useProjectFolderDndController } from './use-project-folder-dnd-controll
 import { useValidatedForm } from './use-validated-form';
 import { useIsMobile } from './use-mobile';
 import { useWorkspaceProjectsController } from './use-workspace-projects-controller';
+import { THEME_STORAGE_KEY, ThemeProvider, useTheme } from './theme';
 
 export {
     ActiveProjectProvider,
@@ -17,11 +18,14 @@ export {
     organizationProjects,
     projectTabs,
     ProjectTabProvider,
+    ThemeProvider,
+    THEME_STORAGE_KEY,
     useActiveProject,
     useIsMobile,
     useProjectTab,
     useProjectFolderTree,
     useProjectFolderDndController,
+    useTheme,
     useValidatedForm,
     useWorkspaceProjectsController,
 };

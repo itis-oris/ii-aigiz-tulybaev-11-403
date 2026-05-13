@@ -17,14 +17,37 @@ type UseProjectFolderTreeParams<TProject extends FolderProjectItem> = {
     folders: ProjectFolder[];
     projects: TProject[];
     query?: string;
+    matchesProjectQuery?: (
+        project: TProject,
+        normalizedQuery: string,
+    ) => boolean;
+    matchesFolderQuery?: (
+        folder: ProjectFolder,
+        normalizedQuery: string,
+    ) => boolean;
 };
+
+const defaultProjectMatchesQuery = (
+    project: FolderProjectItem,
+    normalizedQuery: string,
+) => project.name.toLowerCase().includes(normalizedQuery);
+
+const defaultFolderMatchesQuery = (
+    folder: ProjectFolder,
+    normalizedQuery: string,
+) => folder.name.toLowerCase().includes(normalizedQuery);
 
 export const useProjectFolderTree = <TProject extends FolderProjectItem>({
     folders,
     projects,
     query = '',
+    matchesProjectQuery,
+    matchesFolderQuery,
 }: UseProjectFolderTreeParams<TProject>) => {
     const normalizedQuery = query.trim().toLowerCase();
+    const projectMatchesQuery =
+        matchesProjectQuery ?? defaultProjectMatchesQuery;
+    const folderMatchesQuery = matchesFolderQuery ?? defaultFolderMatchesQuery;
 
     const groupedFolders = useMemo(
         () =>
@@ -33,11 +56,12 @@ export const useProjectFolderTree = <TProject extends FolderProjectItem>({
                     const folderProjects = projects.filter(
                         (project) => project.folderId === folder.id,
                     );
-                    const folderMatches = folder.name
-                        .toLowerCase()
-                        .includes(normalizedQuery);
+                    const folderMatches = folderMatchesQuery(
+                        folder,
+                        normalizedQuery,
+                    );
                     const matchingProjects = folderProjects.filter((project) =>
-                        project.name.toLowerCase().includes(normalizedQuery),
+                        projectMatchesQuery(project, normalizedQuery),
                     );
 
                     if (!normalizedQuery) {
@@ -56,7 +80,13 @@ export const useProjectFolderTree = <TProject extends FolderProjectItem>({
                     };
                 })
                 .filter(Boolean) as GroupedFolderProjects<TProject>[],
-        [folders, normalizedQuery, projects],
+        [
+            folderMatchesQuery,
+            folders,
+            normalizedQuery,
+            projectMatchesQuery,
+            projects,
+        ],
     );
 
     const rootProjects = useMemo(
@@ -67,10 +97,10 @@ export const useProjectFolderTree = <TProject extends FolderProjectItem>({
                 }
 
                 return normalizedQuery
-                    ? project.name.toLowerCase().includes(normalizedQuery)
+                    ? projectMatchesQuery(project, normalizedQuery)
                     : true;
             }),
-        [normalizedQuery, projects],
+        [normalizedQuery, projectMatchesQuery, projects],
     );
 
     return {

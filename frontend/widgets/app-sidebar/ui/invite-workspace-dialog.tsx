@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Link2, PlusCircle, UserRound, X } from 'lucide-react';
+import { Link2, PlusCircle, X } from 'lucide-react';
 import { Button, Input } from '@/shared/ui';
 import { cn } from '@/shared/lib';
 
@@ -58,7 +58,7 @@ export function InviteWorkspaceDialog({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="invite-workspace-title"
-                className="w-full max-w-[35rem] overflow-hidden rounded-[18px] bg-white shadow-2xl"
+                className="w-full max-w-[35rem] overflow-hidden rounded-[18px] border border-border bg-card text-card-foreground shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="border-b border-border px-5 pb-4 pt-4">
@@ -80,7 +80,7 @@ export function InviteWorkspaceDialog({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className="mt-1 rounded-lg text-muted-foreground hover:bg-slate-100"
+                            className="mt-1 rounded-lg text-muted-foreground"
                             onClick={() => onOpenChange(false)}
                         >
                             <X className="size-4" />
@@ -104,14 +104,12 @@ export function InviteWorkspaceDialog({
                                 }
                                 className={cn(
                                     'relative inline-flex h-6 w-10 shrink-0 rounded-full transition-colors',
-                                    inviteByLink
-                                        ? 'bg-primary'
-                                        : 'bg-slate-200',
+                                    inviteByLink ? 'bg-primary' : 'bg-muted',
                                 )}
                             >
                                 <span
                                     className={cn(
-                                        'absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform',
+                                        'absolute top-0.5 size-5 rounded-full bg-background shadow-sm transition-transform',
                                         inviteByLink
                                             ? 'translate-x-[1.15rem]'
                                             : 'translate-x-0.5',
@@ -179,7 +177,7 @@ export function InviteWorkspaceDialog({
                                     type="button"
                                     variant="ghost"
                                     size="icon-sm"
-                                    className="self-end rounded-lg text-muted-foreground hover:bg-slate-100 sm:self-auto"
+                                    className="self-end rounded-lg text-muted-foreground sm:self-auto"
                                     onClick={() =>
                                         setRows((currentRows) =>
                                             currentRows.length === 1
@@ -226,7 +224,7 @@ export function InviteWorkspaceDialog({
                                     },
                                 ])
                             }
-                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-slate-100 hover:text-foreground"
+                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                             <PlusCircle className="size-4" />
                             Добавить ещё
@@ -239,7 +237,7 @@ export function InviteWorkspaceDialog({
                         type="button"
                         variant="outline"
                         size="xl"
-                        className="rounded-xl border-[#6c78ff] px-6 text-[#6c78ff] hover:bg-[#eef1ff] hover:text-[#5562ff]"
+                        className="rounded-xl px-6"
                         onClick={() => onOpenChange(false)}
                     >
                         Отмена

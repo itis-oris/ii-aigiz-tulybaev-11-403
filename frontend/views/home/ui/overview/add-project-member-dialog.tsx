@@ -112,7 +112,7 @@ const AddProjectMemberDialog = ({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="add-project-member-title"
-                className="w-full max-w-[38rem] overflow-hidden rounded-[18px] bg-white shadow-2xl"
+                className="w-full max-w-[38rem] overflow-hidden rounded-[18px] border border-border bg-card text-card-foreground shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="border-b border-border px-5 pb-4 pt-4">
@@ -134,7 +134,7 @@ const AddProjectMemberDialog = ({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className="mt-1 rounded-lg text-muted-foreground hover:bg-slate-100"
+                            className="mt-1 rounded-lg text-muted-foreground"
                             onClick={() => handleOpenChange(false)}
                         >
                             <X className="size-4" />
@@ -180,7 +180,7 @@ const AddProjectMemberDialog = ({
                                             'flex w-full cursor-pointer items-center gap-4 rounded-2xl border px-4 py-3 text-left transition-colors',
                                             isSelected
                                                 ? 'border-primary/40 bg-primary/5'
-                                                : 'border-border/70 bg-background hover:bg-slate-50',
+                                                : 'border-border/70 bg-background hover:bg-muted/50',
                                         )}
                                     >
                                         <Avatar
@@ -207,7 +207,7 @@ const AddProjectMemberDialog = ({
                                                 'flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors',
                                                 isSelected
                                                     ? 'border-primary bg-primary text-primary-foreground'
-                                                    : 'border-border bg-white text-transparent',
+                                                    : 'border-border bg-background text-transparent',
                                             )}
                                         >
                                             <Check className="size-3.5" />

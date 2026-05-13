@@ -1,3 +1,3 @@
-import ProfilePage from '@/views/profile/ui/profile-page';
+import ProfilePage from './ui/profile-page';
 
 export { ProfilePage };

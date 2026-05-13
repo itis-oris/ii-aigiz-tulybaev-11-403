@@ -107,7 +107,7 @@ const CreateProjectDialog = ({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="create-project-title"
-                className="w-full max-w-[36rem] overflow-hidden rounded-[18px] bg-white shadow-2xl"
+                className="w-full max-w-[36rem] overflow-hidden rounded-[18px] border border-border bg-card text-card-foreground shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="border-b border-border px-5 pb-4 pt-4">
@@ -129,7 +129,7 @@ const CreateProjectDialog = ({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className="mt-1 rounded-lg text-muted-foreground hover:bg-slate-100"
+                            className="mt-1 rounded-lg text-muted-foreground"
                             onClick={() => handleOpenChange(false)}
                         >
                             <X className="size-4" />
@@ -139,8 +139,8 @@ const CreateProjectDialog = ({
                 </div>
 
                 <div className="space-y-5 px-5 py-4">
-                    <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-slate-50 px-4 py-3">
-                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-black text-sm font-semibold text-white">
+                    <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/50 px-4 py-3">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground">
                             {previewInitials}
                         </div>
                         <div className="min-w-0">
@@ -184,7 +184,7 @@ const CreateProjectDialog = ({
                             }
                             rows={4}
                             placeholder="Коротко опишите назначение проекта"
-                            className="w-full resize-none rounded-xl border border-input bg-input/20 px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+                            className="w-full resize-none rounded-xl border border-input bg-input/20 px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
                         />
                     </div>
 
@@ -202,7 +202,7 @@ const CreateProjectDialog = ({
                                 onChange={(event) =>
                                     setFolderId(event.target.value)
                                 }
-                                className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 pr-10 pl-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+                                className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 pr-10 pl-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
                             >
                                 <option value="none">Без папки</option>
                                 {folders.map((folder) => (

@@ -54,12 +54,16 @@ type UseAllProjectsWorkspaceParams = {
     folders: ProjectFolder[];
     projects: ProjectSummary[];
     query: string;
+    statusFilter: 'all' | ProjectListItem['status'];
+    placementFilter: 'all' | 'foldered' | 'root';
 };
 
 export const useAllProjectsWorkspace = ({
     folders,
     projects,
     query,
+    statusFilter,
+    placementFilter,
 }: UseAllProjectsWorkspaceParams) => {
     const projectItems = useMemo<ProjectListItem[]>(
         () =>
@@ -69,12 +73,46 @@ export const useAllProjectsWorkspace = ({
             })),
         [projects],
     );
+    const filteredProjectItems = useMemo(
+        () =>
+            projectItems.filter((project) => {
+                const matchesStatus =
+                    statusFilter === 'all'
+                        ? true
+                        : project.status === statusFilter;
+                const matchesPlacement =
+                    placementFilter === 'all'
+                        ? true
+                        : placementFilter === 'foldered'
+                          ? Boolean(project.folderId)
+                          : !project.folderId;
+
+                return matchesStatus && matchesPlacement;
+            }),
+        [placementFilter, projectItems, statusFilter],
+    );
+    const statusOptions = useMemo(
+        () =>
+            [...new Set(projectItems.map((project) => project.status))].sort(),
+        [projectItems],
+    );
 
     const { groupedFolders, hasResults, normalizedQuery, rootProjects } =
         useProjectFolderTree({
             folders,
-            projects: projectItems,
+            projects: filteredProjectItems,
             query,
+            matchesProjectQuery: (project, normalizedValue) =>
+                [
+                    project.name,
+                    project.ownerName,
+                    project.status,
+                    project.boardTabs.join(' '),
+                    project.description,
+                ]
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(normalizedValue),
         });
 
     return {
@@ -82,5 +120,6 @@ export const useAllProjectsWorkspace = ({
         hasResults,
         normalizedQuery,
         rootProjects,
+        statusOptions,
     };
 };

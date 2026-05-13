@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { cn } from '@/shared/lib';
+import { cn, useTheme } from '@/shared/lib';
 import { Avatar } from '@/shared/ui';
 import {
     SidebarMenu,
@@ -18,29 +18,18 @@ type SidebarProfileMenuProps = {
     label: string;
 };
 
-const profileMenuItems = [
-    {
-        label: 'Настройки',
-        icon: Settings2,
-    },
-    {
-        label: 'Тема',
-        value: 'System',
-        icon: MoonStar,
-    },
-    {
-        label: 'Язык',
-        value: 'RU',
-        icon: Languages,
-    },
-];
-
 function SidebarProfileMenuContent({
     email,
     initials,
     label,
 }: SidebarProfileMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const { mounted, theme, toggleTheme } = useTheme();
+    const themeLabel = !mounted
+        ? 'Светлая'
+        : theme === 'dark'
+          ? 'Темная'
+          : 'Светлая';
 
     return (
         <div className="relative w-full">
@@ -59,34 +48,41 @@ function SidebarProfileMenuContent({
                     </div>
                 </div>
                 <SidebarMenu>
-                    {profileMenuItems.map((item) => (
-                        <SidebarMenuItem key={item.label}>
-                            {item.label === 'Настройки' ? (
-                                <SidebarMenuButton
-                                    asChild
-                                    className="h-10 rounded-xl px-3 text-sm"
-                                >
-                                    <Link
-                                        href="/profile"
-                                        onClick={() => setIsOpen(false)}
-                                    >
-                                        <item.icon className="size-4 text-sidebar-foreground/75" />
-                                        <span>{item.label}</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            ) : (
-                                <SidebarMenuButton className="h-10 rounded-xl px-3 text-sm">
-                                    <item.icon className="size-4 text-sidebar-foreground/75" />
-                                    <span>{item.label}</span>
-                                    {item.value ? (
-                                        <span className="ml-auto text-xs text-sidebar-foreground/55">
-                                            {item.value}
-                                        </span>
-                                    ) : null}
-                                </SidebarMenuButton>
-                            )}
-                        </SidebarMenuItem>
-                    ))}
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            asChild
+                            className="h-10 rounded-xl px-3 text-sm"
+                        >
+                            <Link
+                                href="/profile"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <Settings2 className="size-4 text-sidebar-foreground/75" />
+                                <span>Настройки</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            className="h-10 rounded-xl px-3 text-sm"
+                            onClick={toggleTheme}
+                        >
+                            <MoonStar className="size-4 text-sidebar-foreground/75" />
+                            <span>Тема</span>
+                            <span className="ml-auto text-xs text-sidebar-foreground/55">
+                                {themeLabel}
+                            </span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton className="h-10 rounded-xl px-3 text-sm">
+                            <Languages className="size-4 text-sidebar-foreground/75" />
+                            <span>Язык</span>
+                            <span className="ml-auto text-xs text-sidebar-foreground/55">
+                                RU
+                            </span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             asChild
@@ -111,7 +107,10 @@ function SidebarProfileMenuContent({
                 aria-label="Открыть меню профиля"
                 className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
             >
-                <Avatar size="md" className="bg-black text-white">
+                <Avatar
+                    size="md"
+                    className="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
                     {initials}
                 </Avatar>
                 <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">

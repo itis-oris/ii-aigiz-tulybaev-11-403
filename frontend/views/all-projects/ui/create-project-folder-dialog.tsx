@@ -61,7 +61,7 @@ const CreateProjectFolderDialog = ({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="create-project-folder-title"
-                className="w-full max-w-[32rem] overflow-hidden rounded-[18px] bg-white shadow-2xl"
+                className="w-full max-w-[32rem] overflow-hidden rounded-[18px] border border-border bg-card text-card-foreground shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="border-b border-border px-5 pb-4 pt-4">
@@ -83,7 +83,7 @@ const CreateProjectFolderDialog = ({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className="mt-1 rounded-lg text-muted-foreground hover:bg-slate-100"
+                            className="mt-1 rounded-lg text-muted-foreground"
                             onClick={() => handleOpenChange(false)}
                         >
                             <X className="size-4" />

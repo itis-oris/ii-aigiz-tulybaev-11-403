@@ -27,8 +27,9 @@ export function FolderRow({
         <div
             ref={ref}
             className={cn(
-                'grid grid-cols-[1.3fr_1fr_1fr_1.1fr] gap-4 rounded-xl bg-amber-50/70 px-3 py-3 transition-colors',
-                isDropTarget && 'bg-amber-100 ring-1 ring-inset ring-amber-300',
+                'grid grid-cols-[1.3fr_1fr_1fr_1.1fr] gap-4 rounded-xl bg-muted/50 px-3 py-3 transition-colors',
+                isDropTarget &&
+                    'bg-primary/8 ring-1 ring-inset ring-primary/30',
             )}
         >
             <div className="flex min-w-0 items-center gap-3">
@@ -40,7 +41,7 @@ export function FolderRow({
                             : `Свернуть папку ${folder.name}`
                     }
                     onClick={onToggle}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                     <ChevronRight
                         className={cn(
@@ -75,7 +76,7 @@ export function FolderRow({
             </div>
 
             <div className="flex items-center gap-2 text-sm text-foreground">
-                <span className="size-2 rounded-full bg-amber-400" />
+                <span className="size-2 rounded-full bg-primary/70" />
                 <span>Папка</span>
             </div>
 

@@ -1,3 +1,3 @@
-import Header from '@/views/home/ui/home-header/home-header';
+import Header from './home-header';
 
 export { Header };

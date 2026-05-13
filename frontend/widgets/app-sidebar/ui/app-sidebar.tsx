@@ -1,5 +1,4 @@
 'use client';
-
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -98,9 +97,18 @@ export function AppSidebar() {
             >
                 <Sidebar
                     collapsible="icon"
-                    className="border-r border-sidebar-border"
+                    className="border-r border-sidebar-border bg-sidebar"
                 >
-                    <SidebarHeader className="gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0"
+                    >
+                        <div className="absolute inset-0 bg-sidebar" />
+                        <div className="absolute inset-y-0 left-0 w-px bg-sidebar-border/55" />
+                        <div className="absolute inset-y-0 right-0 w-px bg-sidebar-border/55" />
+                    </div>
+
+                    <SidebarHeader className="relative z-10 gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
                         <div className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
                             <WorkspaceSwitcher
                                 label="Campus"
@@ -124,7 +132,7 @@ export function AppSidebar() {
                             />
                         </div>
                     </SidebarHeader>
-                    <SidebarContent>
+                    <SidebarContent className="relative z-10">
                         <SidebarGroup className="px-3 py-0 group-data-[collapsible=icon]:px-2">
                             <SidebarGroupContent>
                                 <SidebarMenu>
@@ -326,7 +334,7 @@ export function AppSidebar() {
                             </SidebarGroupContent>
                         </SidebarGroup>
                     </SidebarContent>
-                    <SidebarFooter className="mt-auto gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
+                    <SidebarFooter className="relative z-10 mt-auto gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
                         <SidebarMenu>
                             <SidebarMenuItem>
                                 <SidebarMenuButton

@@ -28,10 +28,10 @@ const Overview = () => {
             <div className="min-h-0 flex-1 overflow-y-auto bg-background">
                 <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                     <div className="flex flex-col gap-6">
-                        <Card className="py-0 ring-0">
+                        <Card className="bg-transparent py-0 ring-0">
                             <CardContent className="px-0 py-0">
                                 <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start">
-                                    <div className="flex size-24 shrink-0 items-center justify-center rounded-3xl bg-black text-5xl text-white shadow-sm ring-1 ring-black/5">
+                                    <div className="flex size-24 shrink-0 items-center justify-center rounded-3xl bg-primary text-5xl text-primary-foreground shadow-sm ring-1 ring-border">
                                         {projectOverview.emoji}
                                     </div>
                                     <div className="min-w-0 flex-1">
