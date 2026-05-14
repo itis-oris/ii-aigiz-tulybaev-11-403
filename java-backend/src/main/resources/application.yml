@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: sprintly-java-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sprintly
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.springframework.security: info
+    org.hibernate.SQL: info
