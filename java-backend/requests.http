@@ -43,6 +43,9 @@ client.global.set("userId", response.body.userId);
 GET {{baseUrl}}/api/auth/me
 Authorization: Bearer {{token}}
 
+### Access protected endpoint without token, expect 401 JSON
+GET {{baseUrl}}/api/projects
+
 ### Users in current organization
 GET {{baseUrl}}/api/users
 Authorization: Bearer {{token}}
