@@ -8,5 +8,12 @@ import java.util.UUID;
 
 public interface TaskRepositoryCustom {
 
-    List<Task> findByFilters(UUID projectId, UUID assigneeId, TaskStatus status, Integer priority, String search);
+    List<Task> findByFilters(
+        UUID organizationId,
+        UUID projectId,
+        UUID assigneeId,
+        TaskStatus status,
+        Integer priority,
+        String search
+    );
 }

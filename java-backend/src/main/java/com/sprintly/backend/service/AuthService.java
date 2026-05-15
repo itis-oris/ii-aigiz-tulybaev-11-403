@@ -36,9 +36,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final CaptchaVerificationService captchaVerificationService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        captchaVerificationService.verify(request.getCaptchaToken());
+
         String normalizedEmail = request.getEmail().trim().toLowerCase();
 
         if (userRepository.existsByEmail(normalizedEmail)) {
@@ -91,6 +94,8 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        captchaVerificationService.verify(request.getCaptchaToken());
+
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
                 request.getEmail().trim().toLowerCase(),

@@ -34,3 +34,6 @@ app:
     jwt:
       secret: 0123456789012345678901234567890123456789012345678901234567890123
       access-token-expiration: 86400000
+    captcha:
+      verify-url: https://www.google.com/recaptcha/api/siteverify
+      secret: change-me

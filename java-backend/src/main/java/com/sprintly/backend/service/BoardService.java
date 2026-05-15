@@ -12,6 +12,8 @@ import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,11 +26,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BoardService {
 
+    private static final String BOARDS_BY_PROJECT_CACHE = "boardsByProject";
+
     private final BoardRepository boardRepository;
     private final ProjectRepository projectRepository;
     private final BoardMapper boardMapper;
 
     @Transactional(readOnly = true)
+    @Cacheable(value = BOARDS_BY_PROJECT_CACHE, key = "#projectId")
     public List<BoardResponse> findAllByProject(UUID projectId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
         return boardRepository.findAllByProject_IdAndDeletedAtIsNullOrderByPositionAsc(project.getId()).stream()
@@ -42,6 +47,7 @@ public class BoardService {
     }
 
     @Transactional
+    @CacheEvict(value = BOARDS_BY_PROJECT_CACHE, key = "#request.projectId")
     public BoardResponse create(CreateBoardRequest request, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
@@ -57,6 +63,7 @@ public class BoardService {
     }
 
     @Transactional
+    @CacheEvict(value = BOARDS_BY_PROJECT_CACHE, allEntries = true)
     public BoardResponse update(UUID boardId, UpdateBoardRequest request, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
@@ -66,6 +73,7 @@ public class BoardService {
     }
 
     @Transactional
+    @CacheEvict(value = BOARDS_BY_PROJECT_CACHE, allEntries = true)
     public void delete(UUID boardId, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());

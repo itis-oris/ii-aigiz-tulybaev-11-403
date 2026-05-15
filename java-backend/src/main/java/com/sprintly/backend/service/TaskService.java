@@ -23,6 +23,7 @@ import com.sprintly.backend.repository.TaskRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +44,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse create(CreateTaskRequest request, CustomUserDetails currentUser) {
+        ensureManagerAccess(currentUser, "Insufficient permissions for task creation");
+
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
         Board board = getBoardInProject(request.getBoardId(), project.getId());
         BoardColumn column = getColumnInBoard(request.getColumnId(), board.getId());
@@ -82,13 +85,13 @@ public class TaskService {
         }
 
         return taskRepository.findByFilters(
+                currentUser.getOrganizationId(),
                 filter.getProjectId(),
                 filter.getAssigneeId(),
                 filter.getStatus(),
                 filter.getPriority(),
                 filter.getSearch()
             ).stream()
-            .filter(task -> belongsToOrganization(task, currentUser.getOrganizationId()))
             .map(taskMapper::toResponse)
             .toList();
     }
@@ -100,6 +103,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse update(UUID taskId, UpdateTaskRequest request, CustomUserDetails currentUser) {
+        ensureManagerAccess(currentUser, "Insufficient permissions for task update");
+
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
 
         Project project = task.getProject();
@@ -154,6 +159,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse assign(UUID taskId, AssignTaskRequest request, CustomUserDetails currentUser) {
+        ensureManagerAccess(currentUser, "Insufficient permissions for task assignment");
+
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
         User assignee = request.getAssigneeId() != null
             ? getUserInOrganization(request.getAssigneeId(), currentUser.getOrganizationId())
@@ -167,6 +174,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse move(UUID taskId, MoveTaskRequest request, CustomUserDetails currentUser) {
+        ensureManagerAccess(currentUser, "Insufficient permissions for task move");
+
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
         BoardColumn column = getColumnInBoard(request.getColumnId(), task.getBoard().getId());
 
@@ -182,6 +191,7 @@ public class TaskService {
     @Transactional
     public TaskResponse updateStatus(UUID taskId, UpdateTaskStatusRequest request, CustomUserDetails currentUser) {
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
+        ensureManagerOrAssigneeAccess(currentUser, task);
         task.setStatus(request.getStatus());
         task.setUpdatedAt(OffsetDateTime.now());
         return taskMapper.toResponse(taskRepository.save(task));
@@ -189,6 +199,8 @@ public class TaskService {
 
     @Transactional
     public void delete(UUID taskId, CustomUserDetails currentUser) {
+        ensureManagerAccess(currentUser, "Insufficient permissions for task deletion");
+
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
 
         if (task.getDeletedAt() != null) {
@@ -275,5 +287,26 @@ public class TaskService {
         }
 
         return user;
+    }
+
+    private void ensureManagerAccess(CustomUserDetails currentUser, String message) {
+        boolean hasAccess = currentUser.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
+
+        if (!hasAccess) {
+            throw new AccessDeniedException(message);
+        }
+    }
+
+    private void ensureManagerOrAssigneeAccess(CustomUserDetails currentUser, Task task) {
+        boolean isManager = currentUser.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
+        boolean isAssignee = task.getAssignee() != null && currentUser.getId().equals(task.getAssignee().getId());
+
+        if (!isManager && !isAssignee) {
+            throw new AccessDeniedException("Only managers or task assignee can change task status");
+        }
     }
 }

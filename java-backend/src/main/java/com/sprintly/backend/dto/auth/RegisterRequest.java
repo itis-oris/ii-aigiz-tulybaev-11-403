@@ -31,4 +31,7 @@ public class RegisterRequest {
     @NotBlank
     @Size(min = 2, max = 255)
     private String organizationName;
+
+    @NotBlank
+    private String captchaToken;
 }
