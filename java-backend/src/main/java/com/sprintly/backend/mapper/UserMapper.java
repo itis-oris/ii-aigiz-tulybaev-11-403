@@ -16,6 +16,7 @@ public class UserMapper {
             .lastname(user.getLastname())
             .middlename(user.getMiddlename())
             .email(user.getEmail())
+            .avatarUrl(user.getAvatarUrl())
             .organizationId(user.getOrganization() != null ? user.getOrganization().getId() : null)
             .organizationName(user.getOrganization() != null ? user.getOrganization().getName() : null)
             .roles(user.getRoles().stream()

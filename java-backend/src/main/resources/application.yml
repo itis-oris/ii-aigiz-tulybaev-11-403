@@ -1,39 +1,52 @@
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:java-backend/.env[.properties]
   application:
     name: sprintly-java-backend
   datasource:
-    url: jdbc:postgresql://localhost:5432/sprintly
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sprintly}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL:true}
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 springdoc:
   swagger-ui:
-    path: /swagger-ui.html
+    path: /doc
 
 logging:
   level:
-    org.springframework.security: info
-    org.hibernate.SQL: info
+    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:info}
+    org.hibernate.SQL: ${LOGGING_LEVEL_ORG_HIBERNATE_SQL:info}
 
 app:
   security:
     jwt:
-      secret: 0123456789012345678901234567890123456789012345678901234567890123
-      access-token-expiration: 86400000
+      secret: ${APP_SECURITY_JWT_SECRET}
+      access-token-expiration: ${APP_SECURITY_JWT_ACCESS_TOKEN_EXPIRATION:86400000}
     captcha:
-      verify-url: https://www.google.com/recaptcha/api/siteverify
-      secret: change-me
+      verify-url: ${APP_SECURITY_CAPTCHA_VERIFY_URL:https://www.google.com/recaptcha/api/siteverify}
+      secret: ${APP_SECURITY_CAPTCHA_SECRET}
+  storage:
+    s3:
+      endpoint: ${APP_STORAGE_S3_ENDPOINT}
+      region: ${APP_STORAGE_S3_REGION}
+      bucket: ${APP_STORAGE_S3_BUCKET}
+      access-key: ${APP_STORAGE_S3_ACCESS_KEY}
+      secret-key: ${APP_STORAGE_S3_SECRET_KEY}
+      public-base-url: ${APP_STORAGE_S3_PUBLIC_BASE_URL:}
+      path-style-access: ${APP_STORAGE_S3_PATH_STYLE_ACCESS:false}

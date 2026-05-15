@@ -16,6 +16,7 @@ public class UserResponse {
     private String lastname;
     private String middlename;
     private String email;
+    private String avatarUrl;
     private UUID organizationId;
     private String organizationName;
     private Set<String> roles;

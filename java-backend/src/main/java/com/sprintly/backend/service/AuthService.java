@@ -127,6 +127,7 @@ public class AuthService {
             .firstname(user.getFirstname())
             .lastname(user.getLastname())
             .middlename(user.getMiddlename())
+            .avatarUrl(user.getAvatarUrl())
             .roles(user.getRoles().stream().map(role -> role.getName().name()).collect(Collectors.toSet()))
             .build();
     }

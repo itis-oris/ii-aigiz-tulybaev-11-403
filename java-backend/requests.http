@@ -50,6 +50,18 @@ GET {{baseUrl}}/api/projects
 GET {{baseUrl}}/api/users
 Authorization: Bearer {{token}}
 
+### Upload current user avatar
+POST {{baseUrl}}/api/users/me/avatar
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="avatar.png"
+Content-Type: image/png
+
+< ./testdata/avatar.png
+--WebAppBoundary--
+
 ### Create project
 POST {{baseUrl}}/api/projects
 Content-Type: application/json
@@ -70,6 +82,18 @@ Authorization: Bearer {{token}}
 ### Get project by id
 GET {{baseUrl}}/api/projects/{{projectId}}
 Authorization: Bearer {{token}}
+
+### Upload project image
+POST {{baseUrl}}/api/projects/{{projectId}}/image
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="project-cover.png"
+Content-Type: image/png
+
+< ./testdata/project-cover.png
+--WebAppBoundary--
 
 ### Update project
 PUT {{baseUrl}}/api/projects/{{projectId}}

@@ -12,6 +12,7 @@ public class ProjectResponse {
 
     private UUID id;
     private String name;
+    private String imageUrl;
     private UUID organizationId;
     private String organizationName;
     private OffsetDateTime createdAt;

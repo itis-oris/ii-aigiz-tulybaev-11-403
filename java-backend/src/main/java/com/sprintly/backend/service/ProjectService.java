@@ -17,6 +17,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -31,6 +32,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final OrganizationRepository organizationRepository;
     private final ProjectMapper projectMapper;
+    private final S3StorageService s3StorageService;
 
     @Transactional(readOnly = true)
     @Cacheable(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
@@ -88,6 +90,18 @@ public class ProjectService {
 
         project.setDeletedAt(OffsetDateTime.now());
         projectRepository.save(project);
+    }
+
+    @Transactional
+    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
+    public ProjectResponse uploadImage(UUID projectId, MultipartFile file, CustomUserDetails currentUser) {
+        ensureManagerAccess(currentUser);
+
+        Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
+        String imageUrl = s3StorageService.uploadImage(file, "projects/" + project.getId() + "/image");
+        project.setImageUrl(imageUrl);
+
+        return projectMapper.toResponse(projectRepository.save(project));
     }
 
     private Project getProjectInOrganization(UUID projectId, UUID organizationId) {
