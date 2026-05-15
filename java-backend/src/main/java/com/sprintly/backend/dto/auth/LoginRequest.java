@@ -18,4 +18,7 @@ public class LoginRequest {
     @NotBlank
     @Size(min = 6, max = 128)
     private String password;
+
+    @NotBlank
+    private String captchaToken;
 }

@@ -1,34 +1,54 @@
-### Register
-POST http://localhost:8080/api/auth/register
+@baseUrl = http://localhost:8080
+@email = admin.sprintly.local
+@password = 12345678
+@captchaToken = replace-with-real-captcha-token
+
+### Register admin and organization
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
 {
   "firstname": "Andrey",
   "lastname": "Ivanov",
-  "email": "admin@sprintly.local",
-  "password": "12345678",
-  "organizationName": "Sprintly Team"
+  "email": "admin-{{$timestamp}}@sprintly.local",
+  "password": "{{password}}",
+  "organizationName": "Sprintly Team",
+  "captchaToken": "{{captchaToken}}"
 }
 
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organizationId);
+client.global.set("userId", response.body.userId);
+client.global.set("email", response.body.email);
+%}
+
 ### Login
-POST http://localhost:8080/api/auth/login
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@sprintly.local",
-  "password": "12345678"
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "captchaToken": "{{captchaToken}}"
 }
 
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organizationId);
+client.global.set("userId", response.body.userId);
+%}
+
 ### Current user
-GET http://localhost:8080/api/auth/me
+GET {{baseUrl}}/api/auth/me
 Authorization: Bearer {{token}}
 
 ### Users in current organization
-GET http://localhost:8080/api/users
+GET {{baseUrl}}/api/users
 Authorization: Bearer {{token}}
 
 ### Create project
-POST http://localhost:8080/api/projects
+POST {{baseUrl}}/api/projects
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -36,16 +56,20 @@ Authorization: Bearer {{token}}
   "name": "Semester Project"
 }
 
+> {%
+client.global.set("projectId", response.body.id);
+%}
+
 ### Get projects
-GET http://localhost:8080/api/projects
+GET {{baseUrl}}/api/projects
 Authorization: Bearer {{token}}
 
 ### Get project by id
-GET http://localhost:8080/api/projects/{{projectId}}
+GET {{baseUrl}}/api/projects/{{projectId}}
 Authorization: Bearer {{token}}
 
 ### Update project
-PUT http://localhost:8080/api/projects/{{projectId}}
+PUT {{baseUrl}}/api/projects/{{projectId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -54,7 +78,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Create board
-POST http://localhost:8080/api/boards
+POST {{baseUrl}}/api/boards
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -64,12 +88,16 @@ Authorization: Bearer {{token}}
   "position": 1000
 }
 
+> {%
+client.global.set("boardId", response.body.id);
+%}
+
 ### Get boards by project
-GET http://localhost:8080/api/boards?projectId={{projectId}}
+GET {{baseUrl}}/api/boards?projectId={{projectId}}
 Authorization: Bearer {{token}}
 
 ### Create column
-POST http://localhost:8080/api/columns
+POST {{baseUrl}}/api/columns
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -79,12 +107,16 @@ Authorization: Bearer {{token}}
   "position": 1000
 }
 
+> {%
+client.global.set("columnId", response.body.id);
+%}
+
 ### Get columns by board
-GET http://localhost:8080/api/columns?boardId={{boardId}}
+GET {{baseUrl}}/api/columns?boardId={{boardId}}
 Authorization: Bearer {{token}}
 
 ### Create task
-POST http://localhost:8080/api/tasks
+POST {{baseUrl}}/api/tasks
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -93,23 +125,28 @@ Authorization: Bearer {{token}}
   "description": "Create controller, service and validation",
   "storyPoints": 5,
   "priority": 2,
+  "dueDate": "2026-12-15T10:00:00+05:00",
   "projectId": "{{projectId}}",
   "boardId": "{{boardId}}",
   "columnId": "{{columnId}}",
-  "assigneeId": "{{assigneeId}}",
+  "assigneeId": "{{userId}}",
   "position": 1000
 }
 
-### Get tasks
-GET http://localhost:8080/api/tasks?projectId={{projectId}}&status=TODO
+> {%
+client.global.set("taskId", response.body.id);
+%}
+
+### Get tasks by project with lowercase status to verify custom converter
+GET {{baseUrl}}/api/tasks?projectId={{projectId}}&status=todo
 Authorization: Bearer {{token}}
 
 ### Get task by id
-GET http://localhost:8080/api/tasks/{{taskId}}
+GET {{baseUrl}}/api/tasks/{{taskId}}
 Authorization: Bearer {{token}}
 
 ### Update task
-PUT http://localhost:8080/api/tasks/{{taskId}}
+PUT {{baseUrl}}/api/tasks/{{taskId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -119,16 +156,16 @@ Authorization: Bearer {{token}}
 }
 
 ### Assign task
-PATCH http://localhost:8080/api/tasks/{{taskId}}/assign
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/assign
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "assigneeId": "{{assigneeId}}"
+  "assigneeId": "{{userId}}"
 }
 
 ### Move task
-PATCH http://localhost:8080/api/tasks/{{taskId}}/move
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/move
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -138,7 +175,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Update task status
-PATCH http://localhost:8080/api/tasks/{{taskId}}/status
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/status
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -147,7 +184,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Create comment
-POST http://localhost:8080/api/comments
+POST {{baseUrl}}/api/comments
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -157,9 +194,19 @@ Authorization: Bearer {{token}}
 }
 
 ### Get comments by task
-GET http://localhost:8080/api/comments?taskId={{taskId}}
+GET {{baseUrl}}/api/comments?taskId={{taskId}}
 Authorization: Bearer {{token}}
 
+### Login with invalid captcha token, expect 400
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "captchaToken": "invalid-captcha-token"
+}
+
 ### Delete task
-DELETE http://localhost:8080/api/tasks/{{taskId}}
+DELETE {{baseUrl}}/api/tasks/{{taskId}}
 Authorization: Bearer {{token}}

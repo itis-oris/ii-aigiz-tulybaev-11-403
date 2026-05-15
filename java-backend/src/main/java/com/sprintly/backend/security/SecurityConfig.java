@@ -1,5 +1,6 @@
 package com.sprintly.backend.security;
 
+import com.sprintly.backend.config.CaptchaProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -21,7 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, CaptchaProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
