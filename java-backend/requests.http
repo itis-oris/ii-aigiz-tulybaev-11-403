@@ -23,6 +23,10 @@ Content-Type: application/json
 GET http://localhost:8080/api/auth/me
 Authorization: Bearer {{token}}
 
+### Users in current organization
+GET http://localhost:8080/api/users
+Authorization: Bearer {{token}}
+
 ### Create project
 POST http://localhost:8080/api/projects
 Content-Type: application/json
@@ -48,6 +52,36 @@ Authorization: Bearer {{token}}
 {
   "name": "Semester Project Updated"
 }
+
+### Create board
+POST http://localhost:8080/api/boards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Backend Board",
+  "projectId": "{{projectId}}",
+  "position": 1000
+}
+
+### Get boards by project
+GET http://localhost:8080/api/boards?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+### Create column
+POST http://localhost:8080/api/columns
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "To Do",
+  "boardId": "{{boardId}}",
+  "position": 1000
+}
+
+### Get columns by board
+GET http://localhost:8080/api/columns?boardId={{boardId}}
+Authorization: Bearer {{token}}
 
 ### Create task
 POST http://localhost:8080/api/tasks
@@ -111,6 +145,20 @@ Authorization: Bearer {{token}}
 {
   "status": "IN_PROGRESS"
 }
+
+### Create comment
+POST http://localhost:8080/api/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "taskId": "{{taskId}}",
+  "text": "Первый комментарий к задаче"
+}
+
+### Get comments by task
+GET http://localhost:8080/api/comments?taskId={{taskId}}
+Authorization: Bearer {{token}}
 
 ### Delete task
 DELETE http://localhost:8080/api/tasks/{{taskId}}
