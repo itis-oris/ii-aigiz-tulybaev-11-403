@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -77,5 +79,15 @@ public class ProjectController {
         @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         projectService.delete(projectId, currentUser);
+    }
+
+    @PostMapping("/{projectId}/image")
+    @Operation(summary = "Upload project image")
+    public ProjectResponse uploadImage(
+        @PathVariable UUID projectId,
+        @RequestParam("file") MultipartFile file,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return projectService.uploadImage(projectId, file, currentUser);
     }
 }

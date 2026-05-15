@@ -18,5 +18,6 @@ public class CurrentUserResponse {
     private String firstname;
     private String lastname;
     private String middlename;
+    private String avatarUrl;
     private Set<String> roles;
 }
