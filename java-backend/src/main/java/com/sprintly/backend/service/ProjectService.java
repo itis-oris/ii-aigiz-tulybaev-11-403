@@ -12,6 +12,8 @@ import com.sprintly.backend.repository.OrganizationRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,11 +26,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProjectService {
 
+    private static final String PROJECTS_BY_ORGANIZATION_CACHE = "projectsByOrganization";
+
     private final ProjectRepository projectRepository;
     private final OrganizationRepository organizationRepository;
     private final ProjectMapper projectMapper;
 
     @Transactional(readOnly = true)
+    @Cacheable(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public List<ProjectResponse> findAll(CustomUserDetails currentUser) {
         return projectRepository.findAllByOrganization_IdAndDeletedAtIsNull(currentUser.getOrganizationId()).stream()
             .map(projectMapper::toResponse)
@@ -41,6 +46,7 @@ public class ProjectService {
     }
 
     @Transactional
+    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse create(CreateProjectRequest request, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
 
@@ -59,6 +65,7 @@ public class ProjectService {
     }
 
     @Transactional
+    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse update(UUID projectId, UpdateProjectRequest request, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
 
@@ -69,6 +76,7 @@ public class ProjectService {
     }
 
     @Transactional
+    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public void delete(UUID projectId, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
 
