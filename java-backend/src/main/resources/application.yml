@@ -7,7 +7,7 @@ spring:
     password: postgres
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
@@ -28,3 +28,9 @@ logging:
   level:
     org.springframework.security: info
     org.hibernate.SQL: info
+
+app:
+  security:
+    jwt:
+      secret: 0123456789012345678901234567890123456789012345678901234567890123
+      access-token-expiration: 86400000
