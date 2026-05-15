@@ -142,6 +142,20 @@ Authorization: Bearer {{token}}
   "status": "IN_PROGRESS"
 }
 
+### Create comment
+POST http://localhost:8080/api/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "taskId": "{{taskId}}",
+  "text": "Первый комментарий к задаче"
+}
+
+### Get comments by task
+GET http://localhost:8080/api/comments?taskId={{taskId}}
+Authorization: Bearer {{token}}
+
 ### Delete task
 DELETE http://localhost:8080/api/tasks/{{taskId}}
 Authorization: Bearer {{token}}
