@@ -23,6 +23,10 @@ Content-Type: application/json
 GET http://localhost:8080/api/auth/me
 Authorization: Bearer {{token}}
 
+### Users in current organization
+GET http://localhost:8080/api/users
+Authorization: Bearer {{token}}
+
 ### Create project
 POST http://localhost:8080/api/projects
 Content-Type: application/json
