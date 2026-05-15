@@ -49,6 +49,36 @@ Authorization: Bearer {{token}}
   "name": "Semester Project Updated"
 }
 
+### Create board
+POST http://localhost:8080/api/boards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Backend Board",
+  "projectId": "{{projectId}}",
+  "position": 1000
+}
+
+### Get boards by project
+GET http://localhost:8080/api/boards?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+### Create column
+POST http://localhost:8080/api/columns
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "To Do",
+  "boardId": "{{boardId}}",
+  "position": 1000
+}
+
+### Get columns by board
+GET http://localhost:8080/api/columns?boardId={{boardId}}
+Authorization: Bearer {{token}}
+
 ### Create task
 POST http://localhost:8080/api/tasks
 Content-Type: application/json
