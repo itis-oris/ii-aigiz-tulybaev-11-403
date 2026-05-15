@@ -1,5 +1,6 @@
 package com.sprintly.backend.repository;
 
+import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.Task;
 import com.sprintly.backend.entity.enums.TaskStatus;
 import jakarta.persistence.EntityManager;
@@ -9,6 +10,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -21,13 +23,29 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
     private EntityManager entityManager;
 
     @Override
-    public List<Task> findByFilters(UUID projectId, UUID assigneeId, TaskStatus status, Integer priority, String search) {
+    public List<Task> findByFilters(
+        UUID organizationId,
+        UUID projectId,
+        UUID assigneeId,
+        TaskStatus status,
+        Integer priority,
+        String search
+    ) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Task> cq = cb.createQuery(Task.class);
         Root<Task> task = cq.from(Task.class);
 
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(cb.isNull(task.get("deletedAt")));
+
+        Subquery<UUID> projectSubquery = cq.subquery(UUID.class);
+        Root<Project> project = projectSubquery.from(Project.class);
+        projectSubquery.select(project.get("id"))
+            .where(
+                cb.equal(project.get("organization").get("id"), organizationId),
+                cb.isNull(project.get("deletedAt"))
+            );
+        predicates.add(task.get("project").get("id").in(projectSubquery));
 
         if (projectId != null) {
             predicates.add(cb.equal(task.get("project").get("id"), projectId));
