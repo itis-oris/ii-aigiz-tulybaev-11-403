@@ -1,0 +1,117 @@
+### Register
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "firstname": "Andrey",
+  "lastname": "Ivanov",
+  "email": "admin@sprintly.local",
+  "password": "12345678",
+  "organizationName": "Sprintly Team"
+}
+
+### Login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@sprintly.local",
+  "password": "12345678"
+}
+
+### Current user
+GET http://localhost:8080/api/auth/me
+Authorization: Bearer {{token}}
+
+### Create project
+POST http://localhost:8080/api/projects
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Semester Project"
+}
+
+### Get projects
+GET http://localhost:8080/api/projects
+Authorization: Bearer {{token}}
+
+### Get project by id
+GET http://localhost:8080/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+### Update project
+PUT http://localhost:8080/api/projects/{{projectId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Semester Project Updated"
+}
+
+### Create task
+POST http://localhost:8080/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Implement task API",
+  "description": "Create controller, service and validation",
+  "storyPoints": 5,
+  "priority": 2,
+  "projectId": "{{projectId}}",
+  "boardId": "{{boardId}}",
+  "columnId": "{{columnId}}",
+  "assigneeId": "{{assigneeId}}",
+  "position": 1000
+}
+
+### Get tasks
+GET http://localhost:8080/api/tasks?projectId={{projectId}}&status=TODO
+Authorization: Bearer {{token}}
+
+### Get task by id
+GET http://localhost:8080/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+
+### Update task
+PUT http://localhost:8080/api/tasks/{{taskId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Implement task API v2",
+  "priority": 1
+}
+
+### Assign task
+PATCH http://localhost:8080/api/tasks/{{taskId}}/assign
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assigneeId": "{{assigneeId}}"
+}
+
+### Move task
+PATCH http://localhost:8080/api/tasks/{{taskId}}/move
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "columnId": "{{columnId}}",
+  "position": 2000
+}
+
+### Update task status
+PATCH http://localhost:8080/api/tasks/{{taskId}}/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### Delete task
+DELETE http://localhost:8080/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
