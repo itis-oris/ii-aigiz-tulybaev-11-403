@@ -5,6 +5,9 @@ import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.service.ProjectService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,16 +28,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/projects")
 @RequiredArgsConstructor
+@Tag(name = "Projects", description = "Project management endpoints")
+@SecurityRequirement(name = "bearerAuth")
 public class ProjectController {
 
     private final ProjectService projectService;
 
     @GetMapping
+    @Operation(summary = "List projects", description = "Returns all active projects in current organization")
     public List<ProjectResponse> findAll(@AuthenticationPrincipal CustomUserDetails currentUser) {
         return projectService.findAll(currentUser);
     }
 
     @GetMapping("/{projectId}")
+    @Operation(summary = "Get project by id")
     public ProjectResponse findById(
         @PathVariable UUID projectId,
         @AuthenticationPrincipal CustomUserDetails currentUser
@@ -44,6 +51,7 @@ public class ProjectController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create project")
     public ProjectResponse create(
         @Valid @RequestBody CreateProjectRequest request,
         @AuthenticationPrincipal CustomUserDetails currentUser
@@ -52,6 +60,7 @@ public class ProjectController {
     }
 
     @PutMapping("/{projectId}")
+    @Operation(summary = "Update project")
     public ProjectResponse update(
         @PathVariable UUID projectId,
         @Valid @RequestBody UpdateProjectRequest request,
@@ -62,6 +71,7 @@ public class ProjectController {
 
     @DeleteMapping("/{projectId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Soft delete project")
     public void delete(
         @PathVariable UUID projectId,
         @AuthenticationPrincipal CustomUserDetails currentUser

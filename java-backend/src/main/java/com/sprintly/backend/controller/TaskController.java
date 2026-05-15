@@ -9,6 +9,9 @@ import com.sprintly.backend.dto.task.UpdateTaskRequest;
 import com.sprintly.backend.dto.task.UpdateTaskStatusRequest;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.service.TaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,12 +33,15 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tasks")
 @RequiredArgsConstructor
+@Tag(name = "Tasks", description = "Task management endpoints")
+@SecurityRequirement(name = "bearerAuth")
 public class TaskController {
 
     private final TaskService taskService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create task")
     public TaskResponse create(
         @Valid @RequestBody CreateTaskRequest request,
         @AuthenticationPrincipal CustomUserDetails currentUser
@@ -44,6 +50,7 @@ public class TaskController {
     }
 
     @GetMapping
+    @Operation(summary = "List tasks with filters")
     public List<TaskResponse> findAll(
         TaskFilterRequest filter,
         @AuthenticationPrincipal CustomUserDetails currentUser
@@ -52,6 +59,7 @@ public class TaskController {
     }
 
     @GetMapping("/{taskId}")
+    @Operation(summary = "Get task by id")
     public TaskResponse findById(
         @PathVariable UUID taskId,
         @AuthenticationPrincipal CustomUserDetails currentUser
@@ -60,6 +68,7 @@ public class TaskController {
     }
 
     @PutMapping("/{taskId}")
+    @Operation(summary = "Update task")
     public TaskResponse update(
         @PathVariable UUID taskId,
         @Valid @RequestBody UpdateTaskRequest request,
@@ -69,6 +78,7 @@ public class TaskController {
     }
 
     @PatchMapping("/{taskId}/assign")
+    @Operation(summary = "Assign or unassign task")
     public TaskResponse assign(
         @PathVariable UUID taskId,
         @RequestBody AssignTaskRequest request,
@@ -78,6 +88,7 @@ public class TaskController {
     }
 
     @PatchMapping("/{taskId}/move")
+    @Operation(summary = "Move task to another column")
     public TaskResponse move(
         @PathVariable UUID taskId,
         @Valid @RequestBody MoveTaskRequest request,
@@ -87,6 +98,7 @@ public class TaskController {
     }
 
     @PatchMapping("/{taskId}/status")
+    @Operation(summary = "Update task status")
     public TaskResponse updateStatus(
         @PathVariable UUID taskId,
         @Valid @RequestBody UpdateTaskStatusRequest request,
@@ -97,6 +109,7 @@ public class TaskController {
 
     @DeleteMapping("/{taskId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Soft delete task")
     public void delete(
         @PathVariable UUID taskId,
         @AuthenticationPrincipal CustomUserDetails currentUser
