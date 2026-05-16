@@ -1,46 +1,59 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { EllipsisVertical } from 'lucide-react';
+import { EllipsisVertical, Plus } from 'lucide-react';
 
 import {
     cn,
     projectTabs,
     type ProjectSummary,
     type ProjectTab,
+    useActiveProject,
 } from '@/shared/lib';
-import { Avatar, Badge } from '@/shared/ui';
+import {
+    Avatar,
+    Badge,
+    Button,
+    Input,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/shared/ui';
 
 type HeaderProps = React.ComponentProps<'header'>;
-
-const projectMembers = [
-    {
-        id: '1',
-        name: 'Артем',
-        avatar: 'AR',
-        color: 'bg-amber-200 text-amber-900',
-    },
-    { id: '2', name: 'София', avatar: 'SO', color: 'bg-sky-200 text-sky-900' },
-    {
-        id: '3',
-        name: 'Максим',
-        avatar: 'MA',
-        color: 'bg-lime-200 text-lime-900',
-    },
-    { id: '4', name: 'Анна', avatar: 'AN', color: 'bg-rose-200 text-rose-900' },
-    {
-        id: '5',
-        name: 'Илья',
-        avatar: 'IL',
-        color: 'bg-violet-200 text-violet-900',
-    },
-];
 
 type HeaderViewProps = HeaderProps & {
     project: ProjectSummary;
     activeProjectTab?: ProjectTab;
     onProjectTabChange?: (tab: ProjectTab) => void;
 };
+
+const projectStatusOptions: Array<{
+    value: ProjectSummary['lifecycleStatus'];
+    label: string;
+    dotClassName: string;
+}> = [
+    {
+        value: 'active',
+        label: 'В работе',
+        dotClassName: 'bg-green-500',
+    },
+    {
+        value: 'at_risk',
+        label: 'Есть риск',
+        dotClassName: 'bg-amber-500',
+    },
+    {
+        value: 'on_hold',
+        label: 'На паузе',
+        dotClassName: 'bg-slate-400',
+    },
+    {
+        value: 'completed',
+        label: 'Завершен',
+        dotClassName: 'bg-sky-500',
+    },
+];
 
 const Header = ({
     className,
@@ -50,12 +63,15 @@ const Header = ({
     onProjectTabChange,
     ...props
 }: HeaderViewProps) => {
-    const [activeBoard, setActiveBoard] = useState(project.boardTabs[0]);
+    const { activeBoardId, setActiveBoardId, setProjects } = useActiveProject();
     const [projectTab, setProjectTab] = useState<ProjectTab>('Задачи');
+    const [newBoardName, setNewBoardName] = useState('');
 
     useEffect(() => {
-        setActiveBoard(project.boardTabs[0]);
-    }, [project]);
+        if (!project.boardTabs.includes(activeBoardId)) {
+            setActiveBoardId(project.boardTabs[0]);
+        }
+    }, [activeBoardId, project.boardTabs, setActiveBoardId]);
 
     const activeProjectTab = controlledProjectTab ?? projectTab;
 
@@ -65,6 +81,73 @@ const Header = ({
         if (controlledProjectTab === undefined) {
             setProjectTab(tab);
         }
+    };
+
+    const handleCreateBoard = () => {
+        const trimmedName = newBoardName.trim();
+
+        if (!trimmedName) {
+            return;
+        }
+
+        setProjects((currentProjects) =>
+            currentProjects.map((currentProject) =>
+                currentProject.id === project.id
+                    ? {
+                          ...currentProject,
+                          boardTabs: [
+                              ...currentProject.boardTabs,
+                              trimmedName.toUpperCase(),
+                          ],
+                      }
+                    : currentProject,
+            ),
+        );
+        setActiveBoardId(trimmedName.toUpperCase());
+        setNewBoardName('');
+    };
+
+    const handleDeleteBoard = (boardName: string) => {
+        if (project.boardTabs.length === 1) {
+            return;
+        }
+
+        const remainingBoards = project.boardTabs.filter(
+            (tab) => tab !== boardName,
+        );
+
+        setProjects((currentProjects) =>
+            currentProjects.map((currentProject) =>
+                currentProject.id === project.id
+                    ? {
+                          ...currentProject,
+                          boardTabs: remainingBoards,
+                      }
+                    : currentProject,
+            ),
+        );
+
+        if (activeBoardId === boardName) {
+            setActiveBoardId(remainingBoards[0]);
+        }
+    };
+
+    const activeStatus =
+        projectStatusOptions.find(
+            (status) => status.value === project.lifecycleStatus,
+        ) ?? projectStatusOptions[0];
+
+    const handleStatusChange = (status: ProjectSummary['lifecycleStatus']) => {
+        setProjects((currentProjects) =>
+            currentProjects.map((currentProject) =>
+                currentProject.id === project.id
+                    ? {
+                          ...currentProject,
+                          lifecycleStatus: status,
+                      }
+                    : currentProject,
+            ),
+        );
     };
 
     return (
@@ -90,13 +173,64 @@ const Header = ({
                                 <div className="truncate text-base font-semibold leading-none">
                                     {project.name}
                                 </div>
-                                <Badge
-                                    size="sm"
-                                    className="bg-sidebar-accent text-sidebar-foreground/80"
-                                >
-                                    <span className="size-1.5 rounded-full bg-green-500" />
-                                    В работе
-                                </Badge>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="cursor-pointer"
+                                            aria-label="Изменить статус проекта"
+                                        >
+                                            <Badge
+                                                size="sm"
+                                                className="bg-sidebar-accent text-sidebar-foreground/80 hover:bg-sidebar-accent/80"
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        'size-1.5 rounded-full',
+                                                        activeStatus.dotClassName,
+                                                    )}
+                                                />
+                                                {activeStatus.label}
+                                            </Badge>
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        align="start"
+                                        className="w-48 border-sidebar-border bg-sidebar p-2 text-sidebar-foreground"
+                                    >
+                                        <div className="space-y-1">
+                                            {projectStatusOptions.map(
+                                                (status) => (
+                                                    <button
+                                                        key={status.value}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleStatusChange(
+                                                                status.value,
+                                                            )
+                                                        }
+                                                        className={cn(
+                                                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sidebar-accent',
+                                                            project.lifecycleStatus ===
+                                                                status.value &&
+                                                                'bg-sidebar-accent',
+                                                        )}
+                                                    >
+                                                        <span
+                                                            className={cn(
+                                                                'size-2 rounded-full',
+                                                                status.dotClassName,
+                                                            )}
+                                                        />
+                                                        <span>
+                                                            {status.label}
+                                                        </span>
+                                                    </button>
+                                                ),
+                                            )}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="mt-1 truncate text-xs leading-none text-sidebar-foreground/60">
                                 {project.description}
@@ -105,24 +239,9 @@ const Header = ({
                     </div>
 
                     <div className="flex items-center">
-                        {projectMembers.slice(0, 5).map((member, index) => (
-                            <Avatar
-                                key={member.id}
-                                title={member.name}
-                                className={cn(
-                                    'border-2 border-sidebar',
-                                    member.color,
-                                    index > 0 && '-ml-2',
-                                )}
-                            >
-                                {member.avatar}
-                            </Avatar>
-                        ))}
-                        {project.memberCount > 5 ? (
-                            <Avatar className="-ml-2 min-w-7 border-2 border-sidebar bg-sidebar-accent px-1.5 text-sidebar-foreground">
-                                +{project.memberCount - 5}
-                            </Avatar>
-                        ) : null}
+                        <span className="text-sm font-semibold tracking-[0.04em] text-sidebar-foreground/78">
+                            Sprintly
+                        </span>
                     </div>
                 </div>
 
@@ -147,23 +266,108 @@ const Header = ({
 
                     <div className="flex flex-wrap items-center gap-2">
                         {project.boardTabs.map((tab) => (
-                            <button
+                            <div
                                 key={tab}
-                                type="button"
-                                onClick={() => setActiveBoard(tab)}
                                 className={cn(
-                                    'flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-3 text-xs font-medium tracking-[0.02em] transition-colors',
-                                    activeBoard === tab
+                                    'flex h-7 items-center gap-1 rounded-md pl-3 pr-1 text-xs font-medium tracking-[0.02em] transition-colors',
+                                    activeBoardId === tab
                                         ? 'bg-sidebar-accent text-sidebar-foreground'
                                         : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
                                 )}
                             >
-                                <span>{tab}</span>
-                                {activeBoard === tab && (
-                                    <EllipsisVertical className="size-4" />
-                                )}
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveBoardId(tab)}
+                                    className="cursor-pointer"
+                                >
+                                    <span>{tab}</span>
+                                </button>
+                                {activeBoardId === tab ? (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="cursor-pointer rounded-sm p-0.5 text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground"
+                                                aria-label="Действия с таблицей"
+                                            >
+                                                <EllipsisVertical className="size-4" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            align="end"
+                                            className="w-52 border-sidebar-border bg-sidebar p-2 text-sidebar-foreground"
+                                        >
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="w-full justify-start text-destructive hover:bg-sidebar-accent hover:text-destructive disabled:opacity-40"
+                                                disabled={
+                                                    project.boardTabs.length ===
+                                                    1
+                                                }
+                                                onClick={() =>
+                                                    handleDeleteBoard(tab)
+                                                }
+                                            >
+                                                Удалить таблицу
+                                            </Button>
+                                        </PopoverContent>
+                                    </Popover>
+                                ) : null}
+                            </div>
                         ))}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="size-7 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                    aria-label="Создать таблицу"
+                                >
+                                    <Plus className="size-4" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="end"
+                                className="w-72 border-sidebar-border bg-sidebar p-3 text-sidebar-foreground"
+                            >
+                                <div className="space-y-3">
+                                    <div>
+                                        <div className="text-sm font-medium">
+                                            Новая таблица
+                                        </div>
+                                        <div className="mt-1 text-xs text-sidebar-foreground/60">
+                                            Добавьте новую таблицу в текущий
+                                            проект.
+                                        </div>
+                                    </div>
+                                    <Input
+                                        value={newBoardName}
+                                        onChange={(event) =>
+                                            setNewBoardName(event.target.value)
+                                        }
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter') {
+                                                handleCreateBoard();
+                                            }
+                                        }}
+                                        placeholder="Например, SUPPORT"
+                                        uiSize="md"
+                                        className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-sidebar-foreground/45"
+                                    />
+                                    <Button
+                                        type="button"
+                                        className="w-full bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"
+                                        onClick={handleCreateBoard}
+                                        disabled={!newBoardName.trim()}
+                                    >
+                                        Создать таблицу
+                                    </Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
 

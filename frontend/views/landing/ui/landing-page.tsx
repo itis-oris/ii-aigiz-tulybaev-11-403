@@ -1,9 +1,14 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { LogIn, UserPlus } from 'lucide-react';
+import { useI18n } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 
 const LandingPage = () => {
+    const { t } = useI18n();
+
     return (
         <main className="min-h-screen bg-background text-foreground">
             <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_auto]">
@@ -11,15 +16,13 @@ const LandingPage = () => {
                     <div className="max-w-3xl space-y-10">
                         <div className="space-y-5">
                             <div className="text-base font-medium text-primary">
-                                Work management for focused teams
+                                {t('landing.eyebrow')}
                             </div>
                             <h1 className="text-6xl font-semibold tracking-tight text-foreground sm:text-7xl lg:text-8xl">
                                 Sprintly
                             </h1>
                             <p className="max-w-2xl text-xl leading-9 text-muted-foreground sm:text-2xl">
-                                Sprintly собирает проекты, персональные задачи и
-                                общую организационную очередь в одном аккуратном
-                                рабочем пространстве.
+                                {t('landing.description')}
                             </p>
                         </div>
 
@@ -28,14 +31,14 @@ const LandingPage = () => {
                                 <Link href="/register">
                                     <UserPlus className="size-4 text-white" />
                                     <span className="text-white">
-                                        Зарегистрироваться
+                                        {t('landing.register')}
                                     </span>
                                 </Link>
                             </Button>
                             <Button asChild variant="outline" size="xl">
                                 <Link href="/login">
                                     <LogIn className="size-4" />
-                                    Авторизоваться
+                                    {t('landing.login')}
                                 </Link>
                             </Button>
                         </div>
@@ -45,7 +48,7 @@ const LandingPage = () => {
                 <div className="flex min-h-[44vh] items-end justify-end overflow-hidden lg:min-h-screen">
                     <Image
                         src="/img/home.png"
-                        alt="Интерфейс Sprintly"
+                        alt={t('landing.imageAlt')}
                         width={1024}
                         height={1536}
                         className="h-auto max-h-[44vh] w-auto sm:max-h-[52vh] lg:h-screen lg:max-h-none lg:w-auto lg:max-w-none"

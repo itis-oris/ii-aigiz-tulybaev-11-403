@@ -16,7 +16,21 @@ export type ProjectSummary = {
     avatarClassName: string;
     description: string;
     boardTabs: string[];
+    lifecycleStatus: 'active' | 'at_risk' | 'on_hold' | 'completed';
     memberCount: number;
+    folderId?: string;
+};
+
+export type ProjectFolder = {
+    id: string;
+    name: string;
+    shortLabel: string;
+    avatarClassName: string;
+    description: string;
+    ownerName: string;
+    ownerInitials: string;
+    ownerClassName: string;
+    dateLabel: string;
 };
 
 export const organizationProjects: ProjectSummary[] = [
@@ -28,6 +42,7 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-amber-100 text-amber-700',
         description: 'Основной продуктовый контур и текущая delivery-команда.',
         boardTabs: ['DIGITAL', 'TRADE', 'OUTDOOR'],
+        lifecycleStatus: 'active',
         memberCount: 7,
     },
     {
@@ -38,6 +53,7 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-sky-100 text-sky-700',
         description: 'Операционный проект с фокусом на запуск и сопровождение.',
         boardTabs: ['CORE', 'OPS', 'QA'],
+        lifecycleStatus: 'at_risk',
         memberCount: 5,
     },
     {
@@ -48,6 +64,7 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-emerald-100 text-emerald-700',
         description: 'Growth-направление с задачами маркетинга и активации.',
         boardTabs: ['ACQ', 'RETENTION', 'CRM'],
+        lifecycleStatus: 'active',
         memberCount: 6,
     },
     {
@@ -58,13 +75,22 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-violet-100 text-violet-700',
         description: 'Экспериментальный поток для новых продуктовых гипотез.',
         boardTabs: ['LAB', 'MVP', 'RESEARCH'],
+        lifecycleStatus: 'on_hold',
         memberCount: 4,
     },
 ];
 
 type ActiveProjectContextValue = {
+    projects: ProjectSummary[];
+    setProjects: Dispatch<SetStateAction<ProjectSummary[]>>;
+    folders: ProjectFolder[];
+    setFolders: Dispatch<SetStateAction<ProjectFolder[]>>;
+    collapsedFolderIds: string[];
+    setCollapsedFolderIds: Dispatch<SetStateAction<string[]>>;
     activeProjectId: string;
     setActiveProjectId: Dispatch<SetStateAction<string>>;
+    activeBoardId: string;
+    setActiveBoardId: Dispatch<SetStateAction<string>>;
 };
 
 const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(

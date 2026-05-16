@@ -8,13 +8,16 @@ import {
     AuthFormFooter,
 } from '@/widgets/auth-shell';
 import { useValidatedForm } from '@/shared/lib/use-validated-form';
+import { useI18n } from '@/shared/lib';
 import {
+    getRegisterFields,
     initialValues,
-    registerFields,
     validateForm,
 } from '@/app/register/_lib/register-form';
 
 export const RegisterForm = () => {
+    const { locale, t } = useI18n();
+    const registerFields = getRegisterFields(locale);
     const {
         errors,
         handleBlur,
@@ -24,12 +27,14 @@ export const RegisterForm = () => {
         isValid,
         resetForm,
         values,
-    } = useValidatedForm(initialValues, validateForm);
+    } = useValidatedForm(initialValues, (values) =>
+        validateForm(values, locale),
+    );
 
     return (
         <AuthCard
-            title="Регистрация"
-            description="Создание нового аккаунта в рабочем пространстве"
+            title={t('auth.registerTitle')}
+            description={t('auth.registerDescription')}
         >
             <form
                 className="space-y-5 px-5 py-5 sm:px-6 sm:py-6"
@@ -59,12 +64,12 @@ export const RegisterForm = () => {
 
                 <AuthFormFooter
                     href="/login"
-                    linkLabel="страницу входа"
-                    text="Уже есть аккаунт? Перейдите на"
+                    linkLabel={t('auth.registerFooterLink')}
+                    text={t('auth.registerFooterText')}
                 />
 
                 {isSubmitted && !isValid && (
-                    <AuthFormError message="Проверьте обязательные поля формы." />
+                    <AuthFormError message={t('auth.registerError')} />
                 )}
 
                 <div className="flex gap-3 pt-1">
@@ -75,10 +80,10 @@ export const RegisterForm = () => {
                         className="flex-1 text-muted-foreground"
                         onClick={resetForm}
                     >
-                        Очистить
+                        {t('auth.clear')}
                     </Button>
                     <Button type="submit" size="xl" className="flex-1">
-                        Создать аккаунт
+                        {t('auth.registerSubmit')}
                     </Button>
                 </div>
             </form>

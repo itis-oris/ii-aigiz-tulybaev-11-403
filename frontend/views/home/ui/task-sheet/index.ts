@@ -1,3 +1,3 @@
-import { TaskSheet } from '@/views/home/ui/task-sheet/TaskSheet';
+import { TaskSheet } from './task-sheet';
 
 export { TaskSheet };

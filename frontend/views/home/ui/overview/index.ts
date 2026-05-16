@@ -1,6 +1,6 @@
-import Overview from '@/views/home/ui/overview/Overview';
-import OverviewMemberItem from '@/views/home/ui/overview/OverviewMemberItem';
-import OverviewMembersList from '@/views/home/ui/overview/OverviewMembersList';
+import Overview from './overview-page';
+import OverviewMemberItem from './overview-member-item';
+import OverviewMembersList from './overview-members-list';
 
 export { Overview };
 export { OverviewMemberItem, OverviewMembersList };

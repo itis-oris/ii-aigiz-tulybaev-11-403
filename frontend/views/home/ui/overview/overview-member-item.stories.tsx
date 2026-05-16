@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { projectOverview } from '@/views/home/model/project-overview';
-import OverviewMemberItem from './OverviewMemberItem';
+import OverviewMemberItem from './overview-member-item';
 
 const meta = {
     title: 'Views/Home/OverviewMemberItem',

@@ -1,3 +1,3 @@
-import HomePage from '@/views/home/ui/home-page';
+import HomePage from './ui/home-page';
 
 export { HomePage };

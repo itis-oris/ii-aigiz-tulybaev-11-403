@@ -1,5 +1,5 @@
 import type { ProjectParticipant } from '@/views/home/model/project-overview';
-import OverviewMemberItem from './OverviewMemberItem';
+import OverviewMemberItem from './overview-member-item';
 
 type OverviewMembersListProps = {
     members: ProjectParticipant[];

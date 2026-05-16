@@ -1,3 +1,3 @@
-import AllProjectsPage from '@/views/all-projects/ui/all-projects-page';
+import AllProjectsPage from './ui/all-projects-page';
 
 export { AllProjectsPage };
