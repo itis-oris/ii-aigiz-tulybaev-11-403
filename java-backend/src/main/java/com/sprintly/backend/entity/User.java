@@ -86,6 +86,10 @@ public class User {
     private Set<Role> roles = new HashSet<>();
 
     @Builder.Default
+    @ManyToMany(mappedBy = "members")
+    private Set<Project> projects = new HashSet<>();
+
+    @Builder.Default
     @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL)
     private List<Task> createdTasks = new ArrayList<>();
 

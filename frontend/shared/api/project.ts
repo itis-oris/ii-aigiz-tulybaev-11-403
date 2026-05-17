@@ -1,10 +1,12 @@
 import { apiClient } from './client';
+import type { UserResponse } from './user';
 
 export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED';
 
 export type ProjectResponse = {
     id: string;
     name: string;
+    description: string | null;
     imageUrl: string | null;
     organizationId: string | null;
     organizationName: string | null;
@@ -22,6 +24,7 @@ export type ProjectResponse = {
 
 export type CreateProjectRequest = {
     name: string;
+    description?: string;
     status?: ProjectStatus;
     ownerId?: string;
     folderId?: string;
@@ -29,9 +32,14 @@ export type CreateProjectRequest = {
 
 export type UpdateProjectRequest = {
     name: string;
+    description?: string;
     status?: ProjectStatus;
     ownerId?: string;
     folderId?: string;
+};
+
+export type AddProjectMembersRequest = {
+    userIds: string[];
 };
 
 export function getProjects() {
@@ -68,5 +76,19 @@ export function uploadProjectImage(projectId: string, file: File) {
     return apiClient<ProjectResponse>(`/api/projects/${projectId}/image`, {
         method: 'POST',
         body: formData,
+    });
+}
+
+export function getProjectMembers(projectId: string) {
+    return apiClient<UserResponse[]>(`/api/projects/${projectId}/members`);
+}
+
+export function addProjectMembers(
+    projectId: string,
+    payload: AddProjectMembersRequest,
+) {
+    return apiClient<UserResponse[]>(`/api/projects/${projectId}/members`, {
+        method: 'POST',
+        body: payload,
     });
 }

@@ -16,6 +16,9 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
     @EntityGraph(attributePaths = {"organization", "owner", "folder"})
     Optional<Project> findByIdAndDeletedAtIsNull(UUID id);
 
+    @EntityGraph(attributePaths = {"organization", "owner", "folder", "members", "members.roles", "members.organization"})
+    Optional<Project> findWithMembersByIdAndDeletedAtIsNull(UUID id);
+
     @EntityGraph(attributePaths = {"organization", "owner", "folder"})
     List<Project> findAllByFolder_IdAndDeletedAtIsNull(UUID folderId);
 }

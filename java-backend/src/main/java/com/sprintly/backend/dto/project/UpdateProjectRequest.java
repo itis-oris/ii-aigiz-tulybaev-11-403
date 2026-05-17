@@ -15,6 +15,9 @@ public class UpdateProjectRequest {
     @Size(max = 255)
     private String name;
 
+    @Size(max = 2000)
+    private String description;
+
     private ProjectStatus status;
 
     private UUID ownerId;

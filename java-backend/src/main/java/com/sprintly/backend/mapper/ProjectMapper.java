@@ -11,6 +11,7 @@ public class ProjectMapper {
         return ProjectResponse.builder()
             .id(project.getId())
             .name(project.getName())
+            .description(project.getDescription())
             .imageUrl(project.getImageUrl())
             .organizationId(project.getOrganization() != null ? project.getOrganization().getId() : null)
             .organizationName(project.getOrganization() != null ? project.getOrganization().getName() : null)

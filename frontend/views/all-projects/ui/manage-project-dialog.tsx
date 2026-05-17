@@ -26,6 +26,7 @@ export function ManageProjectDialog({
     onDelete,
 }: ManageProjectDialogProps) {
     const [name, setName] = useState(project?.name ?? '');
+    const [description, setDescription] = useState(project?.description ?? '');
     const [status, setStatus] = useState<ProjectStatus>(
         project?.status ?? 'PLANNING',
     );
@@ -55,9 +56,24 @@ export function ManageProjectDialog({
         [usersQuery.data],
     );
 
+    useEffect(() => {
+        if (!project) {
+            return;
+        }
+
+        setName(project.name);
+        setDescription(project.description ?? '');
+        setStatus(project.status);
+        setOwnerId(project.ownerId ?? '');
+    }, [project]);
+
     const handleOpenChange = useCallback(
         (nextOpen: boolean) => {
             if (!nextOpen) {
+                setName(project?.name ?? '');
+                setDescription(project?.description ?? '');
+                setStatus(project?.status ?? 'PLANNING');
+                setOwnerId(project?.ownerId ?? '');
                 setSelectedImage(null);
                 setImageError(null);
                 setSubmitError(null);
@@ -67,7 +83,7 @@ export function ManageProjectDialog({
 
             onOpenChange(nextOpen);
         },
-        [onOpenChange],
+        [onOpenChange, project],
     );
 
     useEffect(() => {
@@ -100,6 +116,7 @@ export function ManageProjectDialog({
             await onSubmit({
                 ...project,
                 name: name.trim(),
+                description: description.trim(),
                 status,
                 ownerId: ownerId || undefined,
             });
@@ -257,6 +274,26 @@ export function ManageProjectDialog({
                             placeholder="Например, Sprintly Web"
                             disabled={isSubmitting || isDeleting}
                             autoFocus
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label
+                            htmlFor="manage-project-description"
+                            className="text-sm font-medium text-foreground"
+                        >
+                            Описание
+                        </label>
+                        <textarea
+                            id="manage-project-description"
+                            value={description}
+                            onChange={(event) =>
+                                setDescription(event.target.value)
+                            }
+                            rows={4}
+                            placeholder="Коротко опишите цель проекта, команду или контекст."
+                            disabled={isSubmitting || isDeleting}
+                            className="w-full resize-none rounded-xl border border-input bg-input/20 px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
                         />
                     </div>
 

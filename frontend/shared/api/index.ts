@@ -7,8 +7,10 @@ export {
     updateOrganization,
 } from './organization';
 export {
+    addProjectMembers,
     createProject,
     deleteProject,
+    getProjectMembers,
     getProjects,
     uploadProjectImage,
     updateProject,
@@ -33,6 +35,7 @@ export type {
     UpdateOrganizationRequest,
 } from './organization';
 export type {
+    AddProjectMembersRequest,
     CreateProjectRequest,
     ProjectResponse,
     ProjectStatus,

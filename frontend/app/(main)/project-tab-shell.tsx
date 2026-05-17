@@ -51,7 +51,7 @@ const emptyProject: ProjectSummary = {
     shortLabel: 'WS',
     avatar: 'WS',
     avatarClassName: 'bg-slate-100 text-slate-600',
-    description: 'Проекты текущей организации.',
+    description: '',
     boardTabs: defaultBoardTabs,
     status: 'ACTIVE',
     memberCount: 0,
@@ -109,11 +109,7 @@ const mapProjectResponseToSummary = (
         avatarClassName:
             override?.avatarClassName ?? projectAccentPalette[paletteIndex],
         imageUrl: project.imageUrl,
-        description:
-            override?.description ??
-            (project.organizationName
-                ? `Проект организации ${project.organizationName}.`
-                : 'Проект рабочего пространства.'),
+        description: override?.description ?? project.description ?? '',
         boardTabs: override?.boardTabs ?? defaultBoardTabs,
         status: override?.status ?? project.status,
         memberCount: override?.memberCount ?? 1,
@@ -176,16 +172,25 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
         mutationFn: ({
             projectId,
             name,
+            description,
             status,
             ownerId,
             folderId,
         }: {
             projectId: string;
             name: string;
+            description: string;
             status?: ProjectStatus;
             ownerId?: string;
             folderId?: string;
-        }) => updateProject(projectId, { name, status, ownerId, folderId }),
+        }) =>
+            updateProject(projectId, {
+                name,
+                description,
+                status,
+                ownerId,
+                folderId,
+            }),
     });
     const deleteProjectMutation = useMutation({
         mutationFn: deleteProject,
@@ -273,6 +278,7 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
         async (projectDraft: ProjectSummary) => {
             const createdProject = await createProjectMutation.mutateAsync({
                 name: projectDraft.name,
+                description: projectDraft.description,
                 status: projectDraft.status,
                 ownerId: projectDraft.ownerId,
                 folderId: projectDraft.folderId,
@@ -312,6 +318,7 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
             const updatedProject = await updateProjectMutation.mutateAsync({
                 projectId: projectDraft.id,
                 name: projectDraft.name,
+                description: projectDraft.description,
                 status: projectDraft.status,
                 ownerId: projectDraft.ownerId,
                 folderId: projectDraft.folderId,

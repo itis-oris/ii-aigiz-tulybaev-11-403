@@ -13,6 +13,7 @@ public class ProjectResponse {
 
     private UUID id;
     private String name;
+    private String description;
     private String imageUrl;
     private UUID organizationId;
     private String organizationName;
