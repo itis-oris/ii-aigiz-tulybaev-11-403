@@ -21,6 +21,7 @@ public class ProjectMapper {
             .ownerLastname(project.getOwner() != null ? project.getOwner().getLastname() : null)
             .ownerMiddlename(project.getOwner() != null ? project.getOwner().getMiddlename() : null)
             .ownerAvatarUrl(project.getOwner() != null ? project.getOwner().getAvatarUrl() : null)
+            .folderId(project.getFolder() != null ? project.getFolder().getId() : null)
             .createdAt(project.getCreatedAt())
             .deletedAt(project.getDeletedAt())
             .build();

@@ -11,13 +11,13 @@ import {
     useActiveProject,
 } from '@/shared/lib';
 import {
-    Avatar,
     Badge,
     Button,
     Input,
     Popover,
     PopoverContent,
     PopoverTrigger,
+    ProjectAvatar,
 } from '@/shared/ui';
 
 type HeaderProps = React.ComponentProps<'header'>;
@@ -153,13 +153,14 @@ const Header = ({
             <div className="flex w-full flex-col gap-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                        <Avatar
+                        <ProjectAvatar
                             size="md"
                             shape="soft"
                             className={project.avatarClassName}
-                        >
-                            {project.avatar}
-                        </Avatar>
+                            imageUrl={project.imageUrl}
+                            fallback={project.avatar}
+                            alt={project.name}
+                        />
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <div className="truncate text-base font-semibold leading-none">

@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronsUpDown, FolderPlus, X } from 'lucide-react';
+import { ChevronsUpDown, FolderPlus, ImageUp, X } from 'lucide-react';
 import { ApiError, getUsers, type ProjectStatus } from '@/shared/api';
-import { Button, Input } from '@/shared/ui';
+import { Button, Input, ProjectAvatar } from '@/shared/ui';
 import { useI18n, type ProjectFolder, type ProjectSummary } from '@/shared/lib';
+import { getImageUploadError, MAX_IMAGE_SIZE_MB } from '@/shared/lib/utils';
 
 type CreateProjectDialogProps = {
     open: boolean;
@@ -60,6 +61,8 @@ const CreateProjectDialog = ({
     const [folderId, setFolderId] = useState('none');
     const [status, setStatus] = useState<ProjectStatus>('PLANNING');
     const [ownerId, setOwnerId] = useState('');
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [imageError, setImageError] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const usersQuery = useQuery({
@@ -90,6 +93,8 @@ const CreateProjectDialog = ({
                 setFolderId('none');
                 setStatus('PLANNING');
                 setOwnerId('');
+                setSelectedImage(null);
+                setImageError(null);
                 setSubmitError(null);
                 setIsSubmitting(false);
             }
@@ -170,18 +175,55 @@ const CreateProjectDialog = ({
                 </div>
 
                 <div className="space-y-5 px-5 py-4">
-                    <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/50 px-4 py-3">
-                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground">
-                            {previewInitials}
-                        </div>
-                        <div className="min-w-0">
-                            <div className="text-sm font-medium text-foreground">
-                                {trimmedName || t('dialogs.newProject')}
-                            </div>
-                            <div className="mt-1 text-sm text-muted-foreground">
-                                {t('dialogs.projectPreview')}
-                            </div>
-                        </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground mr-4">
+                            Изображение проекта
+                        </label>
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-input/20 px-3 py-2 text-sm text-foreground transition-colors hover:border-ring">
+                            <ImageUp className="size-4" />
+                            <span className="truncate">
+                                {selectedImage
+                                    ? selectedImage.name
+                                    : 'Выбрать файл'}
+                            </span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="sr-only"
+                                disabled={isSubmitting}
+                                onChange={(event) => {
+                                    const file =
+                                        event.target.files?.[0] ?? null;
+
+                                    if (!file) {
+                                        setSelectedImage(null);
+                                        setImageError(null);
+                                        return;
+                                    }
+
+                                    const nextImageError =
+                                        getImageUploadError(file);
+
+                                    if (nextImageError) {
+                                        setSelectedImage(null);
+                                        setImageError(nextImageError);
+                                        event.target.value = '';
+                                        return;
+                                    }
+
+                                    setSelectedImage(file);
+                                    setImageError(null);
+                                }}
+                            />
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                            Максимум {MAX_IMAGE_SIZE_MB} МБ
+                        </p>
+                        {imageError ? (
+                            <p className="text-sm text-destructive">
+                                {imageError}
+                            </p>
+                        ) : null}
                     </div>
 
                     <div className="space-y-2">
@@ -350,6 +392,7 @@ const CreateProjectDialog = ({
                                 boardTabs: normalizeBoardTabs(trimmedName),
                                 status,
                                 memberCount: 1,
+                                imageFile: selectedImage,
                                 ownerId: ownerId || undefined,
                                 folderId:
                                     folderId === 'none' ? undefined : folderId,

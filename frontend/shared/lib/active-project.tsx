@@ -15,10 +15,12 @@ export type ProjectSummary = {
     shortLabel: string;
     avatar: string;
     avatarClassName: string;
+    imageUrl?: string | null;
     description: string;
     boardTabs: string[];
     status: ProjectStatus;
     memberCount: number;
+    imageFile?: File | null;
     createdAt?: string;
     ownerId?: string;
     ownerName?: string;
@@ -30,13 +32,11 @@ export type ProjectSummary = {
 export type ProjectFolder = {
     id: string;
     name: string;
-    shortLabel: string;
-    avatarClassName: string;
-    description: string;
-    ownerName: string;
-    ownerInitials: string;
-    ownerClassName: string;
-    dateLabel: string;
+    createdAt?: string;
+    ownerId?: string;
+    ownerName?: string;
+    ownerEmail?: string;
+    ownerAvatarUrl?: string | null;
 };
 
 export const organizationProjects: ProjectSummary[] = [
@@ -91,9 +91,12 @@ type ActiveProjectContextValue = {
     setProjects: Dispatch<SetStateAction<ProjectSummary[]>>;
     createProject: (project: ProjectSummary) => Promise<void>;
     updateProject: (project: ProjectSummary) => Promise<void>;
+    uploadProjectImage: (projectId: string, file: File) => Promise<void>;
     deleteProject: (projectId: string) => Promise<void>;
     folders: ProjectFolder[];
-    setFolders: Dispatch<SetStateAction<ProjectFolder[]>>;
+    createFolder: (folder: ProjectFolder) => Promise<void>;
+    updateFolder: (folder: ProjectFolder) => Promise<void>;
+    deleteFolder: (folderId: string) => Promise<void>;
     collapsedFolderIds: string[];
     setCollapsedFolderIds: Dispatch<SetStateAction<string[]>>;
     activeProjectId: string;

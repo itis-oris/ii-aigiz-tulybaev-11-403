@@ -12,11 +12,12 @@ import java.util.UUID;
 @Setter
 public class UpdateProjectRequest {
 
-    @NotBlank
     @Size(max = 255)
     private String name;
 
     private ProjectStatus status;
 
     private UUID ownerId;
+
+    private UUID folderId;
 }

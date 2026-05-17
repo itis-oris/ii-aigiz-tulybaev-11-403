@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useDraggable } from '@dnd-kit/react';
 import { GripVertical } from 'lucide-react';
 import { cn, type ProjectSummary } from '@/shared/lib';
-import { Avatar } from '@/shared/ui';
+import { ProjectAvatar } from '@/shared/ui';
 import { SidebarMenuButton } from '@/shared/ui/sidebar';
 import { getSidebarProjectDragId } from './sidebar-project-dnd';
 
@@ -48,13 +48,14 @@ export function SidebarProjectLink({
                     >
                         <GripVertical className="size-3.5" />
                     </span>
-                    <Avatar
+                    <ProjectAvatar
                         size="xs"
                         shape="square"
                         className={cn(project.avatarClassName)}
-                    >
-                        {project.avatar}
-                    </Avatar>
+                        imageUrl={project.imageUrl}
+                        fallback={project.avatar}
+                        alt={project.name}
+                    />
                     <span className="truncate">{project.name}</span>
                 </Link>
             </SidebarMenuButton>

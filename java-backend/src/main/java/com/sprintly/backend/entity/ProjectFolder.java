@@ -1,11 +1,8 @@
 package com.sprintly.backend.entity;
 
-import com.sprintly.backend.entity.enums.ProjectStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -31,8 +28,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "projects")
-public class Project {
+@Table(name = "project_folders")
+public class ProjectFolder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -47,13 +44,6 @@ public class Project {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    @Column(name = "image_url", length = 2048)
-    private String imageUrl;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    private ProjectStatus status;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
@@ -62,15 +52,7 @@ public class Project {
     @JoinColumn(name = "owner_id")
     private User owner;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "folder_id")
-    private ProjectFolder folder;
-
     @Builder.Default
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
-    private List<Board> boards = new ArrayList<>();
-
-    @Builder.Default
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
-    private List<Task> tasks = new ArrayList<>();
+    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL)
+    private List<Project> projects = new ArrayList<>();
 }

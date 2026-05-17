@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 
 const HeaderWithProvider = (args: React.ComponentProps<typeof Header>) => {
     const [projects, setProjects] = useState(organizationProjects);
-    const [folders, setFolders] = useState<ProjectFolder[]>([]);
+    const [folders] = useState<ProjectFolder[]>([]);
     const [collapsedFolderIds, setCollapsedFolderIds] = useState<string[]>([]);
     const [activeProjectId, setActiveProjectId] = useState(
         organizationProjects[0].id,
@@ -51,6 +51,7 @@ const HeaderWithProvider = (args: React.ComponentProps<typeof Header>) => {
                         ),
                     );
                 },
+                uploadProjectImage: async () => {},
                 deleteProject: async (projectId) => {
                     setProjects((currentProjects) =>
                         currentProjects.filter(
@@ -58,8 +59,10 @@ const HeaderWithProvider = (args: React.ComponentProps<typeof Header>) => {
                         ),
                     );
                 },
+                createFolder: async () => {},
+                updateFolder: async () => {},
+                deleteFolder: async () => {},
                 folders,
-                setFolders,
                 collapsedFolderIds,
                 setCollapsedFolderIds,
                 activeProjectId,

@@ -1,6 +1,5 @@
-package com.sprintly.backend.dto.project;
+package com.sprintly.backend.dto.projectfolder;
 
-import com.sprintly.backend.entity.enums.ProjectStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -10,15 +9,11 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class CreateProjectRequest {
+public class CreateProjectFolderRequest {
 
     @NotBlank
     @Size(max = 255)
     private String name;
 
-    private ProjectStatus status;
-
     private UUID ownerId;
-
-    private UUID folderId;
 }

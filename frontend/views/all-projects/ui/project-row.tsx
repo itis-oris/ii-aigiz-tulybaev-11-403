@@ -10,6 +10,7 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
+    ProjectAvatar,
 } from '@/shared/ui';
 import { getAllProjectsProjectDragId } from './all-projects-dnd';
 import type { ProjectListItem } from './project-list-item';
@@ -52,13 +53,14 @@ export function ProjectRow({
                     <GripVertical className="size-4" />
                 </button>
 
-                <Avatar
+                <ProjectAvatar
                     size="md"
                     shape="square"
                     className={project.avatarClassName}
-                >
-                    {project.avatar}
-                </Avatar>
+                    imageUrl={project.imageUrl}
+                    fallback={project.avatar}
+                    alt={project.name}
+                />
 
                 <Link
                     href="/"

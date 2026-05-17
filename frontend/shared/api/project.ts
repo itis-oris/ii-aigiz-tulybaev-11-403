@@ -15,6 +15,7 @@ export type ProjectResponse = {
     ownerLastname: string | null;
     ownerMiddlename: string | null;
     ownerAvatarUrl: string | null;
+    folderId: string | null;
     createdAt: string;
     deletedAt: string | null;
 };
@@ -23,12 +24,14 @@ export type CreateProjectRequest = {
     name: string;
     status?: ProjectStatus;
     ownerId?: string;
+    folderId?: string;
 };
 
 export type UpdateProjectRequest = {
     name: string;
     status?: ProjectStatus;
     ownerId?: string;
+    folderId?: string;
 };
 
 export function getProjects() {
@@ -55,5 +58,15 @@ export function updateProject(
 export function deleteProject(projectId: string) {
     return apiClient<null>(`/api/projects/${projectId}`, {
         method: 'DELETE',
+    });
+}
+
+export function uploadProjectImage(projectId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return apiClient<ProjectResponse>(`/api/projects/${projectId}/image`, {
+        method: 'POST',
+        body: formData,
     });
 }

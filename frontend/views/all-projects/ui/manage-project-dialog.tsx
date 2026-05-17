@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { LoaderCircle, Trash2, X } from 'lucide-react';
+import { ImageUp, LoaderCircle, Trash2, X } from 'lucide-react';
 import { ApiError, getUsers, type ProjectStatus } from '@/shared/api';
-import { Button, Input } from '@/shared/ui';
+import { getImageUploadError, MAX_IMAGE_SIZE_MB } from '@/shared/lib/utils';
+import { Button, Input, ProjectAvatar } from '@/shared/ui';
 import { type ProjectSummary } from '@/shared/lib';
 
 type ManageProjectDialogProps = {
@@ -12,6 +13,7 @@ type ManageProjectDialogProps = {
     project: ProjectSummary | null;
     onOpenChange: (open: boolean) => void;
     onSubmit: (project: ProjectSummary) => Promise<void>;
+    onUploadImage: (projectId: string, file: File) => Promise<void>;
     onDelete: (projectId: string) => Promise<void>;
 };
 
@@ -20,6 +22,7 @@ export function ManageProjectDialog({
     project,
     onOpenChange,
     onSubmit,
+    onUploadImage,
     onDelete,
 }: ManageProjectDialogProps) {
     const [name, setName] = useState(project?.name ?? '');
@@ -27,6 +30,8 @@ export function ManageProjectDialog({
         project?.status ?? 'PLANNING',
     );
     const [ownerId, setOwnerId] = useState(project?.ownerId ?? '');
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [imageError, setImageError] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -53,6 +58,8 @@ export function ManageProjectDialog({
     const handleOpenChange = useCallback(
         (nextOpen: boolean) => {
             if (!nextOpen) {
+                setSelectedImage(null);
+                setImageError(null);
                 setSubmitError(null);
                 setIsSubmitting(false);
                 setIsDeleting(false);
@@ -96,6 +103,9 @@ export function ManageProjectDialog({
                 status,
                 ownerId: ownerId || undefined,
             });
+            if (selectedImage) {
+                await onUploadImage(project.id, selectedImage);
+            }
             handleOpenChange(false);
         } catch (error) {
             setSubmitError(
@@ -171,6 +181,67 @@ export function ManageProjectDialog({
                 </div>
 
                 <div className="space-y-4 px-5 py-5">
+                    <div className="flex items-center gap-4 rounded-2xl px-4 py-3">
+                        <ProjectAvatar
+                            size="2xl"
+                            shape="square"
+                            className={project.avatarClassName}
+                            imageUrl={project.imageUrl}
+                            fallback={project.avatar}
+                            alt={project.name}
+                        />
+                        <div className="min-w-0 flex-1 space-y-2">
+                            <div className="text-sm font-medium text-foreground">
+                                Изображение проекта
+                            </div>
+                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-input/20 px-3 py-2 text-sm text-foreground transition-colors hover:border-ring">
+                                <ImageUp className="size-4" />
+                                <span className="truncate">
+                                    {selectedImage
+                                        ? selectedImage.name
+                                        : 'Выбрать файл'}
+                                </span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="sr-only"
+                                    disabled={isSubmitting || isDeleting}
+                                    onChange={(event) => {
+                                        const file =
+                                            event.target.files?.[0] ?? null;
+
+                                        if (!file) {
+                                            setSelectedImage(null);
+                                            setImageError(null);
+                                            return;
+                                        }
+
+                                        const nextImageError =
+                                            getImageUploadError(file);
+
+                                        if (nextImageError) {
+                                            setSelectedImage(null);
+                                            setImageError(nextImageError);
+                                            event.target.value = '';
+                                            return;
+                                        }
+
+                                        setSelectedImage(file);
+                                        setImageError(null);
+                                    }}
+                                />
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                                Максимум {MAX_IMAGE_SIZE_MB} МБ
+                            </p>
+                            {imageError ? (
+                                <p className="text-sm text-destructive">
+                                    {imageError}
+                                </p>
+                            ) : null}
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <label
                             htmlFor="manage-project-name"

@@ -5,12 +5,14 @@ import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.Project;
+import com.sprintly.backend.entity.ProjectFolder;
 import com.sprintly.backend.entity.User;
 import com.sprintly.backend.entity.enums.ProjectStatus;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.mapper.ProjectMapper;
 import com.sprintly.backend.repository.OrganizationRepository;
+import com.sprintly.backend.repository.ProjectFolderRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
@@ -33,6 +35,7 @@ public class ProjectService {
     private static final String PROJECTS_BY_ORGANIZATION_CACHE = "projectsByOrganization";
 
     private final ProjectRepository projectRepository;
+    private final ProjectFolderRepository projectFolderRepository;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final ProjectMapper projectMapper;
@@ -64,6 +67,10 @@ public class ProjectService {
             currentUser.getId(),
             currentUser.getOrganizationId()
         );
+        ProjectFolder folder = resolveProjectFolder(
+            request.getFolderId(),
+            currentUser.getOrganizationId()
+        );
 
         Project project = projectRepository.save(
             Project.builder()
@@ -71,6 +78,7 @@ public class ProjectService {
                 .status(request.getStatus() != null ? request.getStatus() : ProjectStatus.PLANNING)
                 .organization(organization)
                 .owner(owner)
+                .folder(folder)
                 .createdAt(OffsetDateTime.now())
                 .build()
         );
@@ -84,7 +92,9 @@ public class ProjectService {
         ensureManagerAccess(currentUser);
 
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        project.setName(request.getName().trim());
+        if (request.getName() != null) {
+            project.setName(request.getName().trim());
+        }
         if (request.getStatus() != null) {
             project.setStatus(request.getStatus());
         }
@@ -97,6 +107,9 @@ public class ProjectService {
                 )
             );
         }
+        project.setFolder(
+            resolveProjectFolder(request.getFolderId(), currentUser.getOrganizationId())
+        );
 
         return projectMapper.toResponse(projectRepository.save(project));
     }
@@ -152,6 +165,21 @@ public class ProjectService {
         }
 
         return owner;
+    }
+
+    private ProjectFolder resolveProjectFolder(UUID folderId, UUID organizationId) {
+        if (folderId == null) {
+            return null;
+        }
+
+        ProjectFolder folder = projectFolderRepository.findByIdAndDeletedAtIsNull(folderId)
+            .orElseThrow(() -> new ResourceNotFoundException("Project folder not found"));
+
+        if (folder.getOrganization() == null || !organizationId.equals(folder.getOrganization().getId())) {
+            throw new AccessDeniedException("Project folder does not belong to current organization");
+        }
+
+        return folder;
     }
 
     private void ensureManagerAccess(CustomUserDetails currentUser) {

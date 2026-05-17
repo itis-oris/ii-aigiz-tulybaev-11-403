@@ -7,29 +7,19 @@ import {
     type ProjectSummary,
 } from './active-project';
 
-const createWorkspaceFolder = (folderName: string): ProjectFolder => ({
-    id: `folder-${Date.now()}`,
-    name: folderName,
-    shortLabel: 'FD',
-    avatarClassName: 'bg-slate-100 text-slate-600',
-    description: 'Папка проектов рабочего пространства.',
-    ownerName: 'Система',
-    ownerInitials: 'S',
-    ownerClassName: 'bg-slate-100 text-slate-600',
-    dateLabel: 'Сегодня',
-});
-
 export const useWorkspaceProjectsController = () => {
     const {
         activeProjectId,
+        createFolder: createFolderInWorkspace,
         createProject: createProjectInWorkspace,
+        deleteFolder: deleteFolderInWorkspace,
         deleteProject: deleteProjectInWorkspace,
         setActiveProjectId,
         projects,
-        setProjects,
+        uploadProjectImage: uploadProjectImageInWorkspace,
         updateProject: updateProjectInWorkspace,
+        updateFolder: updateFolderInWorkspace,
         folders,
-        setFolders,
         collapsedFolderIds,
         setCollapsedFolderIds,
     } = useActiveProject();
@@ -53,16 +43,18 @@ export const useWorkspaceProjectsController = () => {
     );
 
     const moveProjectToFolder = useCallback(
-        (projectId: string, folderId?: string) => {
-            setProjects((currentProjects) =>
-                currentProjects.map((project) =>
-                    project.id === projectId
-                        ? { ...project, folderId }
-                        : project,
-                ),
+        async (projectId: string, folderId?: string) => {
+            const project = projects.find(
+                (currentProject) => currentProject.id === projectId,
             );
+
+            if (!project) {
+                return;
+            }
+
+            await updateProjectInWorkspace({ ...project, folderId });
         },
-        [setProjects],
+        [projects, updateProjectInWorkspace],
     );
 
     const createProject = useCallback(
@@ -73,13 +65,10 @@ export const useWorkspaceProjectsController = () => {
     );
 
     const createFolder = useCallback(
-        (folderName: string) => {
-            setFolders((currentFolders) => [
-                createWorkspaceFolder(folderName),
-                ...currentFolders,
-            ]);
+        async (folder: ProjectFolder) => {
+            await createFolderInWorkspace(folder);
         },
-        [setFolders],
+        [createFolderInWorkspace],
     );
 
     const updateProject = useCallback(
@@ -89,11 +78,32 @@ export const useWorkspaceProjectsController = () => {
         [updateProjectInWorkspace],
     );
 
+    const uploadProjectImage = useCallback(
+        async (projectId: string, file: File) => {
+            await uploadProjectImageInWorkspace(projectId, file);
+        },
+        [uploadProjectImageInWorkspace],
+    );
+
+    const updateFolder = useCallback(
+        async (folder: (typeof folders)[number]) => {
+            await updateFolderInWorkspace(folder);
+        },
+        [updateFolderInWorkspace],
+    );
+
     const deleteProject = useCallback(
         async (projectId: string) => {
             await deleteProjectInWorkspace(projectId);
         },
         [deleteProjectInWorkspace],
+    );
+
+    const deleteFolder = useCallback(
+        async (folderId: string) => {
+            await deleteFolderInWorkspace(folderId);
+        },
+        [deleteFolderInWorkspace],
     );
 
     return {
@@ -103,10 +113,13 @@ export const useWorkspaceProjectsController = () => {
         projects,
         createFolder,
         createProject,
+        deleteFolder,
         deleteProject,
         moveProjectToFolder,
         selectProject,
         toggleFolder,
+        uploadProjectImage,
+        updateFolder,
         updateProject,
     };
 };

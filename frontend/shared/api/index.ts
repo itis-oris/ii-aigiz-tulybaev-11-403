@@ -10,8 +10,15 @@ export {
     createProject,
     deleteProject,
     getProjects,
+    uploadProjectImage,
     updateProject,
 } from './project';
+export {
+    createProjectFolder,
+    deleteProjectFolder,
+    getProjectFolders,
+    updateProjectFolder,
+} from './project-folder';
 export { getUsers } from './user';
 export type {
     AuthResponse,
@@ -31,5 +38,10 @@ export type {
     ProjectStatus,
     UpdateProjectRequest,
 } from './project';
+export type {
+    CreateProjectFolderRequest,
+    ProjectFolderResponse,
+    UpdateProjectFolderRequest,
+} from './project-folder';
 export type { UserResponse } from './user';
 export { apiClient, ApiError } from './client';

@@ -10,9 +10,12 @@ import java.util.UUID;
 
 public interface ProjectRepository extends JpaRepository<Project, UUID> {
 
-    @EntityGraph(attributePaths = {"organization", "owner"})
+    @EntityGraph(attributePaths = {"organization", "owner", "folder"})
     List<Project> findAllByOrganization_IdAndDeletedAtIsNull(UUID organizationId);
 
-    @EntityGraph(attributePaths = {"organization", "owner"})
+    @EntityGraph(attributePaths = {"organization", "owner", "folder"})
     Optional<Project> findByIdAndDeletedAtIsNull(UUID id);
+
+    @EntityGraph(attributePaths = {"organization", "owner", "folder"})
+    List<Project> findAllByFolder_IdAndDeletedAtIsNull(UUID folderId);
 }

@@ -5,11 +5,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+    createProjectFolder,
     createProject,
+    deleteProjectFolder,
     deleteProject,
+    getProjectFolders,
     getProjects,
+    type ProjectFolderResponse,
     type ProjectResponse,
     type ProjectStatus,
+    uploadProjectImage,
+    updateProjectFolder,
     updateProject,
 } from '@/shared/api';
 import Header from '@/shared/ui/header';
@@ -68,6 +74,26 @@ const getOwnerName = (project: ProjectResponse) =>
     project.ownerEmail ||
     'Без владельца';
 
+const getFolderOwnerName = (folder: ProjectFolderResponse) =>
+    [folder.ownerFirstname, folder.ownerLastname]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+    folder.ownerEmail ||
+    'Без владельца';
+
+const mapProjectFolderResponse = (
+    folder: ProjectFolderResponse,
+): ProjectFolder => ({
+    id: folder.id,
+    name: folder.name,
+    createdAt: folder.createdAt,
+    ownerId: folder.ownerId ?? undefined,
+    ownerName: getFolderOwnerName(folder),
+    ownerEmail: folder.ownerEmail ?? undefined,
+    ownerAvatarUrl: folder.ownerAvatarUrl,
+});
+
 const mapProjectResponseToSummary = (
     project: ProjectResponse,
     index: number,
@@ -82,6 +108,7 @@ const mapProjectResponseToSummary = (
         avatar: override?.avatar ?? normalizeInitials(project.name),
         avatarClassName:
             override?.avatarClassName ?? projectAccentPalette[paletteIndex],
+        imageUrl: project.imageUrl,
         description:
             override?.description ??
             (project.organizationName
@@ -95,7 +122,7 @@ const mapProjectResponseToSummary = (
         ownerName: getOwnerName(project),
         ownerEmail: project.ownerEmail ?? undefined,
         ownerAvatarUrl: project.ownerAvatarUrl,
-        folderId: override?.folderId,
+        folderId: project.folderId ?? undefined,
     };
 };
 
@@ -106,7 +133,6 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
     const [projectOverrides, setProjectOverrides] = useState<
         Record<string, ProjectSummary>
     >({});
-    const [folders, setFolders] = useState<ProjectFolder[]>([]);
     const [collapsedFolderIds, setCollapsedFolderIds] = useState<string[]>([]);
     const [activeProjectTab, setActiveProjectTab] =
         useState<ProjectTab>('Задачи');
@@ -119,9 +145,32 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
         enabled: Boolean(user?.organizationId),
         retry: false,
     });
+    const projectFoldersQuery = useQuery({
+        queryKey: ['project-folders', user?.organizationId],
+        queryFn: getProjectFolders,
+        enabled: Boolean(user?.organizationId),
+        retry: false,
+    });
 
     const createProjectMutation = useMutation({
         mutationFn: createProject,
+    });
+    const createProjectFolderMutation = useMutation({
+        mutationFn: createProjectFolder,
+    });
+    const updateProjectFolderMutation = useMutation({
+        mutationFn: ({
+            folderId,
+            name,
+            ownerId,
+        }: {
+            folderId: string;
+            name: string;
+            ownerId?: string;
+        }) => updateProjectFolder(folderId, { name, ownerId }),
+    });
+    const deleteProjectFolderMutation = useMutation({
+        mutationFn: deleteProjectFolder,
     });
     const updateProjectMutation = useMutation({
         mutationFn: ({
@@ -129,15 +178,21 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
             name,
             status,
             ownerId,
+            folderId,
         }: {
             projectId: string;
             name: string;
             status?: ProjectStatus;
             ownerId?: string;
-        }) => updateProject(projectId, { name, status, ownerId }),
+            folderId?: string;
+        }) => updateProject(projectId, { name, status, ownerId, folderId }),
     });
     const deleteProjectMutation = useMutation({
         mutationFn: deleteProject,
+    });
+    const uploadProjectImageMutation = useMutation({
+        mutationFn: ({ projectId, file }: { projectId: string; file: File }) =>
+            uploadProjectImage(projectId, file),
     });
 
     const projects = useMemo(
@@ -150,6 +205,10 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
                 ),
             ),
         [projectOverrides, projectsQuery.data],
+    );
+    const folders = useMemo(
+        () => (projectFoldersQuery.data ?? []).map(mapProjectFolderResponse),
+        [projectFoldersQuery.data],
     );
 
     const showHeader = pathname === '/';
@@ -216,7 +275,15 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
                 name: projectDraft.name,
                 status: projectDraft.status,
                 ownerId: projectDraft.ownerId,
+                folderId: projectDraft.folderId,
             });
+
+            if (projectDraft.imageFile) {
+                await uploadProjectImageMutation.mutateAsync({
+                    projectId: createdProject.id,
+                    file: projectDraft.imageFile,
+                });
+            }
 
             setProjectOverrides((currentOverrides) => ({
                 ...currentOverrides,
@@ -235,6 +302,7 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
             createProjectMutation,
             projects.length,
             queryClient,
+            uploadProjectImageMutation,
             user?.organizationId,
         ],
     );
@@ -246,6 +314,7 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
                 name: projectDraft.name,
                 status: projectDraft.status,
                 ownerId: projectDraft.ownerId,
+                folderId: projectDraft.folderId,
             });
 
             setProjectOverrides((currentOverrides) => ({
@@ -281,6 +350,83 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
         [deleteProjectMutation, queryClient, user?.organizationId],
     );
 
+    const handleUploadProjectImage = useCallback(
+        async (projectId: string, file: File) => {
+            const updatedProject = await uploadProjectImageMutation.mutateAsync(
+                {
+                    projectId,
+                    file,
+                },
+            );
+
+            setProjectOverrides((currentOverrides) => ({
+                ...currentOverrides,
+                [updatedProject.id]: mapProjectResponseToSummary(
+                    updatedProject,
+                    projects.findIndex(
+                        (currentProject) =>
+                            currentProject.id === updatedProject.id,
+                    ),
+                    currentOverrides[updatedProject.id],
+                ),
+            }));
+            await queryClient.invalidateQueries({
+                queryKey: ['projects', user?.organizationId],
+            });
+        },
+        [
+            projects,
+            queryClient,
+            uploadProjectImageMutation,
+            user?.organizationId,
+        ],
+    );
+
+    const handleCreateFolder = useCallback(
+        async (folder: ProjectFolder) => {
+            await createProjectFolderMutation.mutateAsync({
+                name: folder.name,
+                ownerId: folder.ownerId,
+            });
+            await queryClient.invalidateQueries({
+                queryKey: ['project-folders', user?.organizationId],
+            });
+        },
+        [createProjectFolderMutation, queryClient, user?.organizationId],
+    );
+
+    const handleUpdateFolder = useCallback(
+        async (folder: ProjectFolder) => {
+            await updateProjectFolderMutation.mutateAsync({
+                folderId: folder.id,
+                name: folder.name,
+                ownerId: folder.ownerId,
+            });
+            await queryClient.invalidateQueries({
+                queryKey: ['project-folders', user?.organizationId],
+            });
+        },
+        [queryClient, updateProjectFolderMutation, user?.organizationId],
+    );
+
+    const handleDeleteFolder = useCallback(
+        async (folderId: string) => {
+            await deleteProjectFolderMutation.mutateAsync(folderId);
+            setCollapsedFolderIds((currentIds) =>
+                currentIds.filter((currentId) => currentId !== folderId),
+            );
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['project-folders', user?.organizationId],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['projects', user?.organizationId],
+                }),
+            ]);
+        },
+        [deleteProjectFolderMutation, queryClient, user?.organizationId],
+    );
+
     return (
         <ActiveProjectProvider
             value={{
@@ -290,9 +436,12 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
                 >,
                 createProject: handleCreateProject,
                 updateProject: handleUpdateProject,
+                uploadProjectImage: handleUploadProjectImage,
                 deleteProject: handleDeleteProject,
+                createFolder: handleCreateFolder,
+                updateFolder: handleUpdateFolder,
+                deleteFolder: handleDeleteFolder,
                 folders,
-                setFolders,
                 collapsedFolderIds,
                 setCollapsedFolderIds,
                 activeProjectId,
