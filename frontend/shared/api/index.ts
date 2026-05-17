@@ -1,7 +1,10 @@
 export { getCurrentUser, login, register } from './auth';
 export {
+    acceptOrganizationInvitation,
     createOrganization,
+    createOrganizationInvitations,
     deleteOrganization,
+    getOrganizationInvitation,
     getOrganizations,
     switchOrganization,
     updateOrganization,
@@ -29,7 +32,10 @@ export type {
     RegisterRequest,
 } from './auth';
 export type {
+    CreateOrganizationInvitationsRequest,
     CreateOrganizationRequest,
+    OrganizationInvitationDetailsResponse,
+    OrganizationInvitationResponse,
     OrganizationResponse,
     OrganizationSessionResponse,
     UpdateOrganizationRequest,

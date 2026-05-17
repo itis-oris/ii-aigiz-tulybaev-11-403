@@ -28,6 +28,9 @@ public class RegisterRequest {
     @Size(min = 6, max = 128)
     private String password;
 
+    @Size(max = 255)
+    private String invitationToken;
+
     @NotBlank
     private String captchaToken;
 }

@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -86,7 +87,7 @@ public class ProjectService {
                 .organization(organization)
                 .owner(owner)
                 .folder(folder)
-                .members(Set.of(owner))
+                .members(new HashSet<>(Set.of(owner)))
                 .createdAt(OffsetDateTime.now())
                 .build()
         );

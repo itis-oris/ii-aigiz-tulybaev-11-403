@@ -5,6 +5,7 @@ import com.sprintly.backend.dto.auth.CurrentUserResponse;
 import com.sprintly.backend.dto.auth.LoginRequest;
 import com.sprintly.backend.dto.auth.RegisterRequest;
 import com.sprintly.backend.dto.organization.OrganizationResponse;
+import com.sprintly.backend.entity.OrganizationInvitation;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.Role;
 import com.sprintly.backend.entity.User;
@@ -40,6 +41,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final CaptchaVerificationService captchaVerificationService;
+    private final OrganizationInvitationService organizationInvitationService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -51,8 +53,18 @@ public class AuthService {
             throw new IllegalArgumentException("User with this email already exists");
         }
 
-        Role adminRole = roleRepository.findByName(RoleName.ADMIN)
-            .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.ADMIN).build()));
+        String invitationToken = normalizeInvitationToken(request.getInvitationToken());
+        OrganizationInvitation invitation = invitationToken != null
+            ? organizationInvitationService.requireInvitationForRegistration(
+                invitationToken,
+                normalizedEmail
+            )
+            : null;
+
+        Role primaryRole = invitation != null
+            ? organizationInvitationService.getOrCreateUserRole()
+            : roleRepository.findByName(RoleName.ADMIN)
+                .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.ADMIN).build()));
 
         User user = userRepository.save(
             User.builder()
@@ -61,24 +73,32 @@ public class AuthService {
                 .middlename(request.getMiddlename())
                 .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .organization(null)
-                .roles(Set.of(adminRole))
+                .organization(invitation != null ? invitation.getOrganization() : null)
+                .roles(new HashSet<>(Set.of(primaryRole)))
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build()
         );
 
-        Organization organization = organizationRepository.save(
-            Organization.builder()
-                .name(buildInitialOrganizationName(user))
-                .ownerId(user.getId())
-                .createdAt(OffsetDateTime.now())
-                .build()
-        );
+        Organization organization;
+        if (invitation != null) {
+            organization = invitation.getOrganization();
+            user.getOrganizations().add(organization);
+            user = userRepository.save(user);
+            organizationInvitationService.markInvitationAccepted(invitation, user);
+        } else {
+            organization = organizationRepository.save(
+                Organization.builder()
+                    .name(buildInitialOrganizationName(user))
+                    .ownerId(user.getId())
+                    .createdAt(OffsetDateTime.now())
+                    .build()
+            );
 
-        user.setOrganization(organization);
-        user.getOrganizations().add(organization);
-        user = userRepository.save(user);
+            user.setOrganization(organization);
+            user.getOrganizations().add(organization);
+            user = userRepository.save(user);
+        }
 
         CustomUserDetails userDetails = new CustomUserDetails(
             user.getId(),
@@ -179,5 +199,14 @@ public class AuthService {
 
         String shortId = user.getId().toString().substring(0, 8);
         return "Organization " + baseName + " " + shortId;
+    }
+
+    private String normalizeInvitationToken(String invitationToken) {
+        if (invitationToken == null) {
+            return null;
+        }
+
+        String normalized = invitationToken.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

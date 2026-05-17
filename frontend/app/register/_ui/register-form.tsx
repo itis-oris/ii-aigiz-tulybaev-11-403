@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from 'react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError, register } from '@/shared/api';
 import { getPostAuthRedirectPath, useAuth, useI18n } from '@/shared/lib';
@@ -22,10 +22,12 @@ import {
 
 export const RegisterForm = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { refetchUser, setToken } = useAuth();
     const { locale, t } = useI18n();
     const [captchaToken, setCaptchaToken] = useState('');
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const invitationToken = searchParams.get('invite')?.trim() || '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
     const registerFields = getRegisterFields(locale);
     const {
@@ -45,7 +47,11 @@ export const RegisterForm = () => {
         onSuccess: async (data) => {
             setToken(data.accessToken);
             const user = await refetchUser();
-            router.replace(getPostAuthRedirectPath(user ?? null));
+            router.replace(
+                invitationToken
+                    ? `/invite/${invitationToken}`
+                    : getPostAuthRedirectPath(user ?? null),
+            );
         },
         onError: (error) => {
             setSubmitError(
@@ -82,6 +88,7 @@ export const RegisterForm = () => {
             middlename: values.middlename,
             email: values.email,
             password: values.password,
+            invitationToken: invitationToken || undefined,
             captchaToken,
         });
     };
@@ -134,7 +141,13 @@ export const RegisterForm = () => {
                 )}
 
                 <AuthFormFooter
-                    href="/login"
+                    href={
+                        invitationToken
+                            ? `/login?invite=${encodeURIComponent(
+                                  invitationToken,
+                              )}`
+                            : '/login'
+                    }
                     linkLabel={t('auth.registerFooterLink')}
                     text={t('auth.registerFooterText')}
                 />

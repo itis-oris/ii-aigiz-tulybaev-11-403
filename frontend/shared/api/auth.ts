@@ -13,6 +13,7 @@ export type RegisterRequest = {
     middlename: string;
     email: string;
     password: string;
+    invitationToken?: string;
     captchaToken: string;
 };
 

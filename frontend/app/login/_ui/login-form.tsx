@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from 'react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError, login } from '@/shared/api';
 import { getPostAuthRedirectPath, useAuth, useI18n } from '@/shared/lib';
@@ -22,10 +22,12 @@ import {
 
 export const LoginForm = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { refetchUser, setToken } = useAuth();
     const { locale, t } = useI18n();
     const [captchaToken, setCaptchaToken] = useState('');
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const invitationToken = searchParams.get('invite')?.trim() || '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
     const loginFields = getLoginFields(locale);
     const {
@@ -45,7 +47,11 @@ export const LoginForm = () => {
         onSuccess: async (data) => {
             setToken(data.accessToken);
             const user = await refetchUser();
-            router.replace(getPostAuthRedirectPath(user ?? null));
+            router.replace(
+                invitationToken
+                    ? `/invite/${invitationToken}`
+                    : getPostAuthRedirectPath(user ?? null),
+            );
         },
         onError: (error) => {
             setSubmitError(
@@ -124,7 +130,13 @@ export const LoginForm = () => {
                 )}
 
                 <AuthFormFooter
-                    href="/register"
+                    href={
+                        invitationToken
+                            ? `/register?invite=${encodeURIComponent(
+                                  invitationToken,
+                              )}`
+                            : '/register'
+                    }
                     linkLabel={t('auth.loginFooterLink')}
                     text={t('auth.loginFooterText')}
                 />

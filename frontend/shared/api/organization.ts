@@ -21,6 +21,33 @@ export type UpdateOrganizationRequest = {
     name: string;
 };
 
+export type CreateOrganizationInvitationsRequest = {
+    createLinkInvitation: boolean;
+    emails: string[];
+};
+
+export type OrganizationInvitationResponse = {
+    id: string;
+    organizationId: string;
+    organizationName: string;
+    email: string | null;
+    token: string;
+    createdAt: string;
+    expiresAt: string;
+    acceptedAt: string | null;
+    revokedAt: string | null;
+};
+
+export type OrganizationInvitationDetailsResponse = {
+    organizationId: string;
+    organizationName: string;
+    email: string | null;
+    expiresAt: string;
+    expired: boolean;
+    accepted: boolean;
+    revoked: boolean;
+};
+
 export function getOrganizations() {
     return apiClient<OrganizationResponse[]>('/api/organizations');
 }
@@ -57,6 +84,34 @@ export function deleteOrganization(organizationId: string) {
         `/api/organizations/${organizationId}`,
         {
             method: 'DELETE',
+        },
+    );
+}
+
+export function createOrganizationInvitations(
+    organizationId: string,
+    payload: CreateOrganizationInvitationsRequest,
+) {
+    return apiClient<OrganizationInvitationResponse[]>(
+        `/api/organizations/${organizationId}/invitations`,
+        {
+            method: 'POST',
+            body: payload,
+        },
+    );
+}
+
+export function getOrganizationInvitation(token: string) {
+    return apiClient<OrganizationInvitationDetailsResponse>(
+        `/api/invitations/${token}`,
+    );
+}
+
+export function acceptOrganizationInvitation(token: string) {
+    return apiClient<OrganizationSessionResponse>(
+        `/api/invitations/${token}/accept`,
+        {
+            method: 'POST',
         },
     );
 }

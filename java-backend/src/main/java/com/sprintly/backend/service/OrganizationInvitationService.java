@@ -1,0 +1,277 @@
+package com.sprintly.backend.service;
+
+import com.sprintly.backend.dto.organization.CreateOrganizationInvitationsRequest;
+import com.sprintly.backend.dto.organization.OrganizationInvitationDetailsResponse;
+import com.sprintly.backend.dto.organization.OrganizationInvitationResponse;
+import com.sprintly.backend.dto.organization.OrganizationResponse;
+import com.sprintly.backend.dto.organization.OrganizationSessionResponse;
+import com.sprintly.backend.entity.Organization;
+import com.sprintly.backend.entity.OrganizationInvitation;
+import com.sprintly.backend.entity.Role;
+import com.sprintly.backend.entity.User;
+import com.sprintly.backend.entity.enums.RoleName;
+import com.sprintly.backend.exception.AccessDeniedException;
+import com.sprintly.backend.exception.ResourceNotFoundException;
+import com.sprintly.backend.repository.OrganizationInvitationRepository;
+import com.sprintly.backend.repository.OrganizationRepository;
+import com.sprintly.backend.repository.RoleRepository;
+import com.sprintly.backend.repository.UserRepository;
+import com.sprintly.backend.security.CustomUserDetails;
+import com.sprintly.backend.security.JwtService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class OrganizationInvitationService {
+
+    private static final int INVITATION_TTL_DAYS = 7;
+
+    private final OrganizationInvitationRepository organizationInvitationRepository;
+    private final OrganizationRepository organizationRepository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final JwtService jwtService;
+
+    @Transactional
+    public List<OrganizationInvitationResponse> createInvitations(
+        UUID organizationId,
+        CreateOrganizationInvitationsRequest request,
+        CustomUserDetails currentUser
+    ) {
+        ensureManagerAccess(currentUser);
+
+        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
+        User invitedByUser = userRepository.findWithRolesById(currentUser.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        ensureOrganizationMembership(invitedByUser, organizationId);
+
+        List<OrganizationInvitation> invitations = new ArrayList<>();
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime expiresAt = now.plusDays(INVITATION_TTL_DAYS);
+
+        if (request.isCreateLinkInvitation()) {
+            invitations.add(buildInvitation(organization, invitedByUser, null, now, expiresAt));
+        }
+
+        for (String email : request.getEmails() == null ? List.<String>of() : request.getEmails()) {
+            String normalizedEmail = normalizeEmail(email);
+            if (normalizedEmail == null) {
+                continue;
+            }
+
+            invitations.add(buildInvitation(organization, invitedByUser, normalizedEmail, now, expiresAt));
+        }
+
+        if (invitations.isEmpty()) {
+            throw new IllegalArgumentException("At least one invite link or email is required");
+        }
+
+        return organizationInvitationRepository.saveAll(invitations).stream()
+            .map(this::toResponse)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrganizationInvitationDetailsResponse getInvitationDetails(String token) {
+        OrganizationInvitation invitation = getActiveInvitation(token);
+
+        return OrganizationInvitationDetailsResponse.builder()
+            .organizationId(invitation.getOrganization().getId())
+            .organizationName(invitation.getOrganization().getName())
+            .email(invitation.getEmail())
+            .expiresAt(invitation.getExpiresAt())
+            .expired(isExpired(invitation))
+            .accepted(invitation.getAcceptedAt() != null)
+            .revoked(invitation.getRevokedAt() != null)
+            .build();
+    }
+
+    @Transactional
+    public OrganizationSessionResponse acceptInvitation(String token, CustomUserDetails currentUser) {
+        User user = userRepository.findWithRolesById(currentUser.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        OrganizationInvitation invitation = getActiveInvitation(token);
+
+        ensureInvitationAcceptable(invitation, user);
+        validateInvitationEmail(invitation, user.getEmail());
+
+        user.getOrganizations().add(invitation.getOrganization());
+        user.setOrganization(invitation.getOrganization());
+        user.getRoles().add(getOrCreateUserRole());
+        userRepository.save(user);
+
+        if (invitation.getAcceptedAt() == null) {
+            invitation.setAcceptedAt(OffsetDateTime.now());
+            invitation.setAcceptedByUser(user);
+            organizationInvitationRepository.save(invitation);
+        }
+
+        return buildSessionResponse(user, invitation.getOrganization());
+    }
+
+    @Transactional(readOnly = true)
+    public OrganizationInvitation requireInvitationForRegistration(String token, String email) {
+        OrganizationInvitation invitation = getActiveInvitation(token);
+        if (invitation.getAcceptedAt() != null) {
+            throw new IllegalStateException("Invitation has already been accepted");
+        }
+        validateInvitationEmail(invitation, email);
+        return invitation;
+    }
+
+    @Transactional
+    public void markInvitationAccepted(OrganizationInvitation invitation, User user) {
+        if (invitation.getAcceptedAt() != null) {
+            return;
+        }
+
+        invitation.setAcceptedAt(OffsetDateTime.now());
+        invitation.setAcceptedByUser(user);
+        organizationInvitationRepository.save(invitation);
+    }
+
+    public Role getOrCreateUserRole() {
+        return roleRepository.findByName(RoleName.USER)
+            .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.USER).build()));
+    }
+
+    private OrganizationInvitation buildInvitation(
+        Organization organization,
+        User invitedByUser,
+        String email,
+        OffsetDateTime createdAt,
+        OffsetDateTime expiresAt
+    ) {
+        return OrganizationInvitation.builder()
+            .id(UUID.randomUUID())
+            .organization(organization)
+            .invitedByUser(invitedByUser)
+            .email(email)
+            .token(UUID.randomUUID().toString())
+            .createdAt(createdAt)
+            .expiresAt(expiresAt)
+            .build();
+    }
+
+    private OrganizationInvitationResponse toResponse(OrganizationInvitation invitation) {
+        return OrganizationInvitationResponse.builder()
+            .id(invitation.getId())
+            .organizationId(invitation.getOrganization().getId())
+            .organizationName(invitation.getOrganization().getName())
+            .email(invitation.getEmail())
+            .token(invitation.getToken())
+            .createdAt(invitation.getCreatedAt())
+            .expiresAt(invitation.getExpiresAt())
+            .acceptedAt(invitation.getAcceptedAt())
+            .revokedAt(invitation.getRevokedAt())
+            .build();
+    }
+
+    private OrganizationInvitation getActiveInvitation(String token) {
+        OrganizationInvitation invitation = organizationInvitationRepository.findByToken(token)
+            .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+
+        if (invitation.getRevokedAt() != null) {
+            throw new IllegalStateException("Invitation has been revoked");
+        }
+        if (isExpired(invitation)) {
+            throw new IllegalStateException("Invitation has expired");
+        }
+
+        return invitation;
+    }
+
+    private boolean isExpired(OrganizationInvitation invitation) {
+        return invitation.getExpiresAt().isBefore(OffsetDateTime.now());
+    }
+
+    private void validateInvitationEmail(OrganizationInvitation invitation, String email) {
+        String invitationEmail = invitation.getEmail();
+        if (invitationEmail == null || invitationEmail.isBlank()) {
+            return;
+        }
+
+        if (!invitationEmail.equalsIgnoreCase(email.trim().toLowerCase())) {
+            throw new AccessDeniedException("Invitation email does not match current user");
+        }
+    }
+
+    private void ensureInvitationAcceptable(OrganizationInvitation invitation, User user) {
+        if (invitation.getAcceptedAt() == null) {
+            return;
+        }
+
+        if (
+            invitation.getAcceptedByUser() != null
+                && invitation.getAcceptedByUser().getId().equals(user.getId())
+        ) {
+            return;
+        }
+
+        throw new IllegalStateException("Invitation has already been accepted");
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+
+        String normalized = email.trim().toLowerCase();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private void ensureOrganizationMembership(User user, UUID organizationId) {
+        boolean isMember = user.getOrganizations().stream()
+            .anyMatch(organization -> organizationId.equals(organization.getId()));
+
+        if (!isMember && (user.getOrganization() == null || !organizationId.equals(user.getOrganization().getId()))) {
+            throw new AccessDeniedException("User is not a member of this organization");
+        }
+    }
+
+    private void ensureManagerAccess(CustomUserDetails currentUser) {
+        boolean hasAccess = currentUser.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
+
+        if (!hasAccess) {
+            throw new AccessDeniedException("Insufficient permissions for invitations");
+        }
+    }
+
+    private OrganizationSessionResponse buildSessionResponse(User user, Organization organization) {
+        CustomUserDetails userDetails = new CustomUserDetails(
+            user.getId(),
+            organization.getId(),
+            user.getEmail(),
+            user.getPasswordHash(),
+            user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
+                .collect(Collectors.toSet())
+        );
+
+        return OrganizationSessionResponse.builder()
+            .organization(OrganizationResponse.builder()
+                .id(organization.getId())
+                .name(organization.getName())
+                .ownerId(organization.getOwnerId())
+                .createdAt(organization.getCreatedAt())
+                .active(true)
+                .build())
+            .accessToken(jwtService.generateAccessToken(userDetails))
+            .build();
+    }
+}

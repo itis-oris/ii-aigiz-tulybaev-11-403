@@ -1,6 +1,8 @@
 package com.sprintly.backend.controller;
 
 import com.sprintly.backend.dto.organization.CreateOrganizationRequest;
+import com.sprintly.backend.dto.organization.CreateOrganizationInvitationsRequest;
+import com.sprintly.backend.dto.organization.OrganizationInvitationResponse;
 import com.sprintly.backend.dto.organization.OrganizationResponse;
 import com.sprintly.backend.dto.organization.OrganizationSessionResponse;
 import com.sprintly.backend.dto.organization.SwitchOrganizationRequest;
@@ -35,6 +37,7 @@ import java.util.UUID;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final com.sprintly.backend.service.OrganizationInvitationService organizationInvitationService;
 
     @GetMapping
     @Operation(summary = "List my organizations")
@@ -78,5 +81,19 @@ public class OrganizationController {
         @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return organizationService.delete(organizationId, currentUser);
+    }
+
+    @PostMapping("/{organizationId}/invitations")
+    @Operation(summary = "Create organization invitations")
+    public List<OrganizationInvitationResponse> createInvitations(
+        @PathVariable UUID organizationId,
+        @Valid @RequestBody CreateOrganizationInvitationsRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return organizationInvitationService.createInvitations(
+            organizationId,
+            request,
+            currentUser
+        );
     }
 }
