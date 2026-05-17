@@ -22,9 +22,12 @@ const createWorkspaceFolder = (folderName: string): ProjectFolder => ({
 export const useWorkspaceProjectsController = () => {
     const {
         activeProjectId,
+        createProject: createProjectInWorkspace,
+        deleteProject: deleteProjectInWorkspace,
         setActiveProjectId,
         projects,
         setProjects,
+        updateProject: updateProjectInWorkspace,
         folders,
         setFolders,
         collapsedFolderIds,
@@ -63,11 +66,10 @@ export const useWorkspaceProjectsController = () => {
     );
 
     const createProject = useCallback(
-        (project: ProjectSummary) => {
-            setProjects((currentProjects) => [...currentProjects, project]);
-            setActiveProjectId(project.id);
+        async (project: ProjectSummary) => {
+            await createProjectInWorkspace(project);
         },
-        [setActiveProjectId, setProjects],
+        [createProjectInWorkspace],
     );
 
     const createFolder = useCallback(
@@ -80,6 +82,20 @@ export const useWorkspaceProjectsController = () => {
         [setFolders],
     );
 
+    const updateProject = useCallback(
+        async (project: ProjectSummary) => {
+            await updateProjectInWorkspace(project);
+        },
+        [updateProjectInWorkspace],
+    );
+
+    const deleteProject = useCallback(
+        async (projectId: string) => {
+            await deleteProjectInWorkspace(projectId);
+        },
+        [deleteProjectInWorkspace],
+    );
+
     return {
         activeProjectId,
         collapsedFolderIds,
@@ -87,8 +103,10 @@ export const useWorkspaceProjectsController = () => {
         projects,
         createFolder,
         createProject,
+        deleteProject,
         moveProjectToFolder,
         selectProject,
         toggleFolder,
+        updateProject,
     };
 };

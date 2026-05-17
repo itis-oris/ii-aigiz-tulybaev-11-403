@@ -14,6 +14,13 @@ public class ProjectMapper {
             .imageUrl(project.getImageUrl())
             .organizationId(project.getOrganization() != null ? project.getOrganization().getId() : null)
             .organizationName(project.getOrganization() != null ? project.getOrganization().getName() : null)
+            .status(project.getStatus())
+            .ownerId(project.getOwner() != null ? project.getOwner().getId() : null)
+            .ownerEmail(project.getOwner() != null ? project.getOwner().getEmail() : null)
+            .ownerFirstname(project.getOwner() != null ? project.getOwner().getFirstname() : null)
+            .ownerLastname(project.getOwner() != null ? project.getOwner().getLastname() : null)
+            .ownerMiddlename(project.getOwner() != null ? project.getOwner().getMiddlename() : null)
+            .ownerAvatarUrl(project.getOwner() != null ? project.getOwner().getAvatarUrl() : null)
             .createdAt(project.getCreatedAt())
             .deletedAt(project.getDeletedAt())
             .build();

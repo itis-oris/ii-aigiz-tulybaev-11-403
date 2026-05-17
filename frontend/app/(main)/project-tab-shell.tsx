@@ -1,14 +1,24 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { useState } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+    createProject,
+    deleteProject,
+    getProjects,
+    type ProjectResponse,
+    type ProjectStatus,
+    updateProject,
+} from '@/shared/api';
 import Header from '@/shared/ui/header';
 import {
     ActiveProjectProvider,
     ProjectTabProvider,
-    organizationProjects,
+    useCurrentUser,
     type ProjectFolder,
+    type ProjectSummary,
     type ProjectTab,
 } from '@/shared/lib';
 import { SidebarInset, SidebarProvider } from '@/shared/ui/sidebar';
@@ -18,32 +28,269 @@ type ProjectTabShellProps = {
     children: ReactNode;
 };
 
+const projectAccentPalette = [
+    'bg-amber-100 text-amber-700',
+    'bg-sky-100 text-sky-700',
+    'bg-emerald-100 text-emerald-700',
+    'bg-violet-100 text-violet-700',
+    'bg-rose-100 text-rose-700',
+    'bg-cyan-100 text-cyan-700',
+] as const;
+
+const defaultBoardTabs = ['BACKLOG', 'IN PROGRESS', 'DONE'];
+
+const emptyProject: ProjectSummary = {
+    id: 'empty-project',
+    name: 'Workspace',
+    shortLabel: 'WS',
+    avatar: 'WS',
+    avatarClassName: 'bg-slate-100 text-slate-600',
+    description: 'Проекты текущей организации.',
+    boardTabs: defaultBoardTabs,
+    status: 'ACTIVE',
+    memberCount: 0,
+};
+
+const normalizeInitials = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('')
+        .slice(0, 2) || 'PR';
+
+const getOwnerName = (project: ProjectResponse) =>
+    [project.ownerFirstname, project.ownerLastname]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+    project.ownerEmail ||
+    'Без владельца';
+
+const mapProjectResponseToSummary = (
+    project: ProjectResponse,
+    index: number,
+    override?: ProjectSummary,
+): ProjectSummary => {
+    const paletteIndex = index >= 0 ? index % projectAccentPalette.length : 0;
+
+    return {
+        id: project.id,
+        name: project.name,
+        shortLabel: override?.shortLabel ?? normalizeInitials(project.name),
+        avatar: override?.avatar ?? normalizeInitials(project.name),
+        avatarClassName:
+            override?.avatarClassName ?? projectAccentPalette[paletteIndex],
+        description:
+            override?.description ??
+            (project.organizationName
+                ? `Проект организации ${project.organizationName}.`
+                : 'Проект рабочего пространства.'),
+        boardTabs: override?.boardTabs ?? defaultBoardTabs,
+        status: override?.status ?? project.status,
+        memberCount: override?.memberCount ?? 1,
+        createdAt: project.createdAt,
+        ownerId: project.ownerId ?? undefined,
+        ownerName: getOwnerName(project),
+        ownerEmail: project.ownerEmail ?? undefined,
+        ownerAvatarUrl: project.ownerAvatarUrl,
+        folderId: override?.folderId,
+    };
+};
+
 const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
-    const [projects, setProjects] = useState(organizationProjects);
+    const pathname = usePathname();
+    const queryClient = useQueryClient();
+    const { data: user } = useCurrentUser();
+    const [projectOverrides, setProjectOverrides] = useState<
+        Record<string, ProjectSummary>
+    >({});
     const [folders, setFolders] = useState<ProjectFolder[]>([]);
     const [collapsedFolderIds, setCollapsedFolderIds] = useState<string[]>([]);
     const [activeProjectTab, setActiveProjectTab] =
         useState<ProjectTab>('Задачи');
-    const [activeProjectId, setActiveProjectId] = useState(projects[0].id);
-    const [activeBoardId, setActiveBoardId] = useState(
-        projects[0].boardTabs[0],
+    const [activeProjectId, setActiveProjectId] = useState('');
+    const [activeBoardId, setActiveBoardId] = useState(defaultBoardTabs[0]);
+
+    const projectsQuery = useQuery({
+        queryKey: ['projects', user?.organizationId],
+        queryFn: getProjects,
+        enabled: Boolean(user?.organizationId),
+        retry: false,
+    });
+
+    const createProjectMutation = useMutation({
+        mutationFn: createProject,
+    });
+    const updateProjectMutation = useMutation({
+        mutationFn: ({
+            projectId,
+            name,
+            status,
+            ownerId,
+        }: {
+            projectId: string;
+            name: string;
+            status?: ProjectStatus;
+            ownerId?: string;
+        }) => updateProject(projectId, { name, status, ownerId }),
+    });
+    const deleteProjectMutation = useMutation({
+        mutationFn: deleteProject,
+    });
+
+    const projects = useMemo(
+        () =>
+            (projectsQuery.data ?? []).map((project, index) =>
+                mapProjectResponseToSummary(
+                    project,
+                    index,
+                    projectOverrides[project.id],
+                ),
+            ),
+        [projectOverrides, projectsQuery.data],
     );
-    const pathname = usePathname();
+
     const showHeader = pathname === '/';
     const activeProject =
         projects.find((project) => project.id === activeProjectId) ??
-        projects[0];
+        projects[0] ??
+        emptyProject;
     const effectiveActiveBoardId = activeProject.boardTabs.includes(
         activeBoardId,
     )
         ? activeBoardId
         : activeProject.boardTabs[0];
 
+    useEffect(() => {
+        if (
+            projects.length > 0 &&
+            !projects.some((project) => project.id === activeProjectId)
+        ) {
+            queueMicrotask(() => {
+                setActiveProjectId(projects[0].id);
+            });
+        }
+    }, [activeProjectId, projects]);
+
+    useEffect(() => {
+        if (projects.length === 0 && activeProjectId) {
+            queueMicrotask(() => {
+                setActiveProjectId('');
+            });
+        }
+    }, [activeProjectId, projects.length]);
+
+    const setProjects = useCallback(
+        (updater: SetStateAction<ProjectSummary[]>) => {
+            setProjectOverrides((currentOverrides) => {
+                const currentProjects = (projectsQuery.data ?? []).map(
+                    (project, index) =>
+                        mapProjectResponseToSummary(
+                            project,
+                            index,
+                            currentOverrides[project.id],
+                        ),
+                );
+                const nextProjects =
+                    typeof updater === 'function'
+                        ? updater(currentProjects)
+                        : updater;
+
+                return nextProjects.reduce<Record<string, ProjectSummary>>(
+                    (accumulator, project) => {
+                        accumulator[project.id] = project;
+                        return accumulator;
+                    },
+                    {},
+                );
+            });
+        },
+        [projectsQuery.data],
+    );
+
+    const handleCreateProject = useCallback(
+        async (projectDraft: ProjectSummary) => {
+            const createdProject = await createProjectMutation.mutateAsync({
+                name: projectDraft.name,
+                status: projectDraft.status,
+                ownerId: projectDraft.ownerId,
+            });
+
+            setProjectOverrides((currentOverrides) => ({
+                ...currentOverrides,
+                [createdProject.id]: mapProjectResponseToSummary(
+                    createdProject,
+                    projects.length,
+                    projectDraft,
+                ),
+            }));
+            setActiveProjectId(createdProject.id);
+            await queryClient.invalidateQueries({
+                queryKey: ['projects', user?.organizationId],
+            });
+        },
+        [
+            createProjectMutation,
+            projects.length,
+            queryClient,
+            user?.organizationId,
+        ],
+    );
+
+    const handleUpdateProject = useCallback(
+        async (projectDraft: ProjectSummary) => {
+            const updatedProject = await updateProjectMutation.mutateAsync({
+                projectId: projectDraft.id,
+                name: projectDraft.name,
+                status: projectDraft.status,
+                ownerId: projectDraft.ownerId,
+            });
+
+            setProjectOverrides((currentOverrides) => ({
+                ...currentOverrides,
+                [updatedProject.id]: mapProjectResponseToSummary(
+                    updatedProject,
+                    projects.findIndex(
+                        (currentProject) =>
+                            currentProject.id === updatedProject.id,
+                    ),
+                    currentOverrides[updatedProject.id] ?? projectDraft,
+                ),
+            }));
+            await queryClient.invalidateQueries({
+                queryKey: ['projects', user?.organizationId],
+            });
+        },
+        [projects, queryClient, updateProjectMutation, user?.organizationId],
+    );
+
+    const handleDeleteProject = useCallback(
+        async (projectId: string) => {
+            await deleteProjectMutation.mutateAsync(projectId);
+            setProjectOverrides((currentOverrides) => {
+                const nextOverrides = { ...currentOverrides };
+                delete nextOverrides[projectId];
+                return nextOverrides;
+            });
+            await queryClient.invalidateQueries({
+                queryKey: ['projects', user?.organizationId],
+            });
+        },
+        [deleteProjectMutation, queryClient, user?.organizationId],
+    );
+
     return (
         <ActiveProjectProvider
             value={{
                 projects,
-                setProjects,
+                setProjects: setProjects as Dispatch<
+                    SetStateAction<ProjectSummary[]>
+                >,
+                createProject: handleCreateProject,
+                updateProject: handleUpdateProject,
+                deleteProject: handleDeleteProject,
                 folders,
                 setFolders,
                 collapsedFolderIds,
@@ -67,7 +314,7 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
                                 onProjectTabChange={setActiveProjectTab}
                             />
                         ) : null}
-                        <div className="flex-1 min-h-0 overflow-y-auto">
+                        <div className="min-h-0 flex-1 overflow-y-auto">
                             {children}
                         </div>
                     </SidebarInset>

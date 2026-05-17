@@ -27,7 +27,7 @@ public class UserService {
     public List<UserResponse> findAllInCurrentOrganization(CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
 
-        return userRepository.findAllByOrganization_Id(currentUser.getOrganizationId()).stream()
+        return userRepository.findAllByOrganizations_Id(currentUser.getOrganizationId()).stream()
             .map(userMapper::toResponse)
             .toList();
     }
@@ -36,12 +36,8 @@ public class UserService {
     public UserResponse findById(UUID userId, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
 
-        var user = userRepository.findWithRolesById(userId)
+        var user = userRepository.findByIdAndOrganizations_Id(userId, currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (user.getOrganization() == null || !currentUser.getOrganizationId().equals(user.getOrganization().getId())) {
-            throw new AccessDeniedException("User does not belong to current organization");
-        }
 
         return userMapper.toResponse(user);
     }

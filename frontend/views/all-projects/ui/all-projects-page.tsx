@@ -9,6 +9,7 @@ import {
     SlidersHorizontal,
 } from 'lucide-react';
 import {
+    type ProjectSummary,
     useProjectFolderDndController,
     useWorkspaceProjectsController,
 } from '@/shared/lib';
@@ -26,6 +27,7 @@ import {
     parseAllProjectsProjectId,
 } from './all-projects-dnd';
 import { FolderRow } from './folder-row';
+import { ManageProjectDialog } from './manage-project-dialog';
 import { ProjectRow } from './project-row';
 import { RootDropZone } from './root-drop-zone';
 import CreateProjectFolderDialog from './create-project-folder-dialog';
@@ -42,11 +44,13 @@ const AllProjectsPage = () => {
         collapsedFolderIds,
         createFolder,
         createProject,
+        deleteProject,
         folders,
         moveProjectToFolder,
         projects,
         selectProject,
         toggleFolder,
+        updateProject,
     } = useWorkspaceProjectsController();
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<
@@ -59,6 +63,9 @@ const AllProjectsPage = () => {
         useState(false);
     const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] =
         useState(false);
+    const [managedProject, setManagedProject] = useState<ProjectSummary | null>(
+        null,
+    );
     const {
         groupedFolders,
         hasResults,
@@ -332,6 +339,9 @@ const AllProjectsPage = () => {
                                                             setActiveProjectId={
                                                                 selectProject
                                                             }
+                                                            onManageProject={
+                                                                setManagedProject
+                                                            }
                                                             className="bg-background"
                                                         />
                                                     ))
@@ -361,6 +371,9 @@ const AllProjectsPage = () => {
                                                     }
                                                     setActiveProjectId={
                                                         selectProject
+                                                    }
+                                                    onManageProject={
+                                                        setManagedProject
                                                     }
                                                 />
                                             ))
@@ -399,6 +412,19 @@ const AllProjectsPage = () => {
                 open={isCreateFolderDialogOpen}
                 onOpenChange={setIsCreateFolderDialogOpen}
                 onSubmit={createFolder}
+            />
+
+            <ManageProjectDialog
+                key={`manage-${managedProject?.id ?? 'none'}-${managedProject?.name ?? ''}-${managedProject ? 'open' : 'closed'}`}
+                open={Boolean(managedProject)}
+                project={managedProject}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setManagedProject(null);
+                    }
+                }}
+                onSubmit={updateProject}
+                onDelete={deleteProject}
             />
         </>
     );

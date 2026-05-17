@@ -5,11 +5,14 @@ import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.Project;
+import com.sprintly.backend.entity.User;
+import com.sprintly.backend.entity.enums.ProjectStatus;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.mapper.ProjectMapper;
 import com.sprintly.backend.repository.OrganizationRepository;
 import com.sprintly.backend.repository.ProjectRepository;
+import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -31,6 +34,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final OrganizationRepository organizationRepository;
+    private final UserRepository userRepository;
     private final ProjectMapper projectMapper;
     private final S3StorageService s3StorageService;
 
@@ -55,10 +59,18 @@ public class ProjectService {
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
+        User owner = resolveProjectOwner(
+            request.getOwnerId(),
+            currentUser.getId(),
+            currentUser.getOrganizationId()
+        );
+
         Project project = projectRepository.save(
             Project.builder()
                 .name(request.getName().trim())
+                .status(request.getStatus() != null ? request.getStatus() : ProjectStatus.PLANNING)
                 .organization(organization)
+                .owner(owner)
                 .createdAt(OffsetDateTime.now())
                 .build()
         );
@@ -73,6 +85,18 @@ public class ProjectService {
 
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
         project.setName(request.getName().trim());
+        if (request.getStatus() != null) {
+            project.setStatus(request.getStatus());
+        }
+        if (request.getOwnerId() != null) {
+            project.setOwner(
+                resolveProjectOwner(
+                    request.getOwnerId(),
+                    currentUser.getId(),
+                    currentUser.getOrganizationId()
+                )
+            );
+        }
 
         return projectMapper.toResponse(projectRepository.save(project));
     }
@@ -105,18 +129,29 @@ public class ProjectService {
     }
 
     private Project getProjectInOrganization(UUID projectId, UUID organizationId) {
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findByIdAndDeletedAtIsNull(projectId)
             .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-        if (project.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Project not found");
-        }
 
         if (project.getOrganization() == null || !organizationId.equals(project.getOrganization().getId())) {
             throw new AccessDeniedException("Project does not belong to current organization");
         }
 
         return project;
+    }
+
+    private User resolveProjectOwner(UUID requestedOwnerId, UUID fallbackOwnerId, UUID organizationId) {
+        UUID ownerId = requestedOwnerId != null ? requestedOwnerId : fallbackOwnerId;
+        User owner = userRepository.findWithRolesById(ownerId)
+            .orElseThrow(() -> new ResourceNotFoundException("Project owner not found"));
+
+        boolean belongsToOrganization = owner.getOrganizations().stream()
+            .anyMatch(organization -> organizationId.equals(organization.getId()));
+
+        if (!belongsToOrganization) {
+            throw new AccessDeniedException("Project owner must be a member of current organization");
+        }
+
+        return owner;
     }
 
     private void ensureManagerAccess(CustomUserDetails currentUser) {

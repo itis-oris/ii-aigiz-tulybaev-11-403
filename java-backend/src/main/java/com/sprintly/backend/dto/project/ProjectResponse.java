@@ -1,5 +1,6 @@
 package com.sprintly.backend.dto.project;
 
+import com.sprintly.backend.entity.enums.ProjectStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -15,6 +16,13 @@ public class ProjectResponse {
     private String imageUrl;
     private UUID organizationId;
     private String organizationName;
+    private ProjectStatus status;
+    private UUID ownerId;
+    private String ownerEmail;
+    private String ownerFirstname;
+    private String ownerLastname;
+    private String ownerMiddlename;
+    private String ownerAvatarUrl;
     private OffsetDateTime createdAt;
     private OffsetDateTime deletedAt;
 }

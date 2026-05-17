@@ -95,6 +95,8 @@ const dictionaries: Record<Locale, Dictionary> = {
             projectName: 'Название проекта',
             projectNamePlaceholder: 'Например, Sprintly Web',
             projectDescription: 'Описание',
+            projectDescriptionPlaceholder:
+                'Коротко опишите цель проекта, команду или контекст.',
             folder: 'Папка',
             noFolder: 'Без папки',
             newWorkspaceProject: 'Новый проект рабочей области',
@@ -211,6 +213,8 @@ const dictionaries: Record<Locale, Dictionary> = {
             projectName: 'Project name',
             projectNamePlaceholder: 'For example, Sprintly Web',
             projectDescription: 'Description',
+            projectDescriptionPlaceholder:
+                'Briefly describe the project goal, team, or context.',
             folder: 'Folder',
             noFolder: 'No folder',
             newWorkspaceProject: 'New workspace project',

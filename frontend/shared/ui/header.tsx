@@ -29,27 +29,27 @@ type HeaderViewProps = HeaderProps & {
 };
 
 const projectStatusOptions: Array<{
-    value: ProjectSummary['lifecycleStatus'];
+    value: ProjectSummary['status'];
     label: string;
     dotClassName: string;
 }> = [
     {
-        value: 'active',
+        value: 'ACTIVE',
         label: 'В работе',
         dotClassName: 'bg-green-500',
     },
     {
-        value: 'at_risk',
-        label: 'Есть риск',
+        value: 'PLANNING',
+        label: 'Планирование',
         dotClassName: 'bg-amber-500',
     },
     {
-        value: 'on_hold',
+        value: 'ON_HOLD',
         label: 'На паузе',
         dotClassName: 'bg-slate-400',
     },
     {
-        value: 'completed',
+        value: 'COMPLETED',
         label: 'Завершен',
         dotClassName: 'bg-sky-500',
     },
@@ -63,7 +63,8 @@ const Header = ({
     onProjectTabChange,
     ...props
 }: HeaderViewProps) => {
-    const { activeBoardId, setActiveBoardId, setProjects } = useActiveProject();
+    const { activeBoardId, setActiveBoardId, setProjects, updateProject } =
+        useActiveProject();
     const [projectTab, setProjectTab] = useState<ProjectTab>('Задачи');
     const [newBoardName, setNewBoardName] = useState('');
 
@@ -134,20 +135,11 @@ const Header = ({
 
     const activeStatus =
         projectStatusOptions.find(
-            (status) => status.value === project.lifecycleStatus,
+            (status) => status.value === project.status,
         ) ?? projectStatusOptions[0];
 
-    const handleStatusChange = (status: ProjectSummary['lifecycleStatus']) => {
-        setProjects((currentProjects) =>
-            currentProjects.map((currentProject) =>
-                currentProject.id === project.id
-                    ? {
-                          ...currentProject,
-                          lifecycleStatus: status,
-                      }
-                    : currentProject,
-            ),
-        );
+    const handleStatusChange = (status: ProjectSummary['status']) => {
+        void updateProject({ ...project, status });
     };
 
     return (
@@ -211,7 +203,7 @@ const Header = ({
                                                         }
                                                         className={cn(
                                                             'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sidebar-accent',
-                                                            project.lifecycleStatus ===
+                                                            project.status ===
                                                                 status.value &&
                                                                 'bg-sidebar-accent',
                                                         )}

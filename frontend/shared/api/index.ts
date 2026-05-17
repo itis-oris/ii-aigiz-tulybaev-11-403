@@ -6,6 +6,13 @@ export {
     switchOrganization,
     updateOrganization,
 } from './organization';
+export {
+    createProject,
+    deleteProject,
+    getProjects,
+    updateProject,
+} from './project';
+export { getUsers } from './user';
 export type {
     AuthResponse,
     CurrentUserResponse,
@@ -18,4 +25,11 @@ export type {
     OrganizationSessionResponse,
     UpdateOrganizationRequest,
 } from './organization';
+export type {
+    CreateProjectRequest,
+    ProjectResponse,
+    ProjectStatus,
+    UpdateProjectRequest,
+} from './project';
+export type { UserResponse } from './user';
 export { apiClient, ApiError } from './client';

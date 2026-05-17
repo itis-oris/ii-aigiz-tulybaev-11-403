@@ -36,6 +36,28 @@ const HeaderWithProvider = (args: React.ComponentProps<typeof Header>) => {
             value={{
                 projects,
                 setProjects,
+                createProject: async (project) => {
+                    setProjects((currentProjects) => [
+                        ...currentProjects,
+                        project,
+                    ]);
+                },
+                updateProject: async (project) => {
+                    setProjects((currentProjects) =>
+                        currentProjects.map((currentProject) =>
+                            currentProject.id === project.id
+                                ? project
+                                : currentProject,
+                        ),
+                    );
+                },
+                deleteProject: async (projectId) => {
+                    setProjects((currentProjects) =>
+                        currentProjects.filter(
+                            (currentProject) => currentProject.id !== projectId,
+                        ),
+                    );
+                },
                 folders,
                 setFolders,
                 collapsedFolderIds,
