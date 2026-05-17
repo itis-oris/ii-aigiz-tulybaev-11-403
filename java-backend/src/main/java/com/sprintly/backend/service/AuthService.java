@@ -4,6 +4,7 @@ import com.sprintly.backend.dto.auth.AuthResponse;
 import com.sprintly.backend.dto.auth.CurrentUserResponse;
 import com.sprintly.backend.dto.auth.LoginRequest;
 import com.sprintly.backend.dto.auth.RegisterRequest;
+import com.sprintly.backend.dto.organization.OrganizationResponse;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.Role;
 import com.sprintly.backend.entity.User;
@@ -23,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,8 +34,8 @@ import java.util.stream.Collectors;
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -51,13 +54,6 @@ public class AuthService {
         Role adminRole = roleRepository.findByName(RoleName.ADMIN)
             .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.ADMIN).build()));
 
-        Organization organization = organizationRepository.save(
-            Organization.builder()
-                .name(request.getOrganizationName().trim())
-                .createdAt(OffsetDateTime.now())
-                .build()
-        );
-
         User user = userRepository.save(
             User.builder()
                 .firstname(request.getFirstname())
@@ -65,14 +61,24 @@ public class AuthService {
                 .middlename(request.getMiddlename())
                 .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .organization(organization)
+                .organization(null)
                 .roles(Set.of(adminRole))
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build()
         );
 
-        organization.setOwnerId(user.getId());
+        Organization organization = organizationRepository.save(
+            Organization.builder()
+                .name(buildInitialOrganizationName(user))
+                .ownerId(user.getId())
+                .createdAt(OffsetDateTime.now())
+                .build()
+        );
+
+        user.setOrganization(organization);
+        user.getOrganizations().add(organization);
+        user = userRepository.save(user);
 
         CustomUserDetails userDetails = new CustomUserDetails(
             user.getId(),
@@ -119,16 +125,59 @@ public class AuthService {
     public CurrentUserResponse me(CustomUserDetails userDetails) {
         User user = userRepository.findWithRolesById(userDetails.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Organization activeOrganization = getActiveOrganization(user);
 
         return CurrentUserResponse.builder()
             .userId(user.getId())
-            .organizationId(user.getOrganization().getId())
+            .organizationId(activeOrganization != null ? activeOrganization.getId() : null)
             .email(user.getEmail())
             .firstname(user.getFirstname())
             .lastname(user.getLastname())
             .middlename(user.getMiddlename())
             .avatarUrl(user.getAvatarUrl())
+            .organizationName(activeOrganization != null ? activeOrganization.getName() : null)
+            .organizations(mapOrganizations(user))
             .roles(user.getRoles().stream().map(role -> role.getName().name()).collect(Collectors.toSet()))
             .build();
+    }
+
+    private List<OrganizationResponse> mapOrganizations(User user) {
+        Set<Organization> organizations = new HashSet<>(user.getOrganizations());
+        Organization activeOrganization = getActiveOrganization(user);
+
+        if (activeOrganization != null) {
+            organizations.add(activeOrganization);
+        }
+
+        return organizations.stream()
+            .filter(organization -> organization.getDeletedAt() == null)
+            .map(organization -> OrganizationResponse.builder()
+                .id(organization.getId())
+                .name(organization.getName())
+                .ownerId(organization.getOwnerId())
+                .createdAt(organization.getCreatedAt())
+                .active(
+                    activeOrganization != null
+                        && organization.getId().equals(activeOrganization.getId())
+                )
+                .build())
+            .toList();
+    }
+
+    private Organization getActiveOrganization(User user) {
+        if (user.getOrganization() == null || user.getOrganization().getDeletedAt() != null) {
+            return null;
+        }
+
+        return user.getOrganization();
+    }
+
+    private String buildInitialOrganizationName(User user) {
+        String baseName = user.getFirstname() != null && !user.getFirstname().isBlank()
+            ? user.getFirstname().trim()
+            : user.getEmail().split("@")[0];
+
+        String shortId = user.getId().toString().substring(0, 8);
+        return "Organization " + baseName + " " + shortId;
     }
 }

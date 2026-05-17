@@ -39,10 +39,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         Set<SimpleGrantedAuthority> authorities = user.getRoles().stream()
             .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
             .collect(Collectors.toSet());
+        UUID organizationId =
+            user.getOrganization() != null && user.getOrganization().getDeletedAt() == null
+                ? user.getOrganization().getId()
+                : null;
 
         return new CustomUserDetails(
             user.getId(),
-            user.getOrganization().getId(),
+            organizationId,
             user.getEmail(),
             user.getPasswordHash(),
             authorities

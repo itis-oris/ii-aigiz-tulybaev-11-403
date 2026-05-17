@@ -1,6 +1,6 @@
 'use client';
 
-import { useI18n } from '@/shared/lib';
+import { useCurrentUser, useI18n } from '@/shared/lib';
 import {
     Avatar,
     Button,
@@ -12,8 +12,16 @@ import {
     Input,
 } from '@/shared/ui';
 
+const getInitials = (firstname?: string, lastname?: string) =>
+    `${firstname?.[0] ?? ''}${lastname?.[0] ?? ''}`.trim().toUpperCase() || 'U';
+
 const ProfilePage = () => {
     const { t } = useI18n();
+    const { data: user, isLoading, isError } = useCurrentUser();
+    const fullName =
+        [user?.firstname, user?.lastname].filter(Boolean).join(' ') ||
+        'Профиль';
+    const role = user?.roles?.[0] ?? 'User';
 
     return (
         <div className="min-h-0 flex-1 overflow-y-auto bg-background">
@@ -26,6 +34,16 @@ const ProfilePage = () => {
                         <p className="mt-2 text-sm text-muted-foreground">
                             {t('profile.description')}
                         </p>
+                        {isLoading ? (
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Загрузка профиля...
+                            </p>
+                        ) : null}
+                        {isError ? (
+                            <p className="mt-2 text-sm text-destructive">
+                                Не удалось получить данные с backend.
+                            </p>
+                        ) : null}
                     </div>
 
                     <Card className="bg-transparent py-0 ring-0">
@@ -35,14 +53,17 @@ const ProfilePage = () => {
                                     size="2xl"
                                     className="bg-primary text-base text-primary-foreground"
                                 >
-                                    LI
+                                    {getInitials(
+                                        user?.firstname,
+                                        user?.lastname,
+                                    )}
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
                                     <CardTitle className="text-xl font-semibold">
-                                        Lorem Ipsum
+                                        {fullName}
                                     </CardTitle>
                                     <CardDescription className="mt-1 text-sm">
-                                        lorem.ipsum@example.com
+                                        {user?.email ?? 'email@example.com'}
                                     </CardDescription>
                                 </div>
                             </div>
@@ -61,7 +82,11 @@ const ProfilePage = () => {
                                 <label className="text-sm font-medium">
                                     {t('profile.firstName')}
                                 </label>
-                                <Input uiSize="md" defaultValue="Lorem Ipsum" />
+                                <Input
+                                    uiSize="md"
+                                    value={user?.firstname ?? ''}
+                                    readOnly
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">
@@ -69,19 +94,19 @@ const ProfilePage = () => {
                                 </label>
                                 <Input
                                     uiSize="md"
-                                    defaultValue="lorem.ipsum@example.com"
+                                    value={user?.email ?? ''}
+                                    readOnly
                                 />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">
                                     {t('profile.role')}
                                 </label>
-                                <Input
-                                    uiSize="md"
-                                    defaultValue="Product Owner"
-                                />
+                                <Input uiSize="md" value={role} readOnly />
                             </div>
-                            <Button size="md">{t('common.saveChanges')}</Button>
+                            <Button size="md" disabled>
+                                {t('common.saveChanges')}
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>
