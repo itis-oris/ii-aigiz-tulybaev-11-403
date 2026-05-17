@@ -12,17 +12,34 @@ import { useIsMobile } from './use-mobile';
 import { useWorkspaceProjectsController } from './use-workspace-projects-controller';
 import { THEME_STORAGE_KEY, ThemeProvider, useTheme } from './theme';
 import { LOCALE_STORAGE_KEY, LocaleProvider, useI18n } from './i18n';
+import {
+    ACCESS_TOKEN_KEY,
+    clearAccessToken,
+    getAccessToken,
+    setAccessToken,
+} from './auth';
+import { AuthProvider, useAuth } from './auth-provider';
+import { getPostAuthRedirectPath } from './auth-redirect';
+import { useCurrentUser } from './use-current-user';
 
 export {
     ActiveProjectProvider,
+    ACCESS_TOKEN_KEY,
+    AuthProvider,
+    clearAccessToken,
     cn,
+    getAccessToken,
+    getPostAuthRedirectPath,
     LOCALE_STORAGE_KEY,
     LocaleProvider,
     organizationProjects,
     projectTabs,
     ProjectTabProvider,
+    setAccessToken,
     ThemeProvider,
     THEME_STORAGE_KEY,
+    useAuth,
+    useCurrentUser,
     useI18n,
     useActiveProject,
     useIsMobile,

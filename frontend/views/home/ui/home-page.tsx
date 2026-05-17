@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import type { DateRange } from 'react-day-picker';
 import { useActiveProject, useProjectTab } from '@/shared/lib';
+import type { DateRange } from '@/shared/ui';
 import {
     organizationTaskDays,
     type DayTasks,

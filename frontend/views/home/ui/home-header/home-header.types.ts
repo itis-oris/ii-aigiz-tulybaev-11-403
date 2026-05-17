@@ -1,5 +1,5 @@
-import type { DateRange } from 'react-day-picker';
 import type { ProjectSummary } from '@/shared/lib';
+import type { DateRange } from '@/shared/ui';
 import type { SortMode } from '@/views/home/ui/home-header/sort-mode';
 import type { ViewMode } from '@/views/home/ui/home-header/view-mode';
 

@@ -116,11 +116,6 @@ export function AppSidebar() {
                     <SidebarHeader className="relative z-10 gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
                         <div className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
                             <WorkspaceSwitcher
-                                label="Campus"
-                                shortLabel="C"
-                                projects={projects}
-                                activeProjectId={activeProjectId}
-                                onProjectSelect={selectProject}
                                 onInviteClick={() =>
                                     setIsInviteDialogOpen(true)
                                 }
@@ -137,7 +132,7 @@ export function AppSidebar() {
                             />
                         </div>
                     </SidebarHeader>
-                    <SidebarContent className="relative z-10">
+                    <SidebarContent className="relative z-1">
                         <SidebarGroup className="px-3 py-0 group-data-[collapsible=icon]:px-2">
                             <SidebarGroupContent>
                                 <SidebarMenu>

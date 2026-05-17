@@ -3,9 +3,9 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "next dev",
-        "dev:mock": "API_PROXY_TARGET=http://127.0.0.1:4010 next dev",
-        "build": "next build",
+        "dev": "next dev --webpack",
+        "dev:mock": "API_PROXY_TARGET=http://127.0.0.1:4010 next dev --webpack",
+        "build": "next build --webpack",
         "start": "next start",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit",

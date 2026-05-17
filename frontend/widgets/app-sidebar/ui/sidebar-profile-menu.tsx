@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { cn, useI18n, useTheme } from '@/shared/lib';
+import { useRouter } from 'next/navigation';
+import { cn, useAuth, useCurrentUser, useI18n, useTheme } from '@/shared/lib';
 import { Avatar } from '@/shared/ui';
 import {
     SidebarMenu,
@@ -16,12 +17,14 @@ type SidebarProfileMenuProps = {
     email: string;
     initials: string;
     label: string;
+    onLogout?: () => void;
 };
 
 function SidebarProfileMenuContent({
     email,
     initials,
     label,
+    onLogout,
 }: SidebarProfileMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { locale, mounted: localeMounted, t, toggleLocale } = useI18n();
@@ -37,7 +40,7 @@ function SidebarProfileMenuContent({
         <div className="relative w-full">
             <div
                 className={cn(
-                    'absolute -right-6 bottom-full z-30 mb-2 w-64 origin-bottom-right rounded-2xl border border-sidebar-border bg-sidebar p-2 shadow-lg transition-all duration-200',
+                    'absolute -right-6 bottom-full z-30 mb-2 w-64 origin-bottom-right overflow-hidden rounded-2xl border border-sidebar-border/80 bg-sidebar/98 p-2 shadow-[0_18px_48px_rgba(15,23,42,0.18)] ring-1 ring-black/5 backdrop-blur-md supports-[backdrop-filter]:bg-sidebar/92 transition-all duration-200',
                     isOpen
                         ? 'translate-y-0 scale-100 opacity-100'
                         : 'pointer-events-none translate-y-2 scale-95 opacity-0',
@@ -95,7 +98,10 @@ function SidebarProfileMenuContent({
                         >
                             <Link
                                 href="/landing"
-                                onClick={() => setIsOpen(false)}
+                                onClick={() => {
+                                    onLogout?.();
+                                    setIsOpen(false);
+                                }}
                             >
                                 <LogOut className="size-4" />
                                 <span>{t('sidebar.logout')}</span>
@@ -138,8 +144,30 @@ function SidebarProfileMenuContent({
 
 const SidebarProfileMenu = (props: SidebarProfileMenuProps) => {
     const { state } = useSidebar();
+    const router = useRouter();
+    const { logout } = useAuth();
+    const { data: user } = useCurrentUser();
+    const label =
+        [user?.firstname, user?.lastname].filter(Boolean).join(' ') ||
+        props.label;
+    const initials =
+        `${user?.firstname?.[0] ?? ''}${user?.lastname?.[0] ?? ''}` ||
+        props.initials;
+    const email = user?.email ?? props.email;
 
-    return <SidebarProfileMenuContent key={state} {...props} />;
+    return (
+        <SidebarProfileMenuContent
+            key={state}
+            {...props}
+            email={email}
+            initials={initials}
+            label={label}
+            onLogout={() => {
+                logout();
+                router.replace('/login');
+            }}
+        />
+    );
 };
 
 export default SidebarProfileMenu;

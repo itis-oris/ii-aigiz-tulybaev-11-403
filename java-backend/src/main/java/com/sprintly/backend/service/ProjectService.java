@@ -52,7 +52,7 @@ public class ProjectService {
     public ProjectResponse create(CreateProjectRequest request, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
 
-        Organization organization = organizationRepository.findById(currentUser.getOrganizationId())
+        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
         Project project = projectRepository.save(
