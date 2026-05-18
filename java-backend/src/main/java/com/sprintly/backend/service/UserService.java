@@ -12,7 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -21,14 +24,32 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final OrganizationRoleService organizationRoleService;
     private final S3StorageService s3StorageService;
 
     @Transactional(readOnly = true)
     public List<UserResponse> findAllInCurrentOrganization(CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
 
-        return userRepository.findAllByOrganizations_Id(currentUser.getOrganizationId()).stream()
-            .map(userMapper::toResponse)
+        List<com.sprintly.backend.entity.User> users = userRepository.findAllByOrganizations_Id(currentUser.getOrganizationId());
+        Map<UUID, Set<String>> roleNamesByUserId = new LinkedHashMap<>(
+            organizationRoleService.getRoleNamesByUserIdsInOrganization(
+                currentUser.getOrganizationId(),
+                users.stream().map(com.sprintly.backend.entity.User::getId).toList()
+            )
+        );
+
+        return users.stream()
+            .map(user -> userMapper.toResponse(
+                user,
+                roleNamesByUserId.getOrDefault(
+                    user.getId(),
+                    organizationRoleService.getRoleNamesInOrganization(
+                        user,
+                        currentUser.getOrganizationId()
+                    )
+                )
+            ))
             .toList();
     }
 
@@ -39,12 +60,15 @@ public class UserService {
         var user = userRepository.findByIdAndOrganizations_Id(userId, currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        return userMapper.toResponse(user);
+        return userMapper.toResponse(
+            user,
+            organizationRoleService.getRoleNamesInOrganization(user, currentUser.getOrganizationId())
+        );
     }
 
     @Transactional
     public UserResponse uploadAvatar(MultipartFile file, CustomUserDetails currentUser) {
-        var user = userRepository.findWithRolesById(currentUser.getId())
+        var user = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getOrganization() == null || !currentUser.getOrganizationId().equals(user.getOrganization().getId())) {
@@ -54,7 +78,15 @@ public class UserService {
         String avatarUrl = s3StorageService.uploadImage(file, "users/" + user.getId() + "/avatar");
         user.setAvatarUrl(avatarUrl);
 
-        return userMapper.toResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+
+        return userMapper.toResponse(
+            savedUser,
+            organizationRoleService.getRoleNamesInOrganization(
+                savedUser,
+                currentUser.getOrganizationId()
+            )
+        );
     }
 
     private void ensureManagerAccess(CustomUserDetails currentUser) {

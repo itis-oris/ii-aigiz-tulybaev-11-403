@@ -6,18 +6,14 @@ import com.sprintly.backend.dto.organization.OrganizationSessionResponse;
 import com.sprintly.backend.dto.organization.SwitchOrganizationRequest;
 import com.sprintly.backend.dto.organization.UpdateOrganizationRequest;
 import com.sprintly.backend.entity.Organization;
-import com.sprintly.backend.entity.Role;
 import com.sprintly.backend.entity.User;
-import com.sprintly.backend.entity.enums.RoleName;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.repository.OrganizationRepository;
-import com.sprintly.backend.repository.RoleRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,9 +29,9 @@ import java.util.stream.Collectors;
 public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
-    private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final OrganizationRoleService organizationRoleService;
 
     @Transactional(readOnly = true)
     public List<OrganizationResponse> findAllForCurrentUser(CustomUserDetails currentUser) {
@@ -50,8 +46,6 @@ public class OrganizationService {
     @Transactional
     public OrganizationSessionResponse create(CreateOrganizationRequest request, CustomUserDetails currentUser) {
         User user = getCurrentUser(currentUser.getId());
-        Role adminRole = roleRepository.findByName(RoleName.ADMIN)
-            .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.ADMIN).build()));
 
         Organization organization = organizationRepository.save(
             Organization.builder()
@@ -63,8 +57,8 @@ public class OrganizationService {
 
         user.getOrganizations().add(organization);
         user.setOrganization(organization);
-        user.getRoles().add(adminRole);
         userRepository.save(user);
+        organizationRoleService.assignRole(user, organization, com.sprintly.backend.entity.enums.RoleName.ADMIN);
 
         return buildSessionResponse(user, organization);
     }
@@ -160,7 +154,7 @@ public class OrganizationService {
     }
 
     private User getCurrentUser(UUID userId) {
-        return userRepository.findWithRolesById(userId)
+        return userRepository.findWithOrganizationsById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
@@ -203,9 +197,7 @@ public class OrganizationService {
             organization.getId(),
             user.getEmail(),
             user.getPasswordHash(),
-            user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
-                .collect(Collectors.toSet())
+            organizationRoleService.getAuthoritiesInOrganization(user, organization.getId())
         );
 
         return OrganizationSessionResponse.builder()

@@ -46,6 +46,7 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final ProjectMapper projectMapper;
     private final UserMapper userMapper;
+    private final OrganizationRoleService organizationRoleService;
     private final S3StorageService s3StorageService;
 
     @Transactional(readOnly = true)
@@ -159,7 +160,13 @@ public class ProjectService {
 
         return project.getMembers().stream()
             .sorted((left, right) -> left.getEmail().compareToIgnoreCase(right.getEmail()))
-            .map(userMapper::toResponse)
+            .map(user -> userMapper.toResponse(
+                user,
+                organizationRoleService.getRoleNamesInOrganization(
+                    user,
+                    currentUser.getOrganizationId()
+                )
+            ))
             .toList();
     }
 
@@ -192,7 +199,13 @@ public class ProjectService {
 
         return savedProject.getMembers().stream()
             .sorted((left, right) -> left.getEmail().compareToIgnoreCase(right.getEmail()))
-            .map(userMapper::toResponse)
+            .map(user -> userMapper.toResponse(
+                user,
+                organizationRoleService.getRoleNamesInOrganization(
+                    user,
+                    currentUser.getOrganizationId()
+                )
+            ))
             .toList();
     }
 
@@ -224,7 +237,7 @@ public class ProjectService {
 
     private User resolveProjectOwner(UUID requestedOwnerId, UUID fallbackOwnerId, UUID organizationId) {
         UUID ownerId = requestedOwnerId != null ? requestedOwnerId : fallbackOwnerId;
-        User owner = userRepository.findWithRolesById(ownerId)
+        User owner = userRepository.findWithOrganizationsById(ownerId)
             .orElseThrow(() -> new ResourceNotFoundException("Project owner not found"));
 
         boolean belongsToOrganization = owner.getOrganizations().stream()

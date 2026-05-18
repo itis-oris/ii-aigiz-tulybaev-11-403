@@ -3,6 +3,7 @@ package com.sprintly.backend.security;
 import com.sprintly.backend.entity.User;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.repository.UserRepository;
+import com.sprintly.backend.service.OrganizationRoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,30 +20,32 @@ import java.util.stream.Collectors;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final OrganizationRoleService organizationRoleService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findWithRolesByEmail(username.toLowerCase().trim())
+        User user = userRepository.findWithOrganizationsByEmail(username.toLowerCase().trim())
             .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         return toUserDetails(user);
     }
 
     public UserDetails loadUserById(UUID userId) {
-        User user = userRepository.findWithRolesById(userId)
+        User user = userRepository.findWithOrganizationsById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return toUserDetails(user);
     }
 
     private CustomUserDetails toUserDetails(User user) {
-        Set<SimpleGrantedAuthority> authorities = user.getRoles().stream()
-            .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
-            .collect(Collectors.toSet());
         UUID organizationId =
             user.getOrganization() != null && user.getOrganization().getDeletedAt() == null
                 ? user.getOrganization().getId()
                 : null;
+        Set<SimpleGrantedAuthority> authorities = organizationRoleService.getAuthoritiesInOrganization(
+            user,
+            organizationId
+        );
 
         return new CustomUserDetails(
             user.getId(),

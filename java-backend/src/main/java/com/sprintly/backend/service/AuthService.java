@@ -7,12 +7,10 @@ import com.sprintly.backend.dto.auth.RegisterRequest;
 import com.sprintly.backend.dto.organization.OrganizationResponse;
 import com.sprintly.backend.entity.OrganizationInvitation;
 import com.sprintly.backend.entity.Organization;
-import com.sprintly.backend.entity.Role;
 import com.sprintly.backend.entity.User;
 import com.sprintly.backend.entity.enums.RoleName;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.repository.OrganizationRepository;
-import com.sprintly.backend.repository.RoleRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.security.JwtService;
@@ -20,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,12 +35,12 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final CaptchaVerificationService captchaVerificationService;
     private final OrganizationInvitationService organizationInvitationService;
+    private final OrganizationRoleService organizationRoleService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -61,11 +60,6 @@ public class AuthService {
             )
             : null;
 
-        Role primaryRole = invitation != null
-            ? organizationInvitationService.getOrCreateUserRole()
-            : roleRepository.findByName(RoleName.ADMIN)
-                .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.ADMIN).build()));
-
         User user = userRepository.save(
             User.builder()
                 .firstname(request.getFirstname())
@@ -74,7 +68,6 @@ public class AuthService {
                 .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .organization(invitation != null ? invitation.getOrganization() : null)
-                .roles(new HashSet<>(Set.of(primaryRole)))
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build()
@@ -85,6 +78,7 @@ public class AuthService {
             organization = invitation.getOrganization();
             user.getOrganizations().add(organization);
             user = userRepository.save(user);
+            organizationRoleService.assignRole(user, organization, RoleName.USER);
             organizationInvitationService.markInvitationAccepted(invitation, user);
         } else {
             organization = organizationRepository.save(
@@ -98,23 +92,28 @@ public class AuthService {
             user.setOrganization(organization);
             user.getOrganizations().add(organization);
             user = userRepository.save(user);
+            organizationRoleService.assignRole(user, organization, RoleName.ADMIN);
         }
+
+        Set<SimpleGrantedAuthority> authorities =
+            organizationRoleService.getAuthoritiesInOrganization(user, organization.getId());
+        Set<String> roleNames = authorities.stream()
+            .map(authority -> authority.getAuthority().replace("ROLE_", ""))
+            .collect(Collectors.toSet());
 
         CustomUserDetails userDetails = new CustomUserDetails(
             user.getId(),
             organization.getId(),
             user.getEmail(),
             user.getPasswordHash(),
-            user.getRoles().stream()
-                .map(role -> new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role.getName().name()))
-                .collect(Collectors.toSet())
+            authorities
         );
 
         return AuthResponse.builder()
             .userId(user.getId())
             .organizationId(organization.getId())
             .email(user.getEmail())
-            .roles(user.getRoles().stream().map(role -> role.getName().name()).collect(Collectors.toSet()))
+            .roles(roleNames)
             .accessToken(jwtService.generateAccessToken(userDetails))
             .build();
     }
@@ -143,7 +142,7 @@ public class AuthService {
     }
 
     public CurrentUserResponse me(CustomUserDetails userDetails) {
-        User user = userRepository.findWithRolesById(userDetails.getId())
+        User user = userRepository.findWithOrganizationsById(userDetails.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Organization activeOrganization = getActiveOrganization(user);
 
@@ -157,7 +156,14 @@ public class AuthService {
             .avatarUrl(user.getAvatarUrl())
             .organizationName(activeOrganization != null ? activeOrganization.getName() : null)
             .organizations(mapOrganizations(user))
-            .roles(user.getRoles().stream().map(role -> role.getName().name()).collect(Collectors.toSet()))
+            .roles(
+                activeOrganization != null
+                    ? organizationRoleService.getRoleNamesInOrganization(
+                        user,
+                        activeOrganization.getId()
+                    )
+                    : Set.of()
+            )
             .build();
     }
 

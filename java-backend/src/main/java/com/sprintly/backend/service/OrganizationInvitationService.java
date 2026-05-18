@@ -7,29 +7,24 @@ import com.sprintly.backend.dto.organization.OrganizationResponse;
 import com.sprintly.backend.dto.organization.OrganizationSessionResponse;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.OrganizationInvitation;
-import com.sprintly.backend.entity.Role;
 import com.sprintly.backend.entity.User;
 import com.sprintly.backend.entity.enums.RoleName;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.repository.OrganizationInvitationRepository;
 import com.sprintly.backend.repository.OrganizationRepository;
-import com.sprintly.backend.repository.RoleRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,8 +35,8 @@ public class OrganizationInvitationService {
     private final OrganizationInvitationRepository organizationInvitationRepository;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final JwtService jwtService;
+    private final OrganizationRoleService organizationRoleService;
 
     @Transactional
     public List<OrganizationInvitationResponse> createInvitations(
@@ -53,7 +48,7 @@ public class OrganizationInvitationService {
 
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
-        User invitedByUser = userRepository.findWithRolesById(currentUser.getId())
+        User invitedByUser = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         ensureOrganizationMembership(invitedByUser, organizationId);
@@ -86,7 +81,7 @@ public class OrganizationInvitationService {
 
     @Transactional(readOnly = true)
     public OrganizationInvitationDetailsResponse getInvitationDetails(String token) {
-        OrganizationInvitation invitation = getActiveInvitation(token);
+        OrganizationInvitation invitation = getInvitation(token);
 
         return OrganizationInvitationDetailsResponse.builder()
             .organizationId(invitation.getOrganization().getId())
@@ -101,7 +96,7 @@ public class OrganizationInvitationService {
 
     @Transactional
     public OrganizationSessionResponse acceptInvitation(String token, CustomUserDetails currentUser) {
-        User user = userRepository.findWithRolesById(currentUser.getId())
+        User user = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         OrganizationInvitation invitation = getActiveInvitation(token);
 
@@ -110,8 +105,8 @@ public class OrganizationInvitationService {
 
         user.getOrganizations().add(invitation.getOrganization());
         user.setOrganization(invitation.getOrganization());
-        user.getRoles().add(getOrCreateUserRole());
         userRepository.save(user);
+        organizationRoleService.assignRole(user, invitation.getOrganization(), RoleName.USER);
 
         if (invitation.getAcceptedAt() == null) {
             invitation.setAcceptedAt(OffsetDateTime.now());
@@ -141,11 +136,6 @@ public class OrganizationInvitationService {
         invitation.setAcceptedAt(OffsetDateTime.now());
         invitation.setAcceptedByUser(user);
         organizationInvitationRepository.save(invitation);
-    }
-
-    public Role getOrCreateUserRole() {
-        return roleRepository.findByName(RoleName.USER)
-            .orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.USER).build()));
     }
 
     private OrganizationInvitation buildInvitation(
@@ -180,9 +170,13 @@ public class OrganizationInvitationService {
             .build();
     }
 
-    private OrganizationInvitation getActiveInvitation(String token) {
-        OrganizationInvitation invitation = organizationInvitationRepository.findByToken(token)
+    private OrganizationInvitation getInvitation(String token) {
+        return organizationInvitationRepository.findByToken(token)
             .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+    }
+
+    private OrganizationInvitation getActiveInvitation(String token) {
+        OrganizationInvitation invitation = getInvitation(token);
 
         if (invitation.getRevokedAt() != null) {
             throw new IllegalStateException("Invitation has been revoked");
@@ -258,9 +252,7 @@ public class OrganizationInvitationService {
             organization.getId(),
             user.getEmail(),
             user.getPasswordHash(),
-            user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
-                .collect(Collectors.toSet())
+            organizationRoleService.getAuthoritiesInOrganization(user, organization.getId())
         );
 
         return OrganizationSessionResponse.builder()

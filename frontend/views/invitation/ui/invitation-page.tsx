@@ -39,6 +39,16 @@ export default function InvitationPage({ token }: InvitationPageProps) {
             : acceptInvitationMutation.error instanceof ApiError
               ? acceptInvitationMutation.error.message
               : null;
+    const invitationStateMessage = invitation?.revoked
+        ? 'Это приглашение было отозвано.'
+        : invitation?.expired
+          ? 'Срок действия приглашения истёк.'
+          : invitation?.accepted
+            ? 'Это приглашение уже использовано.'
+            : null;
+    const isInvitationClosed = Boolean(
+        invitation?.accepted || invitation?.revoked || invitation?.expired,
+    );
 
     return (
         <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
@@ -87,6 +97,12 @@ export default function InvitationPage({ token }: InvitationPageProps) {
                         </p>
                     ) : null}
 
+                    {invitationStateMessage ? (
+                        <p className="text-sm text-muted-foreground">
+                            {invitationStateMessage}
+                        </p>
+                    ) : null}
+
                     {isAuthenticated ? (
                         <div className="flex gap-3">
                             <Button
@@ -95,9 +111,7 @@ export default function InvitationPage({ token }: InvitationPageProps) {
                                 className="flex-1"
                                 disabled={
                                     !invitation ||
-                                    invitation.accepted ||
-                                    invitation.revoked ||
-                                    invitation.expired ||
+                                    isInvitationClosed ||
                                     acceptInvitationMutation.isPending
                                 }
                                 onClick={() =>
@@ -105,8 +119,12 @@ export default function InvitationPage({ token }: InvitationPageProps) {
                                 }
                             >
                                 {invitation?.accepted
-                                    ? 'Приглашение уже принято'
-                                    : 'Присоединиться'}
+                                    ? 'Приглашение использовано'
+                                    : invitation?.revoked
+                                      ? 'Приглашение отозвано'
+                                      : invitation?.expired
+                                        ? 'Приглашение истекло'
+                                        : 'Присоединиться'}
                             </Button>
                             <Button
                                 type="button"

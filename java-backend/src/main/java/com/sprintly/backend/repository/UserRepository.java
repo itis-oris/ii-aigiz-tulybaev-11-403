@@ -15,18 +15,18 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
-    @EntityGraph(attributePaths = {"roles", "organization", "organizations"})
-    Optional<User> findWithRolesByEmail(String email);
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    Optional<User> findWithOrganizationsByEmail(String email);
 
-    @EntityGraph(attributePaths = {"roles", "organization", "organizations"})
-    Optional<User> findWithRolesById(UUID id);
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    Optional<User> findWithOrganizationsById(UUID id);
 
-    @EntityGraph(attributePaths = {"roles", "organization", "organizations"})
+    @EntityGraph(attributePaths = {"organization", "organizations"})
     List<User> findAllByOrganizations_Id(UUID organizationId);
 
-    @EntityGraph(attributePaths = {"roles", "organization", "organizations"})
+    @EntityGraph(attributePaths = {"organization", "organizations"})
     Optional<User> findByIdAndOrganizations_Id(UUID userId, UUID organizationId);
 
-    @EntityGraph(attributePaths = {"roles", "organization", "organizations"})
+    @EntityGraph(attributePaths = {"organization", "organizations"})
     List<User> findAllByIdInAndOrganizations_Id(Set<UUID> userIds, UUID organizationId);
 }
