@@ -105,7 +105,7 @@ const Header = ({
     >({
         mutationFn: createBoard,
         onSuccess: async (createdBoard) => {
-            setActiveBoardId(createdBoard.name);
+            setActiveBoardId(createdBoard.id);
             setNewBoardName('');
             await Promise.all([
                 queryClient.invalidateQueries({
@@ -198,11 +198,35 @@ const Header = ({
         },
     });
 
+    const liveBoards = (boardsQuery.data ?? []).map((board) => ({
+        id: board.id,
+        name: board.name,
+        key: board.id,
+    }));
+    const fallbackBoards = project.boardTabs.map((boardName, index) => ({
+        id: boardName,
+        name: boardName,
+        key: `fallback:${index}:${boardName}`,
+    }));
+    const effectiveBoards = liveBoards.length > 0 ? liveBoards : fallbackBoards;
+    const normalizedNewBoardName = newBoardName.trim().toLowerCase();
+    const hasDuplicateBoardName =
+        normalizedNewBoardName.length > 0 &&
+        effectiveBoards.some(
+            (board) =>
+                board.name.trim().toLowerCase() === normalizedNewBoardName,
+        );
+
     useEffect(() => {
-        if (!project.boardTabs.includes(activeBoardId)) {
-            setActiveBoardId(project.boardTabs[0]);
+        const hasActiveBoard = effectiveBoards.some(
+            (board) =>
+                board.id === activeBoardId || board.name === activeBoardId,
+        );
+
+        if (!hasActiveBoard && effectiveBoards[0]) {
+            setActiveBoardId(effectiveBoards[0].id);
         }
-    }, [activeBoardId, project.boardTabs, setActiveBoardId]);
+    }, [activeBoardId, effectiveBoards, setActiveBoardId]);
 
     const activeProjectTab = controlledProjectTab ?? projectTab;
 
@@ -217,36 +241,36 @@ const Header = ({
     const handleCreateBoard = () => {
         const trimmedName = newBoardName.trim();
 
-        if (!trimmedName) {
+        if (!trimmedName || hasDuplicateBoardName) {
             return;
         }
 
         createBoardMutation.mutate({
             name: trimmedName,
             projectId: project.id,
-            position: project.boardTabs.length * 1000,
+            position: effectiveBoards.length * 1000,
         });
     };
 
-    const handleDeleteBoard = (boardName: string) => {
-        if (project.boardTabs.length === 1) {
+    const handleDeleteBoard = (boardId: string) => {
+        if (effectiveBoards.length === 1) {
             return;
         }
 
-        const board = (boardsQuery.data ?? []).find(
-            (currentBoard: BoardResponse) => currentBoard.name === boardName,
+        const board = effectiveBoards.find(
+            (currentBoard) => currentBoard.id === boardId,
         );
 
         if (!board) {
             return;
         }
 
-        const remainingBoards = project.boardTabs.filter(
-            (tab) => tab !== boardName,
+        const remainingBoards = effectiveBoards.filter(
+            (currentBoard) => currentBoard.id !== boardId,
         );
 
-        if (activeBoardId === boardName) {
-            setActiveBoardId(remainingBoards[0]);
+        if (activeBoardId === board.id || activeBoardId === board.name) {
+            setActiveBoardId(remainingBoards[0]?.id ?? '');
         }
 
         deleteBoardMutation.mutate(board.id);
@@ -421,58 +445,6 @@ const Header = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {project.boardTabs.map((tab) => (
-                            <div
-                                key={tab}
-                                className={cn(
-                                    'flex h-7 items-center gap-1 rounded-md pl-3 pr-1 text-xs font-medium tracking-[0.02em] transition-colors',
-                                    activeBoardId === tab
-                                        ? 'bg-sidebar-accent text-sidebar-foreground'
-                                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
-                                )}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveBoardId(tab)}
-                                    className="cursor-pointer"
-                                >
-                                    <span>{tab}</span>
-                                </button>
-                                {activeBoardId === tab ? (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <button
-                                                type="button"
-                                                className="cursor-pointer rounded-sm p-0.5 text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground"
-                                                aria-label="Действия с таблицей"
-                                            >
-                                                <EllipsisVertical className="size-4" />
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            align="end"
-                                            className="w-52 border-sidebar-border bg-sidebar p-2 text-sidebar-foreground"
-                                        >
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="w-full justify-start text-destructive hover:bg-sidebar-accent hover:text-destructive disabled:opacity-40"
-                                                disabled={
-                                                    project.boardTabs.length ===
-                                                    1
-                                                }
-                                                onClick={() =>
-                                                    handleDeleteBoard(tab)
-                                                }
-                                            >
-                                                Удалить таблицу
-                                            </Button>
-                                        </PopoverContent>
-                                    </Popover>
-                                ) : null}
-                            </div>
-                        ))}
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
@@ -716,6 +688,59 @@ const Header = ({
                                 </div>
                             </PopoverContent>
                         </Popover>
+                        {effectiveBoards.map((board) => (
+                            <div
+                                key={board.key}
+                                className={cn(
+                                    'flex h-7 items-center gap-1 rounded-md pl-3 pr-1 text-xs font-medium tracking-[0.02em] transition-colors',
+                                    activeBoardId === board.id ||
+                                        activeBoardId === board.name
+                                        ? 'bg-sidebar-accent text-sidebar-foreground'
+                                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                                )}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveBoardId(board.id)}
+                                    className="cursor-pointer"
+                                >
+                                    <span>{board.name}</span>
+                                </button>
+                                {activeBoardId === board.id ||
+                                activeBoardId === board.name ? (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="cursor-pointer rounded-sm p-0.5 text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground"
+                                                aria-label="Действия с таблицей"
+                                            >
+                                                <EllipsisVertical className="size-4" />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            align="end"
+                                            className="w-52 border-sidebar-border bg-sidebar p-2 text-sidebar-foreground"
+                                        >
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="w-full justify-start text-destructive hover:bg-sidebar-accent hover:text-destructive disabled:opacity-40"
+                                                disabled={
+                                                    effectiveBoards.length === 1
+                                                }
+                                                onClick={() =>
+                                                    handleDeleteBoard(board.id)
+                                                }
+                                            >
+                                                Удалить таблицу
+                                            </Button>
+                                        </PopoverContent>
+                                    </Popover>
+                                ) : null}
+                            </div>
+                        ))}
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
@@ -756,11 +781,26 @@ const Header = ({
                                         uiSize="md"
                                         className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-sidebar-foreground/45"
                                     />
+                                    {hasDuplicateBoardName ? (
+                                        <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                            Таблица с таким именем уже
+                                            существует в проекте.
+                                        </div>
+                                    ) : null}
+                                    {createBoardMutation.error instanceof
+                                    Error ? (
+                                        <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                            {createBoardMutation.error.message}
+                                        </div>
+                                    ) : null}
                                     <Button
                                         type="button"
                                         className="w-full bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"
                                         onClick={handleCreateBoard}
-                                        disabled={!newBoardName.trim()}
+                                        disabled={
+                                            !newBoardName.trim() ||
+                                            hasDuplicateBoardName
+                                        }
                                     >
                                         Создать таблицу
                                     </Button>

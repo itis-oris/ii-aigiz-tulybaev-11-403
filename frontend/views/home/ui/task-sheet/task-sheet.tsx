@@ -4,6 +4,7 @@ import {
     assignTask,
     createComment,
     createTag,
+    deleteTask,
     getComments,
     getProjectMembers,
     getTask,
@@ -223,6 +224,30 @@ export const TaskSheet = ({
         },
     });
 
+    const deleteTaskMutation = useMutation({
+        mutationFn: () => deleteTask(selectedTaskId as string),
+        onSuccess: async () => {
+            setIsOpen(false);
+            setSelectedTask(null);
+            setCommentDraft('');
+
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task', selectedTaskId],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task-comments', selectedTaskId],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task-tags', selectedTaskId],
+                }),
+            ]);
+        },
+    });
+
     const updateTaskTagsMutation = useMutation({
         mutationFn: (tagIds: string[]) =>
             updateTask(selectedTaskId as string, { tagIds }),
@@ -411,6 +436,7 @@ export const TaskSheet = ({
                         }
                         isSavingTask={updateTaskMutation.isPending}
                         isSavingTags={updateTaskTagsMutation.isPending}
+                        isDeletingTask={deleteTaskMutation.isPending}
                         saveTaskError={
                             updateTaskMutation.error instanceof Error
                                 ? updateTaskMutation.error
@@ -419,6 +445,11 @@ export const TaskSheet = ({
                         saveTagsError={
                             updateTaskTagsMutation.error instanceof Error
                                 ? updateTaskTagsMutation.error
+                                : null
+                        }
+                        deleteTaskError={
+                            deleteTaskMutation.error instanceof Error
+                                ? deleteTaskMutation.error
                                 : null
                         }
                         availableTags={(availableTagsQuery.data ?? []).map(
@@ -477,6 +508,7 @@ export const TaskSheet = ({
                         isCommentSubmitDisabled={isCommentSubmitDisabled}
                         isCreatingComment={createCommentMutation.isPending}
                         onSubmitComment={() => createCommentMutation.mutate()}
+                        onDeleteTask={() => deleteTaskMutation.mutate()}
                         currentUserId={user?.userId}
                     />
                 ) : null}

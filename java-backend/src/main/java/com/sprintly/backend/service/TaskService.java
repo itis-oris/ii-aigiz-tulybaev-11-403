@@ -182,9 +182,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse assign(UUID taskId, AssignTaskRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser, "Insufficient permissions for task assignment");
-
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
+        ensureManagerOrProjectMemberAccess(currentUser, task.getProject(), "Insufficient permissions for task assignment");
         User assignee = request.getAssigneeId() != null
             ? getUserInOrganization(request.getAssigneeId(), currentUser.getOrganizationId())
             : null;
@@ -213,7 +212,7 @@ public class TaskService {
     @Transactional
     public TaskResponse updateStatus(UUID taskId, UpdateTaskStatusRequest request, CustomUserDetails currentUser) {
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
-        ensureManagerOrAssigneeAccess(currentUser, task);
+        ensureManagerOrProjectMemberOrAssigneeAccess(currentUser, task);
         task.setStatus(request.getStatus());
         task.setUpdatedAt(OffsetDateTime.now());
         return taskMapper.toResponse(taskRepository.save(task));
@@ -221,9 +220,8 @@ public class TaskService {
 
     @Transactional
     public void delete(UUID taskId, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser, "Insufficient permissions for task deletion");
-
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
+        ensureManagerOrProjectMemberAccess(currentUser, task.getProject(), "Insufficient permissions for task deletion");
 
         if (task.getDeletedAt() != null) {
             throw new IllegalStateException("Task already deleted");
@@ -369,14 +367,26 @@ public class TaskService {
         }
     }
 
-    private void ensureManagerOrAssigneeAccess(CustomUserDetails currentUser, Task task) {
+    private void ensureManagerOrProjectMemberOrAssigneeAccess(CustomUserDetails currentUser, Task task) {
         boolean isManager = currentUser.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
-        boolean isAssignee = task.getAssignee() != null && currentUser.getId().equals(task.getAssignee().getId());
+        if (isManager) {
+            return;
+        }
 
-        if (!isManager && !isAssignee) {
-            throw new AccessDeniedException("Only managers or task assignee can change task status");
+        Project project = task.getProject();
+        boolean isOwner = project != null
+            && project.getOwner() != null
+            && currentUser.getId().equals(project.getOwner().getId());
+        boolean isMember = project != null
+            && project.getMembers().stream()
+            .anyMatch(member -> currentUser.getId().equals(member.getId()));
+        boolean isAssignee = task.getAssignee() != null
+            && currentUser.getId().equals(task.getAssignee().getId());
+
+        if (!isOwner && !isMember && !isAssignee) {
+            throw new AccessDeniedException("Insufficient permissions for task status update");
         }
     }
 }

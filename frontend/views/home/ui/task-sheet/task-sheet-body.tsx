@@ -34,8 +34,10 @@ export const TaskSheetBody = ({
     onSaveTags,
     isSavingTask,
     isSavingTags,
+    isDeletingTask,
     saveTaskError,
     saveTagsError,
+    deleteTaskError,
     availableTags,
     isTagsRefreshing,
     tagsError,
@@ -56,6 +58,7 @@ export const TaskSheetBody = ({
     isCommentSubmitDisabled,
     isCreatingComment,
     onSubmitComment,
+    onDeleteTask,
     currentUserId,
 }: TaskSheetBodyProps) => {
     const descriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -211,8 +214,29 @@ export const TaskSheetBody = ({
                     <div className="flex shrink-0 gap-2">
                         <Button
                             type="button"
+                            variant="destructive"
+                            disabled={isDeletingTask}
+                            onClick={() => {
+                                if (
+                                    window.confirm(
+                                        'Удалить эту задачу? Действие нельзя отменить.',
+                                    )
+                                ) {
+                                    onDeleteTask();
+                                }
+                            }}
+                        >
+                            {isDeletingTask ? (
+                                <LoaderCircle className="size-4 animate-spin" />
+                            ) : null}
+                            Удалить
+                        </Button>
+                        <Button
+                            type="button"
                             variant="outline"
-                            disabled={!hasChanges || isSavingTask}
+                            disabled={
+                                !hasChanges || isSavingTask || isDeletingTask
+                            }
                             onClick={handleReset}
                         >
                             Сбросить
@@ -220,7 +244,10 @@ export const TaskSheetBody = ({
                         <Button
                             type="button"
                             disabled={
-                                !normalizedTitle || !hasChanges || isSavingTask
+                                !normalizedTitle ||
+                                !hasChanges ||
+                                isSavingTask ||
+                                isDeletingTask
                             }
                             onClick={() =>
                                 onSaveTask({
@@ -265,6 +292,12 @@ export const TaskSheetBody = ({
                 {saveTagsError ? (
                     <TaskSheetErrorNotice>
                         Не удалось сохранить теги: {saveTagsError.message}
+                    </TaskSheetErrorNotice>
+                ) : null}
+
+                {deleteTaskError ? (
+                    <TaskSheetErrorNotice>
+                        Не удалось удалить задачу: {deleteTaskError.message}
                     </TaskSheetErrorNotice>
                 ) : null}
 

@@ -58,6 +58,12 @@ const getTaskCountLabel = (count: number) => {
     return `${count} задач`;
 };
 
+const sortBoardTasks = (tasks: Task[]) =>
+    [...tasks].sort(
+        (left, right) =>
+            Number(left.position ?? 0) - Number(right.position ?? 0),
+    );
+
 const TasksBoard = ({
     tasks,
     setIsOpen,
@@ -84,19 +90,19 @@ const TasksBoard = ({
                 : fallbackBoardModeColumns;
 
         return [...baseColumns, ...customColumns].map((column) => {
-            const columnTasks = tasks
-                .filter((task) =>
+            const columnTasks = sortBoardTasks(
+                tasks.filter((task) =>
                     columns && columns.length > 0
                         ? task.columnId === column.columnId
                         : column.date in fallbackColumnDescriptions
                           ? task.status === column.date
                           : task.columnId === column.columnId,
-                )
-                .map((task, index) => ({
-                    ...task,
-                    columnId: column.columnId,
-                    position: String((index + 1) * 1000),
-                }));
+                ),
+            ).map((task, index) => ({
+                ...task,
+                columnId: column.columnId,
+                position: task.position ?? String((index + 1) * 1000),
+            }));
 
             return {
                 day: column.day,

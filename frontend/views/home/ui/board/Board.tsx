@@ -259,7 +259,7 @@ const BoardTaskCard = ({
                 onOpen(task);
             }}
             className={cn(
-                'relative cursor-grab border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md',
+                'relative cursor-grab touch-none select-none border border-border bg-card shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md',
                 settings?.density === 'compact' ? 'mb-2' : 'mb-3',
                 (isDragging || draggingTaskId === task.id) && 'opacity-50',
                 isOver && 'border-accent/70 bg-accent/5',

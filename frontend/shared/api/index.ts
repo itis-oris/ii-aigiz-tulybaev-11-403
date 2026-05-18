@@ -32,6 +32,7 @@ export { createTag, deleteTag, getTag, getTags, updateTag } from './tag';
 export {
     assignTask,
     createTask,
+    deleteTask,
     getTask,
     getTasks,
     moveTask,

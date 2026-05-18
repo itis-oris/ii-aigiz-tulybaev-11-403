@@ -44,7 +44,6 @@ type HomePageContentProps = {
     activeBoardId: string;
     boardColumns: Array<{ id: string; name: string }>;
     createTaskError: string | null;
-    taskActionDebug?: string | null;
     canCreateTasks: boolean;
     isOrganizationScope: boolean;
     isCreatingTask: boolean;
@@ -247,14 +246,13 @@ const selectTasksForScope = ({
             task.boardId === activeBoardId || task.boardName === activeBoardId,
     );
 
-    return boardTasks.length > 0 ? boardTasks : projectTasks;
+    return boardTasks;
 };
 
 const HomePageContent = ({
     activeBoardId,
     boardColumns,
     createTaskError,
-    taskActionDebug,
     canCreateTasks,
     isOrganizationScope,
     isCreatingTask,
@@ -331,21 +329,7 @@ const HomePageContent = ({
             showTaskCounters: true,
         });
 
-    const allTasks = useMemo(
-        () =>
-            sourceTasks.filter((task) =>
-                isOrganizationScope
-                    ? true
-                    : task.boardId === activeBoardId ||
-                      task.boardName === activeBoardId ||
-                      sourceTasks.every(
-                          (sourceTask) =>
-                              sourceTask.boardId !== activeBoardId &&
-                              sourceTask.boardName !== activeBoardId,
-                      ),
-            ),
-        [activeBoardId, isOrganizationScope, sourceTasks],
-    );
+    const allTasks = useMemo(() => sourceTasks, [sourceTasks]);
 
     const filteredTasks = useMemo(
         () =>
@@ -687,17 +671,6 @@ const HomePageContent = ({
                     </div>
                 ) : null}
 
-                {taskActionDebug ? (
-                    <div className="mb-3 px-1">
-                        <Badge
-                            variant="outline"
-                            className="max-w-full whitespace-normal break-all px-3 py-1.5 text-muted-foreground"
-                        >
-                            {taskActionDebug}
-                        </Badge>
-                    </div>
-                ) : null}
-
                 {isCreatingTask ? (
                     <div className="mb-3 px-1">
                         <Badge
@@ -824,7 +797,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const [organizationProjectFilter, setOrganizationProjectFilter] =
         useState<string>('all');
     const [taskActionError, setTaskActionError] = useState<string | null>(null);
-    const [taskActionDebug, setTaskActionDebug] = useState<string | null>(null);
 
     const tasksQuery = useQuery({
         queryKey: ['tasks', 'all'],
@@ -871,11 +843,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         onMutate: async () => {
             setTaskActionError(null);
         },
-        onSuccess: async (createdTask) => {
-            console.log('createTask: success', createdTask);
-            setTaskActionDebug(
-                `createTask: success; taskId=${createdTask.id}; boardId=${createdTask.boardId}; columnId=${createdTask.columnId}`,
-            );
+        onSuccess: async () => {
             await queryClient.invalidateQueries({
                 queryKey: ['tasks'],
             });
@@ -884,7 +852,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
             });
         },
         onError: (error) => {
-            console.error('createTask: failed', error);
+            console.error(error);
         },
     });
     const moveTaskMutation = useMutation({
@@ -946,13 +914,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
 
     const resolveCreateContext = async () => {
         if (isOrganizationScope || !activeProjectId) {
-            const debugMessage =
-                'createTask: skipped because no active project or organization scope';
-            console.warn(debugMessage, {
-                isOrganizationScope,
-                activeProjectId,
-            });
-            setTaskActionDebug(debugMessage);
             return null;
         }
 
@@ -964,13 +925,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
             })) ??
             [];
 
-        console.log('createTask: boards resolved', {
-            activeProjectId,
-            activeBoardId,
-            boardsCount: boards.length,
-            boards,
-        });
-
         const resolvedBoard =
             boards.find(
                 (board) =>
@@ -980,9 +934,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
             null;
 
         if (!resolvedBoard) {
-            const debugMessage = `createTask: no board resolved; boards=${boards.length}; activeBoardId=${activeBoardId}`;
-            console.warn(debugMessage);
-            setTaskActionDebug(debugMessage);
             return null;
         }
 
@@ -994,25 +945,11 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                       queryFn: () => getColumns(resolvedBoard.id),
                   });
 
-        console.log('createTask: columns resolved', {
-            resolvedBoardId: resolvedBoard.id,
-            resolvedBoardName: resolvedBoard.name,
-            columnsCount: columns.length,
-            columns,
-        });
-
         const resolvedColumn = columns[0] ?? null;
 
         if (!resolvedColumn) {
-            const debugMessage = `createTask: no column resolved; board=${resolvedBoard.name}; boardId=${resolvedBoard.id}; columns=${columns.length}`;
-            console.warn(debugMessage);
-            setTaskActionDebug(debugMessage);
             return null;
         }
-
-        setTaskActionDebug(
-            `createTask: board=${resolvedBoard.name}; boardId=${resolvedBoard.id}; column=${resolvedColumn.name}; columnId=${resolvedColumn.id}`,
-        );
 
         return {
             boardId: resolvedBoard.id,
@@ -1037,12 +974,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                 }
 
                 setTaskActionError(null);
-                console.log('createTask: weekly mutate', {
-                    title,
-                    dateKey,
-                    isPrivate,
-                    createContext,
-                });
                 await createTaskMutation.mutateAsync({
                     title,
                     dueDate: `${dateKey}T09:00:00.000Z`,
@@ -1052,7 +983,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                     columnId: createContext.columnId,
                 });
             } catch (error) {
-                console.error('createTask: weekly mutate failed', error);
+                console.error(error);
             }
         })();
     };
@@ -1080,13 +1011,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                     columnId ??
                     createContext.columnId;
 
-                console.log('createTask: board mutate', {
-                    title,
-                    inputColumnId: columnId,
-                    resolvedColumnId,
-                    isPrivate,
-                    createContext,
-                });
                 await createTaskMutation.mutateAsync({
                     title,
                     dueDate: new Date().toISOString(),
@@ -1096,7 +1020,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                     columnId: resolvedColumnId,
                 });
             } catch (error) {
-                console.error('createTask: board mutate failed', error);
+                console.error(error);
             }
         })();
     };
@@ -1162,7 +1086,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                         ? updateScheduledTaskMutation.error.message
                         : taskActionError
             }
-            taskActionDebug={taskActionDebug}
             canCreateTasks={canCreateTasks}
             isOrganizationScope={isOrganizationScope}
             isCreatingTask={createTaskMutation.isPending}

@@ -14,6 +14,7 @@ import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class BoardService {
+
+    private static final String PROJECTS_BY_ORGANIZATION_CACHE = "projectsByOrganization";
 
     private final BoardRepository boardRepository;
     private final BoardColumnRepository boardColumnRepository;
@@ -51,12 +54,15 @@ public class BoardService {
     }
 
     @Transactional
+    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public BoardResponse create(CreateBoardRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
+        ensureManagerOrProjectMemberAccess(currentUser, project);
+        String normalizedName = request.getName().trim();
+        ensureUniqueBoardName(project.getId(), normalizedName);
 
         Board board = boardRepository.save(Board.builder()
-            .name(request.getName().trim())
+            .name(normalizedName)
             .position(request.getPosition())
             .createdAt(OffsetDateTime.now())
             .project(project)
@@ -66,18 +72,22 @@ public class BoardService {
     }
 
     @Transactional
+    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public BoardResponse update(UUID boardId, UpdateBoardRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
-        board.setName(request.getName().trim());
+        ensureManagerOrProjectMemberAccess(currentUser, board.getProject());
+        String normalizedName = request.getName().trim();
+        ensureUniqueBoardName(board.getProject().getId(), normalizedName, board.getId());
+        board.setName(normalizedName);
         board.setPosition(request.getPosition());
         return boardMapper.toResponse(boardRepository.save(board));
     }
 
     @Transactional
+    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public void delete(UUID boardId, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
+        ensureManagerOrProjectMemberAccess(currentUser, board.getProject());
         if (board.getDeletedAt() != null) {
             throw new IllegalStateException("Board already deleted");
         }
@@ -116,13 +126,34 @@ public class BoardService {
         return project;
     }
 
-    private void ensureManagerAccess(CustomUserDetails currentUser) {
-        boolean hasAccess = currentUser.getAuthorities().stream()
+    private void ensureManagerOrProjectMemberAccess(CustomUserDetails currentUser, Project project) {
+        boolean isManager = currentUser.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
 
-        if (!hasAccess) {
+        if (isManager) {
+            return;
+        }
+
+        boolean isOwner = project.getOwner() != null
+            && currentUser.getId().equals(project.getOwner().getId());
+        boolean isMember = project.getMembers().stream()
+            .anyMatch(member -> currentUser.getId().equals(member.getId()));
+
+        if (!isOwner && !isMember) {
             throw new AccessDeniedException("Недостаточно прав для изменения досок");
+        }
+    }
+
+    private void ensureUniqueBoardName(UUID projectId, String name) {
+        if (boardRepository.existsByProject_IdAndDeletedAtIsNullAndNameIgnoreCase(projectId, name)) {
+            throw new IllegalArgumentException("Таблица с таким именем уже существует в проекте");
+        }
+    }
+
+    private void ensureUniqueBoardName(UUID projectId, String name, UUID boardId) {
+        if (boardRepository.existsByProject_IdAndDeletedAtIsNullAndNameIgnoreCaseAndIdNot(projectId, name, boardId)) {
+            throw new IllegalArgumentException("Таблица с таким именем уже существует в проекте");
         }
     }
 

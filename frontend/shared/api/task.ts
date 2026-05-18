@@ -131,6 +131,12 @@ export function assignTask(taskId: string, payload: AssignTaskRequest) {
     });
 }
 
+export function deleteTask(taskId: string) {
+    return apiClient<null>(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+    });
+}
+
 export function moveTask(taskId: string, payload: MoveTaskRequest) {
     return apiClient<TaskResponse>(`/api/tasks/${taskId}/move`, {
         method: 'PATCH',
