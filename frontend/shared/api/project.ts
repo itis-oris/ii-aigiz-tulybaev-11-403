@@ -18,6 +18,7 @@ export type ProjectResponse = {
     ownerMiddlename: string | null;
     ownerAvatarUrl: string | null;
     folderId: string | null;
+    boardTabs?: string[];
     createdAt: string;
     deletedAt: string | null;
 };

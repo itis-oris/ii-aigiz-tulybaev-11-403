@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FolderPlus, X } from 'lucide-react';
 import { getUsers } from '@/shared/api';
-import { useI18n, type ProjectFolder } from '@/shared/lib';
+import { useCurrentUser, useI18n, type ProjectFolder } from '@/shared/lib';
 import { Button, Input } from '@/shared/ui';
 
 type CreateProjectFolderDialogProps = {
@@ -19,37 +19,66 @@ const CreateProjectFolderDialog = ({
     onSubmit,
 }: CreateProjectFolderDialogProps) => {
     const { t } = useI18n();
+    const { data: currentUser } = useCurrentUser();
+    const canManageUsers = Boolean(
+        currentUser?.roles.some(
+            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
+        ),
+    );
     const [name, setName] = useState('');
     const [ownerId, setOwnerId] = useState('');
     const usersQuery = useQuery({
         queryKey: ['users'],
         queryFn: getUsers,
-        enabled: open,
+        enabled: open && canManageUsers,
         retry: false,
     });
-    const ownerOptions = useMemo(
-        () =>
-            (usersQuery.data ?? []).map((user) => ({
-                id: user.id,
-                label:
-                    [user.firstname, user.lastname]
-                        .filter(Boolean)
-                        .join(' ')
-                        .trim() || user.email,
-            })),
-        [usersQuery.data],
-    );
+    const ownerOptions = useMemo(() => {
+        const currentUserOption = currentUser
+            ? {
+                  id: currentUser.userId,
+                  label:
+                      [currentUser.firstname, currentUser.lastname]
+                          .filter(Boolean)
+                          .join(' ')
+                          .trim() || currentUser.email,
+              }
+            : null;
+
+        const fetchedOptions = (usersQuery.data ?? []).map((user) => ({
+            id: user.id,
+            label:
+                [user.firstname, user.lastname]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() || user.email,
+        }));
+
+        const uniqueOptions = new Map<string, { id: string; label: string }>();
+
+        if (currentUserOption) {
+            uniqueOptions.set(currentUserOption.id, currentUserOption);
+        }
+
+        fetchedOptions.forEach((option) => {
+            uniqueOptions.set(option.id, option);
+        });
+
+        return [...uniqueOptions.values()];
+    }, [currentUser, usersQuery.data]);
 
     const handleOpenChange = useCallback(
         (nextOpen: boolean) => {
             if (!nextOpen) {
                 setName('');
                 setOwnerId('');
+            } else {
+                setOwnerId(currentUser?.userId ?? '');
             }
 
             onOpenChange(nextOpen);
         },
-        [onOpenChange],
+        [currentUser?.userId, onOpenChange],
     );
 
     useEffect(() => {
@@ -146,7 +175,7 @@ const CreateProjectFolderDialog = ({
                             value={ownerId}
                             onChange={(event) => setOwnerId(event.target.value)}
                             disabled={
-                                usersQuery.isLoading ||
+                                usersQuery.isLoading &&
                                 ownerOptions.length === 0
                             }
                             className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 px-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30 disabled:cursor-not-allowed disabled:opacity-70"

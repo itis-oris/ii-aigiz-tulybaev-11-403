@@ -6,7 +6,7 @@ import { ImageUp, LoaderCircle, Trash2, X } from 'lucide-react';
 import { ApiError, getUsers, type ProjectStatus } from '@/shared/api';
 import { getImageUploadError, MAX_IMAGE_SIZE_MB } from '@/shared/lib/utils';
 import { Button, Input, ProjectAvatar } from '@/shared/ui';
-import { type ProjectSummary } from '@/shared/lib';
+import { type ProjectSummary, useCurrentUser } from '@/shared/lib';
 
 type ManageProjectDialogProps = {
     open: boolean;
@@ -25,6 +25,12 @@ export function ManageProjectDialog({
     onUploadImage,
     onDelete,
 }: ManageProjectDialogProps) {
+    const { data: currentUser } = useCurrentUser();
+    const canManageUsers = Boolean(
+        currentUser?.roles.some(
+            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
+        ),
+    );
     const [name, setName] = useState(project?.name ?? '');
     const [description, setDescription] = useState(project?.description ?? '');
     const [status, setStatus] = useState<ProjectStatus>(
@@ -39,22 +45,43 @@ export function ManageProjectDialog({
     const usersQuery = useQuery({
         queryKey: ['users'],
         queryFn: getUsers,
-        enabled: open,
+        enabled: open && canManageUsers,
         retry: false,
     });
 
-    const ownerOptions = useMemo(
-        () =>
-            (usersQuery.data ?? []).map((user) => ({
-                id: user.id,
-                label:
-                    [user.firstname, user.lastname]
-                        .filter(Boolean)
-                        .join(' ')
-                        .trim() || user.email,
-            })),
-        [usersQuery.data],
-    );
+    const ownerOptions = useMemo(() => {
+        const currentUserOption = currentUser
+            ? {
+                  id: currentUser.userId,
+                  label:
+                      [currentUser.firstname, currentUser.lastname]
+                          .filter(Boolean)
+                          .join(' ')
+                          .trim() || currentUser.email,
+              }
+            : null;
+
+        const fetchedOptions = (usersQuery.data ?? []).map((user) => ({
+            id: user.id,
+            label:
+                [user.firstname, user.lastname]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() || user.email,
+        }));
+
+        const uniqueOptions = new Map<string, { id: string; label: string }>();
+
+        if (currentUserOption) {
+            uniqueOptions.set(currentUserOption.id, currentUserOption);
+        }
+
+        fetchedOptions.forEach((option) => {
+            uniqueOptions.set(option.id, option);
+        });
+
+        return [...uniqueOptions.values()];
+    }, [currentUser, usersQuery.data]);
 
     useEffect(() => {
         if (!project) {
@@ -339,8 +366,8 @@ export function ManageProjectDialog({
                                 disabled={
                                     isSubmitting ||
                                     isDeleting ||
-                                    usersQuery.isLoading ||
-                                    ownerOptions.length === 0
+                                    (usersQuery.isLoading &&
+                                        ownerOptions.length === 0)
                                 }
                                 className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 px-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
                             >

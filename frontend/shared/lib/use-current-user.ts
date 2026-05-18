@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from './auth-provider';
+import { useAuth } from './auth/index';
 
 export function useCurrentUser() {
     const { isLoading, user } = useAuth();

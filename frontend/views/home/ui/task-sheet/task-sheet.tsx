@@ -1,21 +1,29 @@
-import React from 'react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/shared/ui/sheet';
-import { Task } from '@/views/home/model/task';
-import { Input } from '@/shared/ui/input';
-import { Avatar, Badge } from '@/shared/ui';
-
-interface SheetProps {
-    isOpen: boolean;
-    selectedTask: Task | null;
-    setIsOpen: (open: boolean) => void;
-    setSelectedTask: (task: Task | null) => void;
-}
+    assignTask,
+    createComment,
+    createTag,
+    getComments,
+    getProjectMembers,
+    getTask,
+    getTags,
+    updateTask,
+    updateTaskStatus,
+    type TaskResponse,
+    type TaskStatus,
+    type UserResponse,
+} from '@/shared/api';
+import type { TagResponse } from '@/shared/api/tag';
+import { useAuth } from '@/shared/lib';
+import { Sheet, SheetContent } from '@/shared/ui/sheet';
+import { TaskSheetBody } from './task-sheet-body';
+import {
+    getDisplayNameFromUser,
+    mapApiStatusToFrontendStatus,
+    mapFrontendStatusToApiStatus,
+} from './task-sheet.lib';
+import type { SheetProps } from './task-sheet.types';
 
 export const TaskSheet = ({
     isOpen,
@@ -23,304 +31,455 @@ export const TaskSheet = ({
     setIsOpen,
     setSelectedTask,
 }: SheetProps) => {
+    const queryClient = useQueryClient();
+    const { user } = useAuth();
+    const [commentDraft, setCommentDraft] = useState('');
+    const selectedTaskId = selectedTask ? String(selectedTask.id) : null;
+    const projectId = selectedTask?.projectId;
+
+    const taskQuery = useQuery({
+        queryKey: ['task', selectedTaskId],
+        queryFn: () => getTask(selectedTaskId as string),
+        enabled: Boolean(isOpen && selectedTaskId),
+    });
+
+    const commentsQuery = useQuery({
+        queryKey: ['task-comments', selectedTaskId],
+        queryFn: () => getComments(selectedTaskId as string),
+        enabled: Boolean(isOpen && selectedTaskId),
+    });
+    const assigneesQuery = useQuery({
+        queryKey: ['project-members', projectId],
+        queryFn: () => getProjectMembers(projectId as string),
+        enabled: Boolean(isOpen && projectId),
+    });
+    const taskTagsQuery = useQuery({
+        queryKey: ['task-tags', selectedTaskId],
+        queryFn: () => getTags({ taskId: selectedTaskId as string }),
+        enabled: Boolean(isOpen && selectedTaskId),
+    });
+    const availableTagsQuery = useQuery({
+        queryKey: ['project-tags', selectedTask?.projectId],
+        queryFn: () =>
+            getTags({ projectId: selectedTask?.projectId as string }),
+        enabled: Boolean(isOpen && selectedTask?.projectId),
+    });
+
+    const createCommentMutation = useMutation({
+        mutationFn: () =>
+            createComment({
+                taskId: selectedTaskId as string,
+                text: commentDraft.trim(),
+            }),
+        onSuccess: async () => {
+            setCommentDraft('');
+            await queryClient.invalidateQueries({
+                queryKey: ['task-comments', selectedTaskId],
+            });
+        },
+    });
+
+    const createTagMutation = useMutation({
+        mutationFn: (payload: { name: string; color: string }) =>
+            createTag({
+                name: payload.name,
+                color: payload.color,
+                projectId: projectId as string,
+            }),
+        onSuccess: async (createdTag) => {
+            queryClient.setQueryData(
+                ['project-tags', projectId],
+                (currentTags: typeof availableTagsQuery.data) => {
+                    const nextTags = currentTags ?? [];
+
+                    if (nextTags.some((tag) => tag.id === createdTag.id)) {
+                        return nextTags;
+                    }
+
+                    return [...nextTags, createdTag];
+                },
+            );
+
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['project-tags', projectId],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task-tags', selectedTaskId],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task', selectedTaskId],
+                }),
+            ]);
+        },
+    });
+
+    const buildOptimisticCustomTags = (tagIds: string[]) => {
+        const sourceTags = new Map<string, TagResponse>();
+
+        (availableTagsQuery.data ?? []).forEach((tag) => {
+            sourceTags.set(tag.id, tag);
+        });
+
+        (taskTagsQuery.data ?? []).forEach((tag) => {
+            if (!sourceTags.has(tag.id)) {
+                sourceTags.set(tag.id, tag);
+            }
+        });
+
+        (selectedTask?.tags ?? []).forEach((tag) => {
+            if (!tag.system && !sourceTags.has(tag.id)) {
+                sourceTags.set(tag.id, {
+                    id: String(tag.id),
+                    name: tag.name,
+                    color: tag.color,
+                    system: false,
+                    projectId: tag.projectId ?? null,
+                    projectName: tag.projectName ?? null,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: null,
+                    deletedAt: null,
+                });
+            }
+        });
+
+        return tagIds
+            .map((tagId) => sourceTags.get(tagId))
+            .filter((tag): tag is TagResponse => Boolean(tag));
+    };
+
+    const updateTaskStatusMutation = useMutation({
+        mutationFn: (status: TaskStatus) =>
+            updateTaskStatus(selectedTaskId as string, { status }),
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task-tags', selectedTaskId],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task', selectedTaskId],
+                }),
+            ]);
+        },
+    });
+
+    const assignTaskMutation = useMutation({
+        mutationFn: (assigneeId: string | null) =>
+            assignTask(selectedTaskId as string, { assigneeId }),
+        onSuccess: async (updatedTask) => {
+            queryClient.setQueryData(['task', selectedTaskId], updatedTask);
+            queryClient.setQueriesData(
+                { queryKey: ['tasks'] },
+                (currentTasks: TaskResponse[] | undefined) =>
+                    currentTasks?.map((task) =>
+                        task.id === selectedTaskId ? updatedTask : task,
+                    ) ?? currentTasks,
+            );
+
+            if (selectedTask) {
+                setSelectedTask({
+                    ...selectedTask,
+                    assigneeId: updatedTask.assigneeId ?? undefined,
+                    assigneeEmail: updatedTask.assigneeEmail ?? undefined,
+                });
+            }
+
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task', selectedTaskId],
+                }),
+            ]);
+        },
+    });
+
+    const updateTaskMutation = useMutation({
+        mutationFn: (payload: {
+            title: string;
+            description?: string;
+            storyPoints?: number;
+            priority?: number;
+            dueDate?: string;
+            isPrivate: boolean;
+            tagIds: string[];
+        }) => updateTask(selectedTaskId as string, payload),
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task', selectedTaskId],
+                }),
+            ]);
+        },
+    });
+
+    const updateTaskTagsMutation = useMutation({
+        mutationFn: (tagIds: string[]) =>
+            updateTask(selectedTaskId as string, { tagIds }),
+        onMutate: async (tagIds) => {
+            const optimisticCustomTags = buildOptimisticCustomTags(tagIds);
+
+            queryClient.setQueryData(
+                ['task', selectedTaskId],
+                (currentTask: TaskResponse | undefined) =>
+                    currentTask
+                        ? {
+                              ...currentTask,
+                              tags: optimisticCustomTags,
+                          }
+                        : currentTask,
+            );
+
+            queryClient.setQueriesData(
+                { queryKey: ['tasks'] },
+                (currentTasks: TaskResponse[] | undefined) =>
+                    currentTasks?.map((task) =>
+                        task.id === selectedTaskId
+                            ? {
+                                  ...task,
+                                  tags: optimisticCustomTags,
+                              }
+                            : task,
+                    ) ?? currentTasks,
+            );
+
+            if (selectedTask) {
+                setSelectedTask({
+                    ...selectedTask,
+                    tags: [
+                        ...selectedTask.tags.filter((tag) => tag.system),
+                        ...optimisticCustomTags.map((tag) => ({
+                            id: tag.id,
+                            name: tag.name,
+                            color: tag.color,
+                            system: false,
+                            projectId: tag.projectId ?? undefined,
+                            projectName: tag.projectName ?? undefined,
+                        })),
+                    ],
+                });
+            }
+        },
+        onSuccess: (updatedTask) => {
+            queryClient.setQueryData(['task', selectedTaskId], updatedTask);
+            queryClient.setQueryData(
+                ['task-tags', selectedTaskId],
+                updatedTask.tags.filter((tag) => !tag.system),
+            );
+            queryClient.setQueriesData(
+                { queryKey: ['tasks'] },
+                (currentTasks: TaskResponse[] | undefined) =>
+                    currentTasks?.map((task) =>
+                        task.id === selectedTaskId ? updatedTask : task,
+                    ) ?? currentTasks,
+            );
+        },
+    });
+
+    const resolvedTask = useMemo(() => {
+        if (!selectedTask) {
+            return null;
+        }
+
+        const liveTask = taskQuery.data;
+        const liveTaskTags = taskTagsQuery.data;
+
+        if (!liveTask) {
+            return selectedTask;
+        }
+
+        return {
+            ...selectedTask,
+            title: liveTask.title,
+            description: liveTask.description ?? selectedTask.description,
+            storyPoints: liveTask.storyPoints ?? selectedTask.storyPoints,
+            priority: liveTask.priority ?? selectedTask.priority,
+            dueDate: liveTask.dueDate ?? selectedTask.dueDate,
+            isPrivate: liveTask.isPrivate ?? selectedTask.isPrivate,
+            columnId: liveTask.columnId ?? selectedTask.columnId,
+            position:
+                liveTask.position !== null && liveTask.position !== undefined
+                    ? String(liveTask.position)
+                    : selectedTask.position,
+            projectId: liveTask.projectId ?? selectedTask.projectId,
+            boardId: liveTask.boardId ?? selectedTask.boardId,
+            assigneeId: liveTask.assigneeId ?? selectedTask.assigneeId,
+            project: liveTask.projectName ?? selectedTask.project,
+            status: mapApiStatusToFrontendStatus(liveTask.status),
+            tags: [
+                ...liveTask.tags
+                    .filter((tag) => tag.system)
+                    .map((tag) => ({
+                        id: tag.id,
+                        name: tag.name,
+                        color: tag.color,
+                        system: tag.system,
+                        projectId: tag.projectId ?? undefined,
+                        projectName: tag.projectName ?? undefined,
+                    })),
+                ...(
+                    liveTaskTags ?? liveTask.tags.filter((tag) => !tag.system)
+                ).map((tag) => ({
+                    id: tag.id,
+                    name: tag.name,
+                    color: tag.color,
+                    system: tag.system,
+                    projectId: tag.projectId ?? undefined,
+                    projectName: tag.projectName ?? undefined,
+                })),
+            ],
+            boardName: liveTask.boardName ?? selectedTask.boardName,
+            columnName: liveTask.columnName ?? selectedTask.columnName,
+            assigneeEmail: liveTask.assigneeEmail ?? selectedTask.assigneeEmail,
+            creatorId: liveTask.creatorId ?? selectedTask.creatorId,
+            creatorEmail: liveTask.creatorEmail ?? selectedTask.creatorEmail,
+        };
+    }, [selectedTask, taskQuery.data, taskTagsQuery.data]);
+
     const handleOpenChange = (open: boolean) => {
         setIsOpen(open);
 
         if (!open) {
             setSelectedTask(null);
+            setCommentDraft('');
         }
     };
 
-    const formatDueDate = (dueDate?: string) => {
-        if (!dueDate) {
-            return 'Без срока';
-        }
-
-        return new Intl.DateTimeFormat('ru-RU', {
-            day: 'numeric',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(new Date(dueDate));
-    };
-
-    const getAssigneeName = (assigneeId?: string) => {
-        if (!assigneeId) {
-            return 'Не назначен';
-        }
-
-        return `Анастасия ${assigneeId.slice(-2)}`;
-    };
-
-    const getPriorityLabel = (priority?: number) => {
-        if (priority === undefined) {
-            return 'Не указан';
-        }
-
-        if (priority <= 1) {
-            return 'Высокий';
-        }
-
-        if (priority === 2) {
-            return 'Средний';
-        }
-
-        return 'Низкий';
-    };
-
-    const getStoryPointsLabel = (storyPoints?: number) => {
-        if (storyPoints === undefined) {
-            return 'Без оценки';
-        }
-
-        return `${storyPoints} story points`;
-    };
-
-    const comments = selectedTask
-        ? [
-              {
-                  id: 1,
-                  author: 'Анастасия',
-                  text: 'Собрала первый вариант. Нужно решить, оставляем ли более строгую типографику в шапке.',
-                  time: 'Сегодня, 10:24',
-                  isOwn: false,
-              },
-              {
-                  id: 2,
-                  author: 'Расиль',
-                  text: 'Оставляем. Дальше можно уже двигать это в финальный макет и проверить на контраст.',
-                  time: 'Сегодня, 11:02',
-                  isOwn: true,
-              },
-          ]
-        : [];
+    const comments = commentsQuery.data ?? [];
+    const availableAssignees = useMemo(
+        () =>
+            (assigneesQuery.data ?? [])
+                .map((user: UserResponse) => ({
+                    id: user.id,
+                    email: user.email,
+                    label: getDisplayNameFromUser(user),
+                    avatarUrl: user.avatarUrl,
+                }))
+                .sort((left, right) =>
+                    left.label.localeCompare(right.label, 'ru-RU'),
+                ),
+        [assigneesQuery.data],
+    );
+    const resolvedApiStatus = taskQuery.data
+        ? taskQuery.data.status
+        : mapFrontendStatusToApiStatus(resolvedTask?.status);
+    const isCommentSubmitDisabled =
+        !selectedTaskId ||
+        !commentDraft.trim() ||
+        createCommentMutation.isPending;
 
     return (
         <Sheet open={isOpen} onOpenChange={handleOpenChange}>
             <SheetContent className="overflow-y-auto border-l border-border bg-background data-[side=right]:w-[48rem] data-[side=right]:max-w-[90vw] data-[side=right]:sm:w-[48rem] data-[side=right]:sm:max-w-[90vw]">
-                {selectedTask && (
-                    <div className="flex h-full flex-col">
-                        <SheetHeader className="border-b border-border bg-muted/40">
-                            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                                <div className="space-y-2">
-                                    <div className="flex flex-wrap gap-2">
-                                        <Badge variant="sidebar" size="sm">
-                                            #{selectedTask.id}
-                                        </Badge>
-                                        <Badge size="sm">
-                                            {selectedTask.status}
-                                        </Badge>
-                                        <Badge variant="accent" size="sm">
-                                            {selectedTask.dueInDays} дн.
-                                        </Badge>
-                                    </div>
-                                    <SheetTitle className="text-xl leading-tight">
-                                        {selectedTask.title}
-                                    </SheetTitle>
-                                    <SheetDescription className="max-w-md text-sm leading-6">
-                                        {selectedTask.description ??
-                                            'Описание задачи пока не заполнено.'}
-                                    </SheetDescription>
-                                </div>
-                            </div>
-                        </SheetHeader>
-
-                        <div className="flex flex-1 flex-col gap-8 p-8">
-                            <div className="flex flex-wrap gap-3">
-                                <button className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground">
-                                    Выполнить
-                                </button>
-                                <button className="rounded-xl bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground">
-                                    Старт
-                                </button>
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                                    Описание
-                                </div>
-                                <div className="max-w-2xl text-sm leading-7 text-foreground">
-                                    {selectedTask.description ??
-                                        'Описание задачи пока не заполнено.'}
-                                </div>
-                            </div>
-
-                            <div className="space-y-5">
-                                <div className="flex items-center gap-6 border-b border-border/70 pb-5">
-                                    <div className="w-32 shrink-0 text-sm text-muted-foreground">
-                                        Исполнитель
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar
-                                            size="xl"
-                                            className="bg-sidebar text-sidebar-foreground"
-                                        >
-                                            {getAssigneeName(
-                                                selectedTask.assigneeId,
-                                            ).charAt(0)}
-                                        </Avatar>
-                                        <div>
-                                            <div className="text-sm font-medium text-foreground">
-                                                {getAssigneeName(
-                                                    selectedTask.assigneeId,
-                                                )}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                Назначенный исполнитель
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-6 border-b border-border/70 pb-5">
-                                    <div className="w-32 shrink-0 text-sm text-muted-foreground">
-                                        Проект
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-foreground">
-                                        <Badge variant="sidebar" size="sm">
-                                            {selectedTask.project}
-                                        </Badge>
-                                        <span className="text-muted-foreground">
-                                            ›
-                                        </span>
-                                        <span>{selectedTask.status}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-6 border-b border-border/70 pb-5">
-                                    <div className="w-32 shrink-0 text-sm text-muted-foreground">
-                                        Дата
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-foreground">
-                                        <span>
-                                            {formatDueDate(
-                                                selectedTask.dueDate,
-                                            )}
-                                        </span>
-                                        <Badge variant="accent" size="sm">
-                                            {selectedTask.dueInDays} дней
-                                        </Badge>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-6 border-b border-border/70 pb-5">
-                                    <div className="w-32 shrink-0 text-sm text-muted-foreground">
-                                        Оценка времени
-                                    </div>
-                                    <div className="text-sm text-foreground">
-                                        <Badge shape="pill">
-                                            {getStoryPointsLabel(
-                                                selectedTask.storyPoints,
-                                            )}
-                                        </Badge>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-6 border-b border-border/70 pb-5">
-                                    <div className="w-32 shrink-0 text-sm text-muted-foreground">
-                                        Приоритет
-                                    </div>
-                                    <div className="text-sm text-foreground">
-                                        {getPriorityLabel(
-                                            selectedTask.priority,
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-2">
-                                <div className="mb-3 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                                    Теги
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedTask.tags.map((tag) => (
-                                        <Badge
-                                            key={tag}
-                                            variant="sidebar"
-                                            size="sm"
-                                        >
-                                            {tag}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="border-t border-border pt-6">
-                                <div className="mb-4 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                                    Комментарии
-                                </div>
-                                <div className="mb-4 space-y-4">
-                                    {comments.map((comment) => (
-                                        <div
-                                            key={comment.id}
-                                            className={`flex gap-3 ${comment.isOwn ? 'justify-end' : 'justify-start'}`}
-                                        >
-                                            {!comment.isOwn && (
-                                                <Avatar
-                                                    size="lg"
-                                                    className="bg-sidebar text-sidebar-foreground"
-                                                >
-                                                    {comment.author.charAt(0)}
-                                                </Avatar>
-                                            )}
-                                            <div
-                                                className={`max-w-[80%] rounded-2xl border p-4 ${
-                                                    comment.isOwn
-                                                        ? 'border-accent bg-accent text-accent-foreground'
-                                                        : 'border-border bg-card text-foreground'
-                                                }`}
-                                            >
-                                                <div className="mb-1 flex items-center gap-2">
-                                                    <span
-                                                        className={`text-sm font-medium ${
-                                                            comment.isOwn
-                                                                ? 'text-accent-foreground'
-                                                                : 'text-foreground'
-                                                        }`}
-                                                    >
-                                                        {comment.author}
-                                                    </span>
-                                                    <span
-                                                        className={`text-xs ${
-                                                            comment.isOwn
-                                                                ? 'text-accent-foreground/70'
-                                                                : 'text-muted-foreground'
-                                                        }`}
-                                                    >
-                                                        {comment.time}
-                                                    </span>
-                                                </div>
-                                                <p
-                                                    className={`text-sm leading-6 ${
-                                                        comment.isOwn
-                                                            ? 'text-accent-foreground'
-                                                            : 'text-foreground'
-                                                    }`}
-                                                >
-                                                    {comment.text}
-                                                </p>
-                                            </div>
-                                            {comment.isOwn && (
-                                                <Avatar
-                                                    size="lg"
-                                                    className="bg-accent text-accent-foreground"
-                                                >
-                                                    {comment.author.charAt(0)}
-                                                </Avatar>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="rounded-2xl border border-border bg-card p-3">
-                                    <Input
-                                        placeholder="Напиши комментарий..."
-                                        className="border-0 bg-transparent px-0 text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {resolvedTask ? (
+                    <TaskSheetBody
+                        key={`${selectedTaskId}:${taskQuery.data?.updatedAt ?? ''}`}
+                        resolvedTask={resolvedTask}
+                        selectedTaskId={selectedTaskId as string}
+                        taskQueryError={
+                            taskQuery.error instanceof Error
+                                ? taskQuery.error
+                                : null
+                        }
+                        isTaskRefreshing={taskQuery.isFetching}
+                        resolvedApiStatus={resolvedApiStatus}
+                        isUpdatingStatus={updateTaskStatusMutation.isPending}
+                        statusUpdateTarget={updateTaskStatusMutation.variables}
+                        statusUpdateError={
+                            updateTaskStatusMutation.error instanceof Error
+                                ? updateTaskStatusMutation.error
+                                : null
+                        }
+                        onUpdateStatus={(status) =>
+                            updateTaskStatusMutation.mutate(status)
+                        }
+                        onSaveTask={(payload) =>
+                            updateTaskMutation.mutate(payload)
+                        }
+                        onSaveTags={(tagIds) =>
+                            updateTaskTagsMutation.mutate(tagIds)
+                        }
+                        isSavingTask={updateTaskMutation.isPending}
+                        isSavingTags={updateTaskTagsMutation.isPending}
+                        saveTaskError={
+                            updateTaskMutation.error instanceof Error
+                                ? updateTaskMutation.error
+                                : null
+                        }
+                        saveTagsError={
+                            updateTaskTagsMutation.error instanceof Error
+                                ? updateTaskTagsMutation.error
+                                : null
+                        }
+                        availableTags={(availableTagsQuery.data ?? []).map(
+                            (tag) => ({
+                                id: tag.id,
+                                name: tag.name,
+                                color: tag.color,
+                                system: tag.system,
+                            }),
+                        )}
+                        isTagsRefreshing={
+                            availableTagsQuery.isFetching ||
+                            taskTagsQuery.isFetching
+                        }
+                        tagsError={
+                            availableTagsQuery.error instanceof Error
+                                ? availableTagsQuery.error
+                                : taskTagsQuery.error instanceof Error
+                                  ? taskTagsQuery.error
+                                  : null
+                        }
+                        isCreatingTag={createTagMutation.isPending}
+                        createTagError={
+                            createTagMutation.error instanceof Error
+                                ? createTagMutation.error
+                                : null
+                        }
+                        onCreateTag={(payload) =>
+                            createTagMutation.mutateAsync(payload)
+                        }
+                        comments={comments}
+                        availableAssignees={availableAssignees}
+                        isAssigneesRefreshing={assigneesQuery.isFetching}
+                        assigneesError={
+                            assigneesQuery.error instanceof Error
+                                ? assigneesQuery.error
+                                : null
+                        }
+                        isAssigningTask={assignTaskMutation.isPending}
+                        assignTaskError={
+                            assignTaskMutation.error instanceof Error
+                                ? assignTaskMutation.error
+                                : null
+                        }
+                        onAssignTask={(assigneeId) =>
+                            assignTaskMutation.mutate(assigneeId)
+                        }
+                        isCommentsRefreshing={commentsQuery.isFetching}
+                        commentsError={
+                            commentsQuery.error instanceof Error
+                                ? commentsQuery.error
+                                : null
+                        }
+                        commentDraft={commentDraft}
+                        onCommentDraftChange={setCommentDraft}
+                        isCommentSubmitDisabled={isCommentSubmitDisabled}
+                        isCreatingComment={createCommentMutation.isPending}
+                        onSubmitComment={() => createCommentMutation.mutate()}
+                        currentUserId={user?.userId}
+                    />
+                ) : null}
             </SheetContent>
         </Sheet>
     );

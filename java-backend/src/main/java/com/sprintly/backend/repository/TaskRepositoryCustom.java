@@ -12,6 +12,8 @@ public interface TaskRepositoryCustom {
         UUID organizationId,
         UUID projectId,
         UUID assigneeId,
+        UUID creatorId,
+        Boolean isPrivate,
         TaskStatus status,
         Integer priority,
         String search

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { myTasksGroups } from '@/views/my-tasks/model';
+import { myTasksGroups } from '@/views/my-tasks/model/mock';
 import MyTasksTaskRow from './my-tasks-task-row';
 
 const task = myTasksGroups[0].rows[0];

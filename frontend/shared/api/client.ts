@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/shared/lib/auth';
+import { getAccessToken } from '@/shared/lib/auth/index';
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
     body?: unknown;

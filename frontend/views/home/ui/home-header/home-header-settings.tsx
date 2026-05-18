@@ -76,27 +76,6 @@ const HomeHeaderSettings = ({
                         </div>
                     </div>
                 </label>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border px-3 py-2">
-                    <input
-                        type="checkbox"
-                        checked={settings.showTaskCounters}
-                        onChange={(event) =>
-                            onChange?.({
-                                ...settings,
-                                showTaskCounters: event.target.checked,
-                            })
-                        }
-                        className="mt-0.5 size-4 rounded border-border accent-foreground"
-                    />
-                    <div>
-                        <div className="text-xs font-medium text-foreground">
-                            Показывать счетчики задач
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-muted-foreground">
-                            Показывать количество задач в колонках и днях.
-                        </div>
-                    </div>
-                </label>
                 <Button
                     type="button"
                     variant="ghost"

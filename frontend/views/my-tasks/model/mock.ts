@@ -33,12 +33,14 @@ export const myTasksGroups: TaskGroup[] = [
                 date: '9 мая',
                 tags: [
                     {
+                        id: 'frontend',
                         label: 'frontend',
-                        className: 'bg-fuchsia-100 text-fuchsia-700',
+                        color: '#C026D3',
                     },
                     {
+                        id: 'design',
                         label: 'дизайн',
-                        className: 'bg-sky-100 text-sky-700',
+                        color: '#0284C7',
                     },
                 ],
             },
@@ -91,12 +93,14 @@ export const myTasksGroups: TaskGroup[] = [
                 columnMark: 'B',
                 tags: [
                     {
+                        id: 'frontend',
                         label: 'frontend',
-                        className: 'bg-fuchsia-100 text-fuchsia-700',
+                        color: '#C026D3',
                     },
                     {
+                        id: 'design',
                         label: 'дизайн',
-                        className: 'bg-sky-100 text-sky-700',
+                        color: '#0284C7',
                     },
                 ],
             },
@@ -120,12 +124,14 @@ export const myTasksGroups: TaskGroup[] = [
                 completed: true,
                 tags: [
                     {
+                        id: 'frontend',
                         label: 'frontend',
-                        className: 'bg-fuchsia-100 text-fuchsia-700',
+                        color: '#C026D3',
                     },
                     {
+                        id: 'management',
                         label: 'management',
-                        className: 'bg-amber-100 text-amber-700',
+                        color: '#D97706',
                     },
                 ],
             },
@@ -159,8 +165,9 @@ export const myTasksGroups: TaskGroup[] = [
                 completed: true,
                 tags: [
                     {
+                        id: 'management',
                         label: 'management',
-                        className: 'bg-amber-100 text-amber-700',
+                        color: '#D97706',
                     },
                 ],
             },
@@ -190,12 +197,14 @@ export const myTasksGroups: TaskGroup[] = [
                 completed: true,
                 tags: [
                     {
+                        id: 'frontend',
                         label: 'frontend',
-                        className: 'bg-fuchsia-100 text-fuchsia-700',
+                        color: '#C026D3',
                     },
                     {
+                        id: 'management',
                         label: 'management',
-                        className: 'bg-amber-100 text-amber-700',
+                        color: '#D97706',
                     },
                 ],
             },

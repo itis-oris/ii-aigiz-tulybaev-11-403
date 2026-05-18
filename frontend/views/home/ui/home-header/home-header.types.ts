@@ -14,6 +14,11 @@ export type HomeHeaderSettingsValue = {
     showTaskCounters: boolean;
 };
 
+export type HomeHeaderTagOption = {
+    label: string;
+    value: string;
+};
+
 export type HomeHeaderProps = {
     activeViewMode?: ViewMode;
     onViewModeChange?: (mode: ViewMode) => void;
@@ -29,7 +34,7 @@ export type HomeHeaderProps = {
     selectedTag?: string;
     onSelectedTagChange?: (value: string) => void;
     statusOptions?: string[];
-    tagOptions?: string[];
+    tagOptions?: HomeHeaderTagOption[];
     onResetFilters?: () => void;
     periodTitle: string;
     periodSubtitle: string;
@@ -52,7 +57,7 @@ export type HomeHeaderFiltersProps = {
     selectedTag: string;
     onSelectedTagChange?: (value: string) => void;
     statusOptions: string[];
-    tagOptions: string[];
+    tagOptions: HomeHeaderTagOption[];
     onResetFilters?: () => void;
 };
 

@@ -11,6 +11,7 @@ import com.sprintly.backend.entity.Board;
 import com.sprintly.backend.entity.BoardColumn;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.Task;
+import com.sprintly.backend.entity.Tag;
 import com.sprintly.backend.entity.User;
 import com.sprintly.backend.entity.enums.TaskStatus;
 import com.sprintly.backend.exception.AccessDeniedException;
@@ -20,6 +21,7 @@ import com.sprintly.backend.repository.BoardColumnRepository;
 import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.repository.TaskRepository;
+import com.sprintly.backend.repository.TagRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -40,19 +44,20 @@ public class TaskService {
     private final BoardRepository boardRepository;
     private final BoardColumnRepository boardColumnRepository;
     private final UserRepository userRepository;
+    private final TagRepository tagRepository;
     private final TaskMapper taskMapper;
 
     @Transactional
     public TaskResponse create(CreateTaskRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser, "Insufficient permissions for task creation");
-
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
+        ensureManagerOrProjectMemberAccess(currentUser, project, "Insufficient permissions for task creation");
         Board board = getBoardInProject(request.getBoardId(), project.getId());
         BoardColumn column = getColumnInBoard(request.getColumnId(), board.getId());
         User creator = getUserInOrganization(currentUser.getId(), currentUser.getOrganizationId());
         User assignee = request.getAssigneeId() != null
             ? getUserInOrganization(request.getAssigneeId(), currentUser.getOrganizationId())
             : null;
+        Set<Tag> tags = resolveTags(request.getTagIds(), project, currentUser.getOrganizationId());
 
         Task task = Task.builder()
             .title(request.getTitle())
@@ -61,6 +66,7 @@ public class TaskService {
             .storyPoints(request.getStoryPoints())
             .priority(request.getPriority())
             .dueDate(request.getDueDate())
+            .isPrivate(Boolean.TRUE.equals(request.getIsPrivate()))
             .position(request.getPosition())
             .createdAt(OffsetDateTime.now())
             .updatedAt(OffsetDateTime.now())
@@ -69,6 +75,7 @@ public class TaskService {
             .column(column)
             .creator(creator)
             .assignee(assignee)
+            .tags(tags)
             .build();
 
         return taskMapper.toResponse(taskRepository.save(task));
@@ -84,10 +91,16 @@ public class TaskService {
             getUserInOrganization(filter.getAssigneeId(), currentUser.getOrganizationId());
         }
 
+        if (filter.getCreatorId() != null) {
+            getUserInOrganization(filter.getCreatorId(), currentUser.getOrganizationId());
+        }
+
         return taskRepository.findByFilters(
                 currentUser.getOrganizationId(),
                 filter.getProjectId(),
                 filter.getAssigneeId(),
+                filter.getCreatorId(),
+                filter.getIsPrivate(),
                 filter.getStatus(),
                 filter.getPriority(),
                 filter.getSearch()
@@ -103,9 +116,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse update(UUID taskId, UpdateTaskRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser, "Insufficient permissions for task update");
-
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
+        ensureManagerOrProjectMemberAccess(currentUser, task.getProject(), "Insufficient permissions for task update");
 
         Project project = task.getProject();
         if (request.getProjectId() != null) {
@@ -132,6 +144,14 @@ public class TaskService {
         if (request.getAssigneeId() != null) {
             task.setAssignee(getUserInOrganization(request.getAssigneeId(), currentUser.getOrganizationId()));
         }
+        if (request.getTagIds() != null) {
+            if (project == null) {
+                throw new IllegalArgumentException("Task must belong to a project");
+            }
+            task.setTags(resolveTags(request.getTagIds(), project, currentUser.getOrganizationId()));
+        } else if (request.getProjectId() != null) {
+            task.setTags(new LinkedHashSet<>());
+        }
 
         if (request.getTitle() != null) {
             task.setTitle(request.getTitle());
@@ -147,6 +167,9 @@ public class TaskService {
         }
         if (request.getDueDate() != null) {
             task.setDueDate(request.getDueDate());
+        }
+        if (request.getIsPrivate() != null) {
+            task.setIsPrivate(request.getIsPrivate());
         }
         if (request.getPosition() != null) {
             task.setPosition(request.getPosition());
@@ -174,9 +197,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse move(UUID taskId, MoveTaskRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser, "Insufficient permissions for task move");
-
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
+        ensureManagerOrProjectMemberAccess(currentUser, task.getProject(), "Insufficient permissions for task move");
         BoardColumn column = getColumnInBoard(request.getColumnId(), task.getBoard().getId());
 
         task.setColumn(column);
@@ -289,12 +311,60 @@ public class TaskService {
         return user;
     }
 
+    private Set<Tag> resolveTags(List<UUID> tagIds, Project project, UUID organizationId) {
+        if (tagIds == null || tagIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+
+        Set<Tag> tags = new LinkedHashSet<>();
+        for (UUID tagId : tagIds) {
+            Tag tag = tagRepository.findByIdAndDeletedAtIsNull(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
+
+            if (tag.getProject() == null || tag.getProject().getOrganization() == null
+                || !organizationId.equals(tag.getProject().getOrganization().getId())) {
+                throw new AccessDeniedException("Tag does not belong to current organization");
+            }
+
+            if (!project.getId().equals(tag.getProject().getId())) {
+                throw new IllegalArgumentException("Tag does not belong to selected project");
+            }
+
+            tags.add(tag);
+        }
+
+        return tags;
+    }
+
     private void ensureManagerAccess(CustomUserDetails currentUser, String message) {
         boolean hasAccess = currentUser.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
 
         if (!hasAccess) {
+            throw new AccessDeniedException(message);
+        }
+    }
+
+    private void ensureManagerOrProjectMemberAccess(
+        CustomUserDetails currentUser,
+        Project project,
+        String message
+    ) {
+        boolean isManager = currentUser.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
+
+        if (isManager) {
+            return;
+        }
+
+        boolean isOwner = project.getOwner() != null
+            && currentUser.getId().equals(project.getOwner().getId());
+        boolean isMember = project.getMembers().stream()
+            .anyMatch(member -> currentUser.getId().equals(member.getId()));
+
+        if (!isOwner && !isMember) {
             throw new AccessDeniedException(message);
         }
     }

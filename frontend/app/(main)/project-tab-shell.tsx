@@ -43,7 +43,7 @@ const projectAccentPalette = [
     'bg-cyan-100 text-cyan-700',
 ] as const;
 
-const defaultBoardTabs = ['BACKLOG', 'IN PROGRESS', 'DONE'];
+const defaultBoardTabs = ['Main'];
 
 const emptyProject: ProjectSummary = {
     id: 'empty-project',
@@ -110,7 +110,10 @@ const mapProjectResponseToSummary = (
             override?.avatarClassName ?? projectAccentPalette[paletteIndex],
         imageUrl: project.imageUrl,
         description: override?.description ?? project.description ?? '',
-        boardTabs: override?.boardTabs ?? defaultBoardTabs,
+        boardTabs:
+            project.boardTabs && project.boardTabs.length > 0
+                ? project.boardTabs
+                : defaultBoardTabs,
         status: override?.status ?? project.status,
         memberCount: override?.memberCount ?? 1,
         createdAt: project.createdAt,

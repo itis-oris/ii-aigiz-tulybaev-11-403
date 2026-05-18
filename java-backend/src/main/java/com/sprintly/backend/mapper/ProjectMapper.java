@@ -4,8 +4,13 @@ import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.entity.Project;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
+import java.util.List;
+
 @Component
 public class ProjectMapper {
+
+    private static final List<String> DEFAULT_BOARD_TABS = List.of("Main");
 
     public ProjectResponse toResponse(Project project) {
         return ProjectResponse.builder()
@@ -23,6 +28,27 @@ public class ProjectMapper {
             .ownerMiddlename(project.getOwner() != null ? project.getOwner().getMiddlename() : null)
             .ownerAvatarUrl(project.getOwner() != null ? project.getOwner().getAvatarUrl() : null)
             .folderId(project.getFolder() != null ? project.getFolder().getId() : null)
+            .boardTabs(
+                project.getBoards().stream()
+                    .filter(board -> board.getDeletedAt() == null)
+                    .sorted(
+                        Comparator.comparing(
+                            board -> board.getPosition() != null ? board.getPosition() : Long.MAX_VALUE
+                        )
+                    )
+                    .map(board -> board.getName())
+                    .toList().isEmpty()
+                    ? DEFAULT_BOARD_TABS
+                    : project.getBoards().stream()
+                        .filter(board -> board.getDeletedAt() == null)
+                        .sorted(
+                            Comparator.comparing(
+                                board -> board.getPosition() != null ? board.getPosition() : Long.MAX_VALUE
+                            )
+                        )
+                        .map(board -> board.getName())
+                        .toList()
+            )
             .createdAt(project.getCreatedAt())
             .deletedAt(project.getDeletedAt())
             .build();

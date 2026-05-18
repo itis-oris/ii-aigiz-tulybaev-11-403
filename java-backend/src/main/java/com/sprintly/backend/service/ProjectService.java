@@ -6,6 +6,8 @@ import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
 import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.entity.Organization;
+import com.sprintly.backend.entity.Board;
+import com.sprintly.backend.entity.BoardColumn;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.ProjectFolder;
 import com.sprintly.backend.entity.User;
@@ -15,6 +17,8 @@ import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.mapper.ProjectMapper;
 import com.sprintly.backend.mapper.UserMapper;
 import com.sprintly.backend.repository.OrganizationRepository;
+import com.sprintly.backend.repository.BoardColumnRepository;
+import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.repository.ProjectFolderRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.repository.UserRepository;
@@ -41,6 +45,8 @@ public class ProjectService {
     private static final String PROJECTS_BY_ORGANIZATION_CACHE = "projectsByOrganization";
 
     private final ProjectRepository projectRepository;
+    private final BoardRepository boardRepository;
+    private final BoardColumnRepository boardColumnRepository;
     private final ProjectFolderRepository projectFolderRepository;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
@@ -65,8 +71,6 @@ public class ProjectService {
     @Transactional
     @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse create(CreateProjectRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
-
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
@@ -92,6 +96,7 @@ public class ProjectService {
                 .createdAt(OffsetDateTime.now())
                 .build()
         );
+        ensureDefaultBoardSetup(project);
 
         return projectMapper.toResponse(project);
     }
@@ -99,9 +104,8 @@ public class ProjectService {
     @Transactional
     @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse update(UUID projectId, UpdateProjectRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
-
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
+        ensureManagerOrProjectOwnerAccess(currentUser, project);
         if (request.getName() != null) {
             project.setName(request.getName().trim());
         }
@@ -130,9 +134,8 @@ public class ProjectService {
     @Transactional
     @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public void delete(UUID projectId, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
-
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
+        ensureManagerOrProjectOwnerAccess(currentUser, project);
 
         if (project.getDeletedAt() != null) {
             throw new IllegalStateException("Project already deleted");
@@ -145,9 +148,8 @@ public class ProjectService {
     @Transactional
     @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse uploadImage(UUID projectId, MultipartFile file, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
-
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
+        ensureManagerOrProjectOwnerAccess(currentUser, project);
         String imageUrl = s3StorageService.uploadImage(file, "projects/" + project.getId() + "/image");
         project.setImageUrl(imageUrl);
 
@@ -177,9 +179,8 @@ public class ProjectService {
         AddProjectMembersRequest request,
         CustomUserDetails currentUser
     ) {
-        ensureManagerAccess(currentUser);
-
         Project project = getProjectWithMembersInOrganization(projectId, currentUser.getOrganizationId());
+        ensureManagerOrProjectOwnerAccess(currentUser, project);
         Set<UUID> userIds = Set.copyOf(request.getUserIds());
         List<User> users = userRepository.findAllByIdInAndOrganizations_Id(
             userIds,
@@ -275,6 +276,23 @@ public class ProjectService {
         }
     }
 
+    private void ensureManagerOrProjectOwnerAccess(CustomUserDetails currentUser, Project project) {
+        boolean isManager = currentUser.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
+
+        if (isManager) {
+            return;
+        }
+
+        boolean isOwner = project.getOwner() != null
+            && currentUser.getId().equals(project.getOwner().getId());
+
+        if (!isOwner) {
+            throw new AccessDeniedException("Insufficient permissions for project modification");
+        }
+    }
+
     private String normalizeDescription(String description) {
         if (description == null) {
             return null;
@@ -282,5 +300,38 @@ public class ProjectService {
 
         String normalized = description.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private void ensureDefaultBoardSetup(Project project) {
+        Board board = boardRepository.save(
+            Board.builder()
+                .name("Main")
+                .position(0L)
+                .createdAt(OffsetDateTime.now())
+                .project(project)
+                .build()
+        );
+
+        boardColumnRepository.save(
+            BoardColumn.builder()
+                .name("Backlog")
+                .position(0L)
+                .board(board)
+                .build()
+        );
+        boardColumnRepository.save(
+            BoardColumn.builder()
+                .name("In Progress")
+                .position(1000L)
+                .board(board)
+                .build()
+        );
+        boardColumnRepository.save(
+            BoardColumn.builder()
+                .name("Done")
+                .position(2000L)
+                .board(board)
+                .build()
+        );
     }
 }

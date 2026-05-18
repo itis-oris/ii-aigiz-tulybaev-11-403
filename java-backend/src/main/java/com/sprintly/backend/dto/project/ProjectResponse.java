@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -25,6 +26,7 @@ public class ProjectResponse {
     private String ownerMiddlename;
     private String ownerAvatarUrl;
     private UUID folderId;
+    private List<String> boardTabs;
     private OffsetDateTime createdAt;
     private OffsetDateTime deletedAt;
 }

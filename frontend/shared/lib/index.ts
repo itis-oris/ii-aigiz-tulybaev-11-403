@@ -8,7 +8,7 @@ import { projectTabs, ProjectTabProvider, useProjectTab } from './project-tab';
 import { useProjectFolderTree } from './use-project-folder-tree';
 import { useProjectFolderDndController } from './use-project-folder-dnd-controller';
 import { useValidatedForm } from './use-validated-form';
-import { useIsMobile } from './use-mobile';
+import { useIsMobile } from './use-mobile/index';
 import { useWorkspaceProjectsController } from './use-workspace-projects-controller';
 import { THEME_STORAGE_KEY, ThemeProvider, useTheme } from './theme';
 import { LOCALE_STORAGE_KEY, LocaleProvider, useI18n } from './i18n';
@@ -17,9 +17,9 @@ import {
     clearAccessToken,
     getAccessToken,
     setAccessToken,
-} from './auth';
-import { AuthProvider, useAuth } from './auth-provider';
-import { getPostAuthRedirectPath } from './auth-redirect';
+} from './auth/index';
+import { AuthProvider, useAuth } from './auth/index';
+import { getPostAuthRedirectPath } from './auth-redirect/index';
 import { useCurrentUser } from './use-current-user';
 
 export {

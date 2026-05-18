@@ -11,8 +11,13 @@ import { type DayTasks, type Task } from '@/views/home/model/task';
 import type { Column } from '@/views/home/ui/board/types';
 
 export type DropPosition = 'before' | 'after' | null;
+type CommitMovePayload = {
+    taskId: string;
+    columnId: string;
+    position: number;
+};
 
-const getTaskColumnId = (days: DayTasks[], taskId: number) =>
+const getTaskColumnId = (days: DayTasks[], taskId: string) =>
     days.find((day) => day.tasks.some((task) => task.id === taskId))
         ?.columnId ?? null;
 
@@ -31,11 +36,11 @@ const normalizeColumnTasks = (tasks: Task[], columnId: string) =>
 
 const moveTaskBetweenColumns = (
     days: DayTasks[],
-    taskId: number,
+    taskId: string,
     target:
         | {
               type: 'task';
-              taskId: number;
+              taskId: string;
               dropPosition: Exclude<DropPosition, null>;
           }
         | { type: 'column'; columnId: string },
@@ -113,7 +118,7 @@ const parseTaskDragId = (
         return null;
     }
 
-    return Number(value.slice('task:'.length));
+    return value.slice('task:'.length);
 };
 
 const parseTaskDropId = (
@@ -123,7 +128,7 @@ const parseTaskDropId = (
         return null;
     }
 
-    return Number(value.slice('task-drop:'.length));
+    return value.slice('task-drop:'.length);
 };
 
 const parseColumnDropId = (
@@ -136,17 +141,25 @@ const parseColumnDropId = (
     return value.slice('column:'.length);
 };
 
-export const getBoardTaskDragId = (taskId: number) => `task:${taskId}`;
-export const getBoardTaskDropId = (taskId: number) => `task-drop:${taskId}`;
+export const getBoardTaskDragId = (taskId: string | number) => `task:${taskId}`;
+export const getBoardTaskDropId = (taskId: string | number) =>
+    `task-drop:${taskId}`;
 export const getBoardColumnDropId = (columnId: string) => `column:${columnId}`;
 
-export const useBoardDnd = (days: DayTasks[]) => {
+export const useBoardDnd = (
+    days: DayTasks[],
+    options?: {
+        enabled?: boolean;
+        onCommitMove?: (payload: CommitMovePayload) => void;
+    },
+) => {
     const [boardDays, setBoardDays] = useState(days);
-    const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+    const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
     const [overColumnId, setOverColumnId] = useState<string | null>(null);
-    const [overTaskId, setOverTaskId] = useState<number | null>(null);
+    const [overTaskId, setOverTaskId] = useState<string | null>(null);
     const [dropPosition, setDropPosition] = useState<DropPosition>(null);
     const [pointerY, setPointerY] = useState<number | null>(null);
+    const isEnabled = options?.enabled ?? true;
 
     useEffect(() => {
         setBoardDays(days);
@@ -172,10 +185,18 @@ export const useBoardDnd = (days: DayTasks[]) => {
     };
 
     const handleDragStart = ({ operation }: DragStartEvent) => {
+        if (!isEnabled) {
+            return;
+        }
+
         setDraggingTaskId(parseTaskDragId(operation.source?.id));
     };
 
     const handleDragMove = ({ nativeEvent }: DragMoveEvent) => {
+        if (!isEnabled) {
+            return;
+        }
+
         if (nativeEvent instanceof MouseEvent) {
             setPointerY(nativeEvent.clientY);
         }
@@ -186,6 +207,10 @@ export const useBoardDnd = (days: DayTasks[]) => {
     };
 
     const handleDragOver = ({ operation }: DragOverEvent) => {
+        if (!isEnabled) {
+            return;
+        }
+
         const nextTaskId = parseTaskDropId(operation.target?.id);
         const nextColumnId =
             parseColumnDropId(operation.target?.id) ??
@@ -210,25 +235,56 @@ export const useBoardDnd = (days: DayTasks[]) => {
     };
 
     const handleDragEnd = ({ operation }: DragEndEvent) => {
+        if (!isEnabled) {
+            resetDragState();
+            return;
+        }
+
         const taskId = parseTaskDragId(operation.source?.id);
         const targetTaskId = parseTaskDropId(operation.target?.id);
         const targetColumnId = parseColumnDropId(operation.target?.id);
 
         if (taskId && targetTaskId) {
-            setBoardDays((currentDays) =>
-                moveTaskBetweenColumns(currentDays, taskId, {
+            setBoardDays((currentDays) => {
+                const nextDays = moveTaskBetweenColumns(currentDays, taskId, {
                     type: 'task',
                     taskId: targetTaskId,
                     dropPosition: dropPosition ?? 'before',
-                }),
-            );
+                });
+                const movedTask = nextDays
+                    .flatMap((day) => day.tasks)
+                    .find((task) => task.id === taskId);
+
+                if (movedTask) {
+                    options?.onCommitMove?.({
+                        taskId,
+                        columnId: movedTask.columnId,
+                        position: Number(movedTask.position ?? 0),
+                    });
+                }
+
+                return nextDays;
+            });
         } else if (taskId && targetColumnId) {
-            setBoardDays((currentDays) =>
-                moveTaskBetweenColumns(currentDays, taskId, {
+            setBoardDays((currentDays) => {
+                const nextDays = moveTaskBetweenColumns(currentDays, taskId, {
                     type: 'column',
                     columnId: targetColumnId,
-                }),
-            );
+                });
+                const movedTask = nextDays
+                    .flatMap((day) => day.tasks)
+                    .find((task) => task.id === taskId);
+
+                if (movedTask) {
+                    options?.onCommitMove?.({
+                        taskId,
+                        columnId: movedTask.columnId,
+                        position: Number(movedTask.position ?? 0),
+                    });
+                }
+
+                return nextDays;
+            });
         }
 
         resetDragState();

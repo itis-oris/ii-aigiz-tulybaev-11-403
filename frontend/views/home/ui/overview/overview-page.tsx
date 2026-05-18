@@ -25,6 +25,11 @@ const Overview = () => {
     const { t } = useI18n();
     const { activeProjectId, projects } = useActiveProject();
     const { data: currentUser } = useCurrentUser();
+    const canManageMembers = Boolean(
+        currentUser?.roles.some(
+            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
+        ),
+    );
     const queryClient = useQueryClient();
     const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
     const activeProject = useMemo(
@@ -34,6 +39,7 @@ const Overview = () => {
     const { data: users = [], isLoading: isUsersLoading } = useQuery({
         queryKey: ['users'],
         queryFn: getUsers,
+        enabled: canManageMembers,
         retry: false,
     });
     const {
@@ -144,6 +150,7 @@ const Overview = () => {
                             size="md"
                             onClick={() => setIsAddMemberDialogOpen(true)}
                             disabled={
+                                !canManageMembers ||
                                 isUsersLoading ||
                                 addProjectMembersMutation.isPending
                             }

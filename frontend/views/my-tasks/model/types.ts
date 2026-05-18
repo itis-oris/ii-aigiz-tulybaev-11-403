@@ -1,6 +1,7 @@
 export type TaskTag = {
+    id: string;
     label: string;
-    className: string;
+    color: string;
 };
 
 export type Assignee = {

@@ -1,6 +1,7 @@
 import { CheckCircle2, Circle, FolderKanban } from 'lucide-react';
 import { Avatar, Badge } from '@/shared/ui';
 import { cn } from '@/shared/lib';
+import { getTagBadgeStyle } from '@/shared/lib/tag-color/index';
 import type { Assignee, TaskRow } from '@/views/my-tasks/model';
 import { myTasksGridClassName } from './constants';
 
@@ -172,9 +173,11 @@ const MyTasksTaskRow = ({
             <div className="flex min-w-0 items-center gap-2 overflow-hidden">
                 {task.tags?.map((tag) => (
                     <Badge
-                        key={tag.label}
+                        key={tag.id}
                         size="sm"
-                        className={cn('shrink-0 font-medium', tag.className)}
+                        variant="outline"
+                        className="shrink-0 font-medium"
+                        style={getTagBadgeStyle(tag.color)}
                     >
                         {tag.label}
                     </Badge>

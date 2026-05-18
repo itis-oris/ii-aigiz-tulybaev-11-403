@@ -8,6 +8,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -27,6 +28,8 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
         UUID organizationId,
         UUID projectId,
         UUID assigneeId,
+        UUID creatorId,
+        Boolean isPrivate,
         TaskStatus status,
         Integer priority,
         String search
@@ -34,6 +37,12 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Task> cq = cb.createQuery(Task.class);
         Root<Task> task = cq.from(Task.class);
+        task.fetch("project", JoinType.LEFT);
+        task.fetch("board", JoinType.LEFT);
+        task.fetch("column", JoinType.LEFT);
+        task.fetch("assignee", JoinType.LEFT);
+        task.fetch("creator", JoinType.LEFT);
+        task.fetch("tags", JoinType.LEFT);
 
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(cb.isNull(task.get("deletedAt")));
@@ -55,6 +64,14 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
             predicates.add(cb.equal(task.get("assignee").get("id"), assigneeId));
         }
 
+        if (creatorId != null) {
+            predicates.add(cb.equal(task.get("creator").get("id"), creatorId));
+        }
+
+        if (isPrivate != null) {
+            predicates.add(cb.equal(task.get("isPrivate"), isPrivate));
+        }
+
         if (status != null) {
             predicates.add(cb.equal(task.get("status"), status));
         }
@@ -68,6 +85,7 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
         }
 
         cq.select(task)
+            .distinct(true)
             .where(predicates.toArray(new Predicate[0]))
             .orderBy(cb.asc(task.get("position")), cb.desc(task.get("createdAt")));
 

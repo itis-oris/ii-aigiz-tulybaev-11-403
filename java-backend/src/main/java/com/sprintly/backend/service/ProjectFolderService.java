@@ -44,8 +44,6 @@ public class ProjectFolderService {
 
     @Transactional
     public ProjectFolderResponse create(CreateProjectFolderRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
-
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
 
@@ -73,8 +71,6 @@ public class ProjectFolderService {
         UpdateProjectFolderRequest request,
         CustomUserDetails currentUser
     ) {
-        ensureManagerAccess(currentUser);
-
         ProjectFolder folder = getFolderInOrganization(folderId, currentUser.getOrganizationId());
         folder.setName(request.getName().trim());
         if (request.getOwnerId() != null) {
@@ -92,8 +88,6 @@ public class ProjectFolderService {
 
     @Transactional
     public void delete(java.util.UUID folderId, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
-
         ProjectFolder folder = getFolderInOrganization(folderId, currentUser.getOrganizationId());
 
         if (folder.getDeletedAt() != null) {

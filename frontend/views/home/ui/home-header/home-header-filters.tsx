@@ -75,10 +75,7 @@ const HomeHeaderFilters = ({
                             onChange={onSelectedTagChange}
                             options={[
                                 { label: 'Все теги', value: 'all' },
-                                ...tagOptions.map((tag) => ({
-                                    label: tag,
-                                    value: tag,
-                                })),
+                                ...tagOptions,
                             ]}
                         />
                     </div>
