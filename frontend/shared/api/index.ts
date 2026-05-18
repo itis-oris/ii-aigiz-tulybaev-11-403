@@ -24,7 +24,7 @@ export {
     getProjectFolders,
     updateProjectFolder,
 } from './project-folder';
-export { getUsers } from './user';
+export { getUsers, updateCurrentUser, uploadCurrentUserAvatar } from './user';
 export type {
     AuthResponse,
     CurrentUserResponse,
@@ -52,5 +52,5 @@ export type {
     ProjectFolderResponse,
     UpdateProjectFolderRequest,
 } from './project-folder';
-export type { UserResponse } from './user';
+export type { UpdateCurrentUserRequest, UserResponse } from './user';
 export { apiClient, ApiError } from './client';

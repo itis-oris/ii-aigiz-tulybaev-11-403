@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -17,6 +18,7 @@ type SidebarProfileMenuProps = {
     email: string;
     initials: string;
     label: string;
+    avatarUrl?: string | null;
     onLogout?: () => void;
 };
 
@@ -24,6 +26,7 @@ function SidebarProfileMenuContent({
     email,
     initials,
     label,
+    avatarUrl,
     onLogout,
 }: SidebarProfileMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -120,16 +123,24 @@ function SidebarProfileMenuContent({
             >
                 <Avatar
                     size="md"
-                    className="bg-sidebar-accent text-sidebar-accent-foreground"
+                    className="overflow-hidden rounded-full bg-sidebar-accent text-sidebar-accent-foreground"
                 >
-                    {initials}
+                    {avatarUrl ? (
+                        <Image
+                            src={avatarUrl}
+                            alt={label}
+                            fill
+                            unoptimized
+                            sizes="32px"
+                            className="object-cover"
+                        />
+                    ) : (
+                        initials
+                    )}
                 </Avatar>
                 <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                     <div className="truncate text-sm font-medium text-sidebar-foreground">
                         {label}
-                    </div>
-                    <div className="truncate text-xs text-sidebar-foreground/55">
-                        {t('sidebar.superAdmin')}
                     </div>
                 </div>
                 <span className="sr-only">
@@ -154,11 +165,13 @@ const SidebarProfileMenu = (props: SidebarProfileMenuProps) => {
         `${user?.firstname?.[0] ?? ''}${user?.lastname?.[0] ?? ''}` ||
         props.initials;
     const email = user?.email ?? props.email;
+    const avatarUrl = user?.avatarUrl ?? props.avatarUrl;
 
     return (
         <SidebarProfileMenuContent
             key={state}
             {...props}
+            avatarUrl={avatarUrl}
             email={email}
             initials={initials}
             label={label}

@@ -3,7 +3,7 @@ import {
     organizationProjects,
     useActiveProject,
 } from './active-project';
-import { cn } from './utils';
+import { cn, getImageUploadError } from './utils';
 import { projectTabs, ProjectTabProvider, useProjectTab } from './project-tab';
 import { useProjectFolderTree } from './use-project-folder-tree';
 import { useProjectFolderDndController } from './use-project-folder-dnd-controller';
@@ -28,6 +28,7 @@ export {
     AuthProvider,
     clearAccessToken,
     cn,
+    getImageUploadError,
     getAccessToken,
     getPostAuthRedirectPath,
     LOCALE_STORAGE_KEY,

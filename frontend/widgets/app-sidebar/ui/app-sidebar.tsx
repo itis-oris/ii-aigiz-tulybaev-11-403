@@ -356,6 +356,7 @@ export function AppSidebar() {
                                 email="artem@sprintly.app"
                                 initials="AR"
                                 label={t('sidebar.profile')}
+                                avatarUrl={null}
                             />
                         </div>
                     </SidebarFooter>
