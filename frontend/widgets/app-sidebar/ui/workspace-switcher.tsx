@@ -185,7 +185,10 @@ export default function WorkspaceSwitcher({
 
     return (
         <>
-            <div ref={containerRef} className="relative min-w-0 flex-1">
+            <div
+                ref={containerRef}
+                className="relative min-w-0 flex-1 group-data-[collapsible=icon]:flex-none"
+            >
                 <button
                     type="button"
                     onClick={() => setIsOpen((open) => !open)}

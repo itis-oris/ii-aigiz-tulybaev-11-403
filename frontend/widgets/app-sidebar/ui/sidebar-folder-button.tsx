@@ -54,7 +54,7 @@ export function SidebarFolderButton({
         >
             <ChevronRight
                 className={cn(
-                    'size-3.5 shrink-0 text-sidebar-foreground/55 transition-transform',
+                    'size-3.5 shrink-0 text-sidebar-foreground/55 transition-transform group-data-[collapsible=icon]:hidden',
                     !isCollapsed && 'rotate-90',
                 )}
             />

@@ -44,7 +44,7 @@ export function SidebarProjectLink({
                     <span
                         ref={handleRef}
                         aria-hidden="true"
-                        className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-sidebar-foreground/0 transition-colors group-hover/project:text-sidebar-foreground/45 hover:bg-sidebar-accent hover:text-sidebar-foreground/75 active:cursor-grabbing"
+                        className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-sidebar-foreground/0 transition-colors group-hover/project:text-sidebar-foreground/45 hover:bg-sidebar-accent hover:text-sidebar-foreground/75 active:cursor-grabbing group-data-[collapsible=icon]:hidden"
                     >
                         <GripVertical className="size-3.5" />
                     </span>
