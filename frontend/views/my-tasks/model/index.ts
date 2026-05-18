@@ -1,4 +1,4 @@
-export { myTasksFilters, myTasksGroups } from './mock';
+export { myTasksFilters } from './constants';
 export type {
     Assignee,
     MyTasksFilter,

@@ -1,14 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { FolderPlus, X } from 'lucide-react';
-import { useI18n } from '@/shared/lib';
+import { getUsers } from '@/shared/api';
+import { useCurrentUser, useI18n, type ProjectFolder } from '@/shared/lib';
 import { Button, Input } from '@/shared/ui';
 
 type CreateProjectFolderDialogProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSubmit: (folderName: string) => void;
+    onSubmit: (folder: ProjectFolder) => Promise<void> | void;
 };
 
 const CreateProjectFolderDialog = ({
@@ -17,17 +19,66 @@ const CreateProjectFolderDialog = ({
     onSubmit,
 }: CreateProjectFolderDialogProps) => {
     const { t } = useI18n();
+    const { data: currentUser } = useCurrentUser();
+    const canManageUsers = Boolean(
+        currentUser?.roles.some(
+            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
+        ),
+    );
     const [name, setName] = useState('');
+    const [ownerId, setOwnerId] = useState('');
+    const usersQuery = useQuery({
+        queryKey: ['users'],
+        queryFn: getUsers,
+        enabled: open && canManageUsers,
+        retry: false,
+    });
+    const ownerOptions = useMemo(() => {
+        const currentUserOption = currentUser
+            ? {
+                  id: currentUser.userId,
+                  label:
+                      [currentUser.firstname, currentUser.lastname]
+                          .filter(Boolean)
+                          .join(' ')
+                          .trim() || currentUser.email,
+              }
+            : null;
+
+        const fetchedOptions = (usersQuery.data ?? []).map((user) => ({
+            id: user.id,
+            label:
+                [user.firstname, user.lastname]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() || user.email,
+        }));
+
+        const uniqueOptions = new Map<string, { id: string; label: string }>();
+
+        if (currentUserOption) {
+            uniqueOptions.set(currentUserOption.id, currentUserOption);
+        }
+
+        fetchedOptions.forEach((option) => {
+            uniqueOptions.set(option.id, option);
+        });
+
+        return [...uniqueOptions.values()];
+    }, [currentUser, usersQuery.data]);
 
     const handleOpenChange = useCallback(
         (nextOpen: boolean) => {
             if (!nextOpen) {
                 setName('');
+                setOwnerId('');
+            } else {
+                setOwnerId(currentUser?.userId ?? '');
             }
 
             onOpenChange(nextOpen);
         },
-        [onOpenChange],
+        [currentUser?.userId, onOpenChange],
     );
 
     useEffect(() => {
@@ -111,6 +162,44 @@ const CreateProjectFolderDialog = ({
                             placeholder={t('dialogs.folderNamePlaceholder')}
                         />
                     </div>
+
+                    <div className="space-y-2">
+                        <label
+                            htmlFor="project-folder-owner"
+                            className="text-sm font-medium text-foreground"
+                        >
+                            Владелец
+                        </label>
+                        <select
+                            id="project-folder-owner"
+                            value={ownerId}
+                            onChange={(event) => setOwnerId(event.target.value)}
+                            disabled={
+                                usersQuery.isLoading &&
+                                ownerOptions.length === 0
+                            }
+                            className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 px-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                            <option value="">
+                                {usersQuery.isLoading
+                                    ? 'Загрузка...'
+                                    : ownerOptions.length > 0
+                                      ? 'Выберите владельца'
+                                      : 'Нет доступных участников'}
+                            </option>
+                            {ownerOptions.map((owner) => (
+                                <option key={owner.id} value={owner.id}>
+                                    {owner.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {usersQuery.isError ? (
+                        <p className="text-sm text-destructive">
+                            Не удалось загрузить участников организации
+                        </p>
+                    ) : null}
                 </div>
 
                 <div className="flex flex-col-reverse gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
@@ -128,8 +217,12 @@ const CreateProjectFolderDialog = ({
                         size="xl"
                         className="rounded-xl px-6"
                         disabled={!trimmedName}
-                        onClick={() => {
-                            onSubmit(trimmedName);
+                        onClick={async () => {
+                            await onSubmit({
+                                id: `folder-${Date.now()}`,
+                                name: trimmedName,
+                                ownerId: ownerId || undefined,
+                            });
                             handleOpenChange(false);
                         }}
                     >

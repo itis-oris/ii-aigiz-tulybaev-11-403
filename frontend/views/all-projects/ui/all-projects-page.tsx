@@ -9,6 +9,8 @@ import {
     SlidersHorizontal,
 } from 'lucide-react';
 import {
+    type ProjectFolder,
+    type ProjectSummary,
     useProjectFolderDndController,
     useWorkspaceProjectsController,
 } from '@/shared/lib';
@@ -26,6 +28,8 @@ import {
     parseAllProjectsProjectId,
 } from './all-projects-dnd';
 import { FolderRow } from './folder-row';
+import { ManageProjectFolderDialog } from './manage-project-folder-dialog';
+import { ManageProjectDialog } from './manage-project-dialog';
 import { ProjectRow } from './project-row';
 import { RootDropZone } from './root-drop-zone';
 import CreateProjectFolderDialog from './create-project-folder-dialog';
@@ -42,11 +46,16 @@ const AllProjectsPage = () => {
         collapsedFolderIds,
         createFolder,
         createProject,
+        deleteFolder,
+        deleteProject,
         folders,
         moveProjectToFolder,
         projects,
         selectProject,
         toggleFolder,
+        uploadProjectImage,
+        updateFolder,
+        updateProject,
     } = useWorkspaceProjectsController();
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<
@@ -59,6 +68,12 @@ const AllProjectsPage = () => {
         useState(false);
     const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] =
         useState(false);
+    const [managedFolder, setManagedFolder] = useState<ProjectFolder | null>(
+        null,
+    );
+    const [managedProject, setManagedProject] = useState<ProjectSummary | null>(
+        null,
+    );
     const {
         groupedFolders,
         hasResults,
@@ -316,6 +331,7 @@ const AllProjectsPage = () => {
                                             onToggle={() =>
                                                 toggleFolder(folder.id)
                                             }
+                                            onManageFolder={setManagedFolder}
                                         />
                                         {!collapsedFolderIds.includes(
                                             folder.id,
@@ -331,6 +347,9 @@ const AllProjectsPage = () => {
                                                             }
                                                             setActiveProjectId={
                                                                 selectProject
+                                                            }
+                                                            onManageProject={
+                                                                setManagedProject
                                                             }
                                                             className="bg-background"
                                                         />
@@ -361,6 +380,9 @@ const AllProjectsPage = () => {
                                                     }
                                                     setActiveProjectId={
                                                         selectProject
+                                                    }
+                                                    onManageProject={
+                                                        setManagedProject
                                                     }
                                                 />
                                             ))
@@ -399,6 +421,33 @@ const AllProjectsPage = () => {
                 open={isCreateFolderDialogOpen}
                 onOpenChange={setIsCreateFolderDialogOpen}
                 onSubmit={createFolder}
+            />
+
+            <ManageProjectDialog
+                key={`manage-${managedProject?.id ?? 'none'}-${managedProject?.name ?? ''}-${managedProject ? 'open' : 'closed'}`}
+                open={Boolean(managedProject)}
+                project={managedProject}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setManagedProject(null);
+                    }
+                }}
+                onSubmit={updateProject}
+                onUploadImage={uploadProjectImage}
+                onDelete={deleteProject}
+            />
+
+            <ManageProjectFolderDialog
+                key={`manage-folder-${managedFolder?.id ?? 'none'}-${managedFolder?.name ?? ''}-${managedFolder ? 'open' : 'closed'}`}
+                open={Boolean(managedFolder)}
+                folder={managedFolder}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setManagedFolder(null);
+                    }
+                }}
+                onSubmit={updateFolder}
+                onDelete={deleteFolder}
             />
         </>
     );

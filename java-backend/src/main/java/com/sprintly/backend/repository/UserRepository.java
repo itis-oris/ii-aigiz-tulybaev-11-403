@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
@@ -14,12 +15,18 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
-    @EntityGraph(attributePaths = {"roles", "organization"})
-    Optional<User> findWithRolesByEmail(String email);
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    Optional<User> findWithOrganizationsByEmail(String email);
 
-    @EntityGraph(attributePaths = {"roles", "organization"})
-    Optional<User> findWithRolesById(UUID id);
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    Optional<User> findWithOrganizationsById(UUID id);
 
-    @EntityGraph(attributePaths = {"roles", "organization"})
-    List<User> findAllByOrganization_Id(UUID organizationId);
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    List<User> findAllByOrganizations_Id(UUID organizationId);
+
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    Optional<User> findByIdAndOrganizations_Id(UUID userId, UUID organizationId);
+
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    List<User> findAllByIdInAndOrganizations_Id(Set<UUID> userIds, UUID organizationId);
 }

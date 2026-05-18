@@ -3,6 +3,8 @@ package com.sprintly.backend.controller;
 import com.sprintly.backend.dto.project.CreateProjectRequest;
 import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
+import com.sprintly.backend.dto.project.AddProjectMembersRequest;
+import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -89,5 +91,24 @@ public class ProjectController {
         @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return projectService.uploadImage(projectId, file, currentUser);
+    }
+
+    @GetMapping("/{projectId}/members")
+    @Operation(summary = "List project members")
+    public List<UserResponse> findMembers(
+        @PathVariable UUID projectId,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return projectService.findMembers(projectId, currentUser);
+    }
+
+    @PostMapping("/{projectId}/members")
+    @Operation(summary = "Add project members")
+    public List<UserResponse> addMembers(
+        @PathVariable UUID projectId,
+        @Valid @RequestBody AddProjectMembersRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return projectService.addMembers(projectId, request, currentUser);
     }
 }

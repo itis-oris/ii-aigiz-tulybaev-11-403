@@ -4,6 +4,6 @@ export type ProjectListItem = ProjectSummary & {
     ownerName: string;
     ownerInitials: string;
     ownerClassName: string;
-    status: 'В работе' | 'Планирование';
+    statusLabel: 'В работе' | 'Планирование' | 'На паузе' | 'Завершен';
     dateLabel: string;
 };

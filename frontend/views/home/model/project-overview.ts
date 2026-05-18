@@ -1,105 +1,136 @@
+import type { ProjectStatus, UserResponse } from '@/shared/api';
+
 export type ProjectParticipant = {
     id: string;
     name: string;
     role: string;
     initials: string;
     accentClassName: string;
+    avatarUrl?: string | null;
 };
 
 export type WorkspaceMember = ProjectParticipant & {
     email: string;
 };
 
-export type ProjectOverview = {
-    name: string;
-    status: string;
-    statusToneClassName: string;
-    description: string;
-    emoji: string;
-    members: ProjectParticipant[];
+const memberAccentPalette = [
+    'bg-violet-500/12 text-violet-700 ring-1 ring-violet-500/20',
+    'bg-amber-500/12 text-amber-700 ring-1 ring-amber-500/20',
+    'bg-sky-500/12 text-sky-700 ring-1 ring-sky-500/20',
+    'bg-lime-500/12 text-lime-700 ring-1 ring-lime-500/20',
+    'bg-rose-500/12 text-rose-700 ring-1 ring-rose-500/20',
+    'bg-cyan-500/12 text-cyan-700 ring-1 ring-cyan-500/20',
+    'bg-indigo-500/12 text-indigo-700 ring-1 ring-indigo-500/20',
+    'bg-fuchsia-500/12 text-fuchsia-700 ring-1 ring-fuchsia-500/20',
+] as const;
+
+const projectStatusToneMap: Record<ProjectStatus, string> = {
+    PLANNING: 'bg-amber-500/12 text-amber-700 ring-1 ring-amber-500/20',
+    ACTIVE: 'bg-emerald-500/12 text-emerald-700 ring-1 ring-emerald-500/20',
+    ON_HOLD: 'bg-slate-500/12 text-slate-700 ring-1 ring-slate-500/20',
+    COMPLETED: 'bg-sky-500/12 text-sky-700 ring-1 ring-sky-500/20',
 };
 
-export const projectOverview: ProjectOverview = {
-    name: 'Lorem Ipsum',
-    status: 'Active',
-    statusToneClassName:
-        'bg-emerald-500/12 text-emerald-700 ring-1 ring-emerald-500/20',
-    description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-    emoji: 'LI',
+const projectStatusLabelMap: Record<ProjectStatus, string> = {
+    PLANNING: 'Планирование',
+    ACTIVE: 'В работе',
+    ON_HOLD: 'На паузе',
+    COMPLETED: 'Завершен',
+};
+
+const rolePriority = ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_USER'] as const;
+
+export const getParticipantAccentClassName = (index: number) =>
+    memberAccentPalette[index % memberAccentPalette.length];
+
+export const getParticipantInitials = (value: string) =>
+    value
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('')
+        .slice(0, 2) || 'U';
+
+export const getUserDisplayName = (user: {
+    firstname?: string | null;
+    lastname?: string | null;
+    email: string;
+}) => {
+    const fullName = [user.firstname, user.lastname]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+    return fullName || user.email;
+};
+
+export const getProjectStatusLabel = (status: ProjectStatus) =>
+    projectStatusLabelMap[status];
+
+export const getProjectStatusToneClassName = (status: ProjectStatus) =>
+    projectStatusToneMap[status];
+
+export const getUserRoleLabel = (roles: string[]) => {
+    const primaryRole =
+        rolePriority.find((role) => roles.includes(role)) ??
+        roles[0] ??
+        'ROLE_USER';
+
+    switch (primaryRole) {
+        case 'ROLE_ADMIN':
+            return 'Администратор';
+        case 'ROLE_MANAGER':
+            return 'Менеджер';
+        default:
+            return 'Участник';
+    }
+};
+
+export const mapUserToWorkspaceMember = (
+    user: UserResponse,
+    index: number,
+): WorkspaceMember => {
+    const name = getUserDisplayName(user);
+
+    return {
+        id: user.id,
+        name,
+        role: getUserRoleLabel(user.roles),
+        initials: getParticipantInitials(name),
+        accentClassName: getParticipantAccentClassName(index),
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+    };
+};
+
+export const projectOverview = {
+    name: 'Sprintly Web',
+    status: 'В работе',
+    statusToneClassName: getProjectStatusToneClassName('ACTIVE'),
+    description: 'Основной проект интерфейса и рабочего пространства.',
+    emoji: 'SW',
     members: [
         {
             id: 'member-1',
-            name: 'Lorem One',
-            role: 'Owner',
-            initials: 'LO',
-            accentClassName:
-                'bg-violet-500/12 text-violet-700 ring-1 ring-violet-500/20',
+            name: 'Alex Johnson',
+            role: 'Владелец проекта',
+            initials: 'AJ',
+            accentClassName: getParticipantAccentClassName(0),
         },
         {
             id: 'member-2',
-            name: 'Ipsum Two',
-            role: 'Manager',
-            initials: 'IT',
-            accentClassName:
-                'bg-amber-500/12 text-amber-700 ring-1 ring-amber-500/20',
-        },
-        {
-            id: 'member-3',
-            name: 'Dolor Three',
-            role: 'Designer',
-            initials: 'DT',
-            accentClassName:
-                'bg-sky-500/12 text-sky-700 ring-1 ring-sky-500/20',
-        },
-        {
-            id: 'member-4',
-            name: 'Sit Four',
-            role: 'Developer',
-            initials: 'SF',
-            accentClassName:
-                'bg-lime-500/12 text-lime-700 ring-1 ring-lime-500/20',
-        },
-        {
-            id: 'member-5',
-            name: 'Amet Five',
-            role: 'Reviewer',
-            initials: 'AF',
-            accentClassName:
-                'bg-rose-500/12 text-rose-700 ring-1 ring-rose-500/20',
+            name: 'Mia Harper',
+            role: 'Менеджер',
+            initials: 'MH',
+            accentClassName: getParticipantAccentClassName(1),
         },
     ],
 };
 
-export const workspaceMembers: WorkspaceMember[] = [
-    ...projectOverview.members.map((member) => ({
+export const workspaceMembers: WorkspaceMember[] = projectOverview.members.map(
+    (member, index) => ({
         ...member,
-        email: `${member.name.toLowerCase().replace(/\s+/g, '.')}@sprintly.app`,
-    })),
-    {
-        id: 'member-6',
-        name: 'Nora Six',
-        role: 'Product Designer',
-        initials: 'NS',
-        email: 'nora.six@sprintly.app',
-        accentClassName: 'bg-cyan-500/12 text-cyan-700 ring-1 ring-cyan-500/20',
-    },
-    {
-        id: 'member-7',
-        name: 'Ethan Seven',
-        role: 'Frontend Developer',
-        initials: 'ES',
-        email: 'ethan.seven@sprintly.app',
-        accentClassName:
-            'bg-indigo-500/12 text-indigo-700 ring-1 ring-indigo-500/20',
-    },
-    {
-        id: 'member-8',
-        name: 'Mia Eight',
-        role: 'QA Engineer',
-        initials: 'ME',
-        email: 'mia.eight@sprintly.app',
-        accentClassName:
-            'bg-fuchsia-500/12 text-fuchsia-700 ring-1 ring-fuchsia-500/20',
-    },
-];
+        email: `member${index + 1}@sprintly.app`,
+    }),
+);

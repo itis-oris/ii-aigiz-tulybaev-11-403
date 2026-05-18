@@ -73,6 +73,15 @@ a {
 }
 
 :root {
+    --font-sans:
+        inter, ui-sans-serif, system-ui, -apple-system, blinkmacsystemfont,
+        'Segoe UI', sans-serif;
+    --font-heading:
+        geist, inter, ui-sans-serif, system-ui, -apple-system,
+        blinkmacsystemfont, 'Segoe UI', sans-serif;
+    --font-mono:
+        'IBM Plex Mono', 'SFMono-Regular', ui-monospace, 'Cascadia Code',
+        'Source Code Pro', menlo, consolas, monospace;
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.141 0.005 285.823);
     --popover: oklch(1 0 0);

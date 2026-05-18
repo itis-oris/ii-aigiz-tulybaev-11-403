@@ -1,5 +1,6 @@
 'use client';
 
+import type { ProjectStatus } from '@/shared/api';
 import {
     createContext,
     type Dispatch,
@@ -14,23 +15,28 @@ export type ProjectSummary = {
     shortLabel: string;
     avatar: string;
     avatarClassName: string;
+    imageUrl?: string | null;
     description: string;
     boardTabs: string[];
-    lifecycleStatus: 'active' | 'at_risk' | 'on_hold' | 'completed';
+    status: ProjectStatus;
     memberCount: number;
+    imageFile?: File | null;
+    createdAt?: string;
+    ownerId?: string;
+    ownerName?: string;
+    ownerEmail?: string;
+    ownerAvatarUrl?: string | null;
     folderId?: string;
 };
 
 export type ProjectFolder = {
     id: string;
     name: string;
-    shortLabel: string;
-    avatarClassName: string;
-    description: string;
-    ownerName: string;
-    ownerInitials: string;
-    ownerClassName: string;
-    dateLabel: string;
+    createdAt?: string;
+    ownerId?: string;
+    ownerName?: string;
+    ownerEmail?: string;
+    ownerAvatarUrl?: string | null;
 };
 
 export const organizationProjects: ProjectSummary[] = [
@@ -42,7 +48,7 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-amber-100 text-amber-700',
         description: 'Основной продуктовый контур и текущая delivery-команда.',
         boardTabs: ['DIGITAL', 'TRADE', 'OUTDOOR'],
-        lifecycleStatus: 'active',
+        status: 'ACTIVE',
         memberCount: 7,
     },
     {
@@ -53,7 +59,7 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-sky-100 text-sky-700',
         description: 'Операционный проект с фокусом на запуск и сопровождение.',
         boardTabs: ['CORE', 'OPS', 'QA'],
-        lifecycleStatus: 'at_risk',
+        status: 'PLANNING',
         memberCount: 5,
     },
     {
@@ -64,7 +70,7 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-emerald-100 text-emerald-700',
         description: 'Growth-направление с задачами маркетинга и активации.',
         boardTabs: ['ACQ', 'RETENTION', 'CRM'],
-        lifecycleStatus: 'active',
+        status: 'ACTIVE',
         memberCount: 6,
     },
     {
@@ -75,7 +81,7 @@ export const organizationProjects: ProjectSummary[] = [
         avatarClassName: 'bg-violet-100 text-violet-700',
         description: 'Экспериментальный поток для новых продуктовых гипотез.',
         boardTabs: ['LAB', 'MVP', 'RESEARCH'],
-        lifecycleStatus: 'on_hold',
+        status: 'ON_HOLD',
         memberCount: 4,
     },
 ];
@@ -83,8 +89,14 @@ export const organizationProjects: ProjectSummary[] = [
 type ActiveProjectContextValue = {
     projects: ProjectSummary[];
     setProjects: Dispatch<SetStateAction<ProjectSummary[]>>;
+    createProject: (project: ProjectSummary) => Promise<void>;
+    updateProject: (project: ProjectSummary) => Promise<void>;
+    uploadProjectImage: (projectId: string, file: File) => Promise<void>;
+    deleteProject: (projectId: string) => Promise<void>;
     folders: ProjectFolder[];
-    setFolders: Dispatch<SetStateAction<ProjectFolder[]>>;
+    createFolder: (folder: ProjectFolder) => Promise<void>;
+    updateFolder: (folder: ProjectFolder) => Promise<void>;
+    deleteFolder: (folderId: string) => Promise<void>;
     collapsedFolderIds: string[];
     setCollapsedFolderIds: Dispatch<SetStateAction<string[]>>;
     activeProjectId: string;

@@ -23,7 +23,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
     render: () => {
         const [projects, setProjects] = useState(organizationProjects);
-        const [folders, setFolders] = useState<ProjectFolder[]>([]);
+        const [folders] = useState<ProjectFolder[]>([]);
         const [collapsedFolderIds, setCollapsedFolderIds] = useState<string[]>(
             [],
         );
@@ -39,8 +39,34 @@ export const Default: Story = {
                 value={{
                     projects,
                     setProjects,
+                    createProject: async (project) => {
+                        setProjects((currentProjects) => [
+                            ...currentProjects,
+                            project,
+                        ]);
+                    },
+                    updateProject: async (project) => {
+                        setProjects((currentProjects) =>
+                            currentProjects.map((currentProject) =>
+                                currentProject.id === project.id
+                                    ? project
+                                    : currentProject,
+                            ),
+                        );
+                    },
+                    uploadProjectImage: async () => {},
+                    deleteProject: async (projectId) => {
+                        setProjects((currentProjects) =>
+                            currentProjects.filter(
+                                (currentProject) =>
+                                    currentProject.id !== projectId,
+                            ),
+                        );
+                    },
+                    createFolder: async () => {},
+                    updateFolder: async () => {},
+                    deleteFolder: async () => {},
                     folders,
-                    setFolders,
                     collapsedFolderIds,
                     setCollapsedFolderIds,
                     activeProjectId,

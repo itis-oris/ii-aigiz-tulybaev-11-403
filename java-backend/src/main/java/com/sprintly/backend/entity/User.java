@@ -64,17 +64,21 @@ public class User {
     private String avatarUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id", nullable = false)
+    @JoinColumn(name = "organization_id")
     private Organization organization;
 
     @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "user_roles",
+        name = "organization_members",
         joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+        inverseJoinColumns = @JoinColumn(name = "organization_id")
     )
-    private Set<Role> roles = new HashSet<>();
+    private Set<Organization> organizations = new HashSet<>();
+
+    @Builder.Default
+    @ManyToMany(mappedBy = "members")
+    private Set<Project> projects = new HashSet<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL)

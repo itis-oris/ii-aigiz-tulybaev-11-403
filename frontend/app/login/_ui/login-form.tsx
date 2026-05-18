@@ -1,8 +1,12 @@
 'use client';
 
 import type { ComponentProps } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/shared/ui';
+import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
+import { ApiError, login } from '@/shared/api';
+import { getPostAuthRedirectPath, useAuth, useI18n } from '@/shared/lib';
+import { Button, GoogleRecaptcha } from '@/shared/ui';
 import {
     AuthCard,
     AuthField,
@@ -10,16 +14,21 @@ import {
     AuthFormFooter,
 } from '@/widgets/auth-shell';
 import { useValidatedForm } from '@/shared/lib/use-validated-form';
-import { useI18n } from '@/shared/lib';
 import {
-    initialLoginValues,
     getLoginFields,
+    initialLoginValues,
     validateLoginForm,
 } from '@/app/login/_lib/login-form';
 
 export const LoginForm = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const { refetchUser, setToken } = useAuth();
     const { locale, t } = useI18n();
+    const [captchaToken, setCaptchaToken] = useState('');
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const invitationToken = searchParams.get('invite')?.trim() || '';
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
     const loginFields = getLoginFields(locale);
     const {
         errors,
@@ -33,13 +42,46 @@ export const LoginForm = () => {
     } = useValidatedForm(initialLoginValues, (values) =>
         validateLoginForm(values, locale),
     );
+    const loginMutation = useMutation({
+        mutationFn: login,
+        onSuccess: async (data) => {
+            setToken(data.accessToken);
+            const user = await refetchUser();
+            router.replace(
+                invitationToken
+                    ? `/invite/${invitationToken}`
+                    : getPostAuthRedirectPath(user ?? null),
+            );
+        },
+        onError: (error) => {
+            setSubmitError(
+                error instanceof ApiError
+                    ? error.message
+                    : t('auth.loginError'),
+            );
+        },
+    });
+    const captchaError = !captchaToken
+        ? locale === 'en'
+            ? 'Complete reCAPTCHA'
+            : 'Пройди reCAPTCHA'
+        : null;
 
-    const handleLoginSubmit: ComponentProps<'form'>['onSubmit'] = (event) => {
+    const handleLoginSubmit: ComponentProps<'form'>['onSubmit'] = async (
+        event,
+    ) => {
+        setSubmitError(null);
         handleSubmit(event);
 
-        if (isValid) {
-            router.push('/');
+        if (!isValid || !captchaToken) {
+            return;
         }
+
+        await loginMutation.mutateAsync({
+            email: values.email,
+            password: values.password,
+            captchaToken,
+        });
     };
 
     return (
@@ -71,8 +113,30 @@ export const LoginForm = () => {
                     );
                 })}
 
+                {siteKey ? (
+                    <div className="space-y-2">
+                        <GoogleRecaptcha
+                            siteKey={siteKey}
+                            onChange={setCaptchaToken}
+                        />
+                        {captchaError ? (
+                            <p className="text-sm text-destructive">
+                                {captchaError}
+                            </p>
+                        ) : null}
+                    </div>
+                ) : (
+                    <AuthFormError message="NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not configured" />
+                )}
+
                 <AuthFormFooter
-                    href="/register"
+                    href={
+                        invitationToken
+                            ? `/register?invite=${encodeURIComponent(
+                                  invitationToken,
+                              )}`
+                            : '/register'
+                    }
                     linkLabel={t('auth.loginFooterLink')}
                     text={t('auth.loginFooterText')}
                 />
@@ -80,6 +144,7 @@ export const LoginForm = () => {
                 {isSubmitted && !isValid && (
                     <AuthFormError message={t('auth.loginError')} />
                 )}
+                {submitError ? <AuthFormError message={submitError} /> : null}
 
                 <div className="flex gap-3 pt-1">
                     <Button
@@ -91,7 +156,12 @@ export const LoginForm = () => {
                     >
                         {t('auth.clear')}
                     </Button>
-                    <Button type="submit" size="xl" className="flex-1">
+                    <Button
+                        type="submit"
+                        size="xl"
+                        className="flex-1"
+                        disabled={loginMutation.isPending || !siteKey}
+                    >
                         {t('auth.loginSubmit')}
                     </Button>
                 </div>

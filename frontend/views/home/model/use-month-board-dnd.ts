@@ -15,8 +15,13 @@ import {
 } from '@/views/home/ui/board/month-board.lib';
 
 export type DropPosition = 'before' | 'after' | null;
+type CommitMovePayload = {
+    taskId: string;
+    dueDate: string;
+    position: number;
+};
 
-const getTaskColumnId = (days: DayTasks[], taskId: number) =>
+const getTaskColumnId = (days: DayTasks[], taskId: string) =>
     days.find((day) => day.tasks.some((task) => task.id === taskId))
         ?.columnId ?? null;
 
@@ -27,24 +32,20 @@ const withDateKey = (task: Task, dateKey: string) => {
         return task;
     }
 
-    const [year, month, day] = dateKey.split('-').map(Number);
-    const nextDueDate = new Date(baseDate);
-    nextDueDate.setFullYear(year, month - 1, day);
-
     return {
         ...task,
-        dueDate: nextDueDate.toISOString(),
+        dueDate: `${dateKey}T09:00:00.000Z`,
         columnId: dateKey,
     };
 };
 
 const moveTaskBetweenDays = (
     days: DayTasks[],
-    taskId: number,
+    taskId: string,
     target:
         | {
               type: 'task';
-              taskId: number;
+              taskId: string;
               dropPosition: Exclude<DropPosition, null>;
           }
         | { type: 'column'; columnId: string },
@@ -112,8 +113,9 @@ const moveTaskBetweenDays = (
     }));
 };
 
-export const getMonthTaskDragId = (taskId: number) => `month-task:${taskId}`;
-export const getMonthTaskDropId = (taskId: number) =>
+export const getMonthTaskDragId = (taskId: string | number) =>
+    `month-task:${taskId}`;
+export const getMonthTaskDropId = (taskId: string | number) =>
     `month-task-drop:${taskId}`;
 export const getMonthDayDropId = (dateKey: string) => `month-day:${dateKey}`;
 
@@ -124,7 +126,7 @@ const parseMonthTaskDragId = (
         return null;
     }
 
-    return Number(value.slice('month-task:'.length));
+    return value.slice('month-task:'.length);
 };
 
 const parseMonthTaskDropId = (
@@ -134,7 +136,7 @@ const parseMonthTaskDropId = (
         return null;
     }
 
-    return Number(value.slice('month-task-drop:'.length));
+    return value.slice('month-task-drop:'.length);
 };
 
 const parseMonthDayDropId = (
@@ -147,13 +149,19 @@ const parseMonthDayDropId = (
     return value.slice('month-day:'.length);
 };
 
-export const useMonthBoardDnd = (tasks: Task[], monthStart: Date) => {
+export const useMonthBoardDnd = (
+    tasks: Task[],
+    monthStart: Date,
+    options?: {
+        onCommitMove?: (payload: CommitMovePayload) => void;
+    },
+) => {
     const [monthDays, setMonthDays] = useState<DayTasks[]>(() =>
         createMonthDays(tasks, monthStart),
     );
-    const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+    const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
     const [overDateKey, setOverDateKey] = useState<string | null>(null);
-    const [overTaskId, setOverTaskId] = useState<number | null>(null);
+    const [overTaskId, setOverTaskId] = useState<string | null>(null);
     const [dropPosition, setDropPosition] = useState<DropPosition>(null);
     const [pointerY, setPointerY] = useState<number | null>(null);
 
@@ -215,20 +223,46 @@ export const useMonthBoardDnd = (tasks: Task[], monthStart: Date) => {
         const targetDateKey = parseMonthDayDropId(operation.target?.id);
 
         if (taskId !== null && targetTaskId !== null) {
-            setMonthDays((currentDays) =>
-                moveTaskBetweenDays(currentDays, taskId, {
+            setMonthDays((currentDays) => {
+                const nextDays = moveTaskBetweenDays(currentDays, taskId, {
                     type: 'task',
                     taskId: targetTaskId,
                     dropPosition: dropPosition ?? 'before',
-                }),
-            );
+                });
+                const movedTask = nextDays
+                    .flatMap((day) => day.tasks)
+                    .find((task) => task.id === taskId);
+
+                if (movedTask?.dueDate) {
+                    options?.onCommitMove?.({
+                        taskId,
+                        dueDate: movedTask.dueDate,
+                        position: Number(movedTask.position ?? 0),
+                    });
+                }
+
+                return nextDays;
+            });
         } else if (taskId !== null && targetDateKey) {
-            setMonthDays((currentDays) =>
-                moveTaskBetweenDays(currentDays, taskId, {
+            setMonthDays((currentDays) => {
+                const nextDays = moveTaskBetweenDays(currentDays, taskId, {
                     type: 'column',
                     columnId: targetDateKey,
-                }),
-            );
+                });
+                const movedTask = nextDays
+                    .flatMap((day) => day.tasks)
+                    .find((task) => task.id === taskId);
+
+                if (movedTask?.dueDate) {
+                    options?.onCommitMove?.({
+                        taskId,
+                        dueDate: movedTask.dueDate,
+                        position: Number(movedTask.position ?? 0),
+                    });
+                }
+
+                return nextDays;
+            });
         }
 
         resetDragState();

@@ -1,10 +1,23 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import type { DateRange } from 'react-day-picker';
-import { useActiveProject, useProjectTab } from '@/shared/lib';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    organizationTaskDays,
+    createTask,
+    getBoards,
+    getColumns,
+    getTasks,
+    moveTask,
+    updateTask,
+} from '@/shared/api';
+import {
+    useActiveProject,
+    useProjectTab,
+    type ProjectSummary,
+} from '@/shared/lib';
+import { Badge, type DateRange } from '@/shared/ui';
+import {
+    mapTaskResponseToTask,
     type DayTasks,
     type Task,
 } from '@/views/home/model/task';
@@ -12,12 +25,55 @@ import { TaskSheet } from '@/views/home/ui/task-sheet';
 import { Header } from '@/views/home/ui/home-header';
 import { Board, MonthBoard, TasksBoard } from '@/views/home/ui/board';
 import type { ViewMode } from '@/views/home/ui/home-header/view-mode';
+import { sortModes } from '@/views/home/ui/home-header/sort-mode';
 import type { SortMode } from '@/views/home/ui/home-header/sort-mode';
 import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-header.types';
 import { Overview } from '@/views/home/ui/overview';
 
 type HomePageProps = {
     scope?: 'project' | 'organization';
+};
+
+const HOME_VIEW_MODE_STORAGE_KEY = 'home:view-mode';
+const HOME_SORT_MODE_STORAGE_KEY = 'home:sort-mode';
+const HOME_SEARCH_QUERY_STORAGE_KEY = 'home:search-query';
+const HOME_SELECTED_STATUS_STORAGE_KEY = 'home:selected-status';
+const HOME_SELECTED_TAG_STORAGE_KEY = 'home:selected-tag';
+
+type HomePageContentProps = {
+    activeBoardId: string;
+    boardColumns: Array<{ id: string; name: string }>;
+    createTaskError: string | null;
+    taskActionDebug?: string | null;
+    canCreateTasks: boolean;
+    isOrganizationScope: boolean;
+    isCreatingTask: boolean;
+    loading: boolean;
+    projects: ProjectSummary[];
+    selectedProjectId: string;
+    sourceTasks: Task[];
+    taskLoadError: string | null;
+    onCreateBoardTask?: (
+        columnId: string,
+        title: string,
+        isPrivate: boolean,
+    ) => void;
+    onCreateWeeklyTask?: (
+        dateKey: string,
+        title: string,
+        isPrivate: boolean,
+    ) => void;
+    onMoveBoardTask?: (payload: {
+        taskId: string;
+        columnId: string;
+        position: number;
+    }) => void;
+    onMoveScheduledTask?: (payload: {
+        taskId: string;
+        dueDate: string;
+        position: number;
+    }) => void;
+    onSelectedProjectIdChange: (projectId: string) => void;
 };
 
 const shortDayMonthFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -40,6 +96,20 @@ const boardDayFormatter = new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',
     month: 'short',
 });
+
+const formatDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
+
+const isViewMode = (value: string): value is ViewMode =>
+    value === 'Неделя' || value === 'Доски' || value === 'Месяц';
+
+const isSortMode = (value: string): value is SortMode =>
+    sortModes.includes(value as SortMode);
 
 const normalizeDate = (value: string) => {
     const date = new Date(value);
@@ -82,26 +152,19 @@ const isSameOrBefore = (left: Date, right: Date) =>
 const capitalize = (value: string) =>
     value.charAt(0).toUpperCase() + value.slice(1);
 
-const getInitialAnchorDate = (tasks: Task[]) => {
-    const datedTasks = tasks
-        .map((task) => (task.dueDate ? normalizeDate(task.dueDate) : null))
-        .filter((date): date is Date => date !== null)
-        .sort((left, right) => left.getTime() - right.getTime());
+const getTodayAnchorDate = () => new Date();
 
-    return datedTasks[0] ?? new Date();
-};
-
-const getInitialRange = (tasks: Task[]): DateRange => {
-    const anchorDate = getInitialAnchorDate(tasks);
+const getTodayRange = (): DateRange => {
+    const today = getTodayAnchorDate();
 
     return {
-        from: startOfMonth(anchorDate),
-        to: endOfMonth(anchorDate),
+        from: startOfMonth(today),
+        to: endOfMonth(today),
     };
 };
 
-const getResolvedRange = (range: DateRange | undefined, tasks: Task[]) => {
-    const fallbackRange = getInitialRange(tasks);
+const getResolvedRange = (range: DateRange | undefined) => {
+    const fallbackRange = getTodayRange();
     const from = range?.from ?? fallbackRange.from ?? new Date();
     const to = range?.to ?? from;
 
@@ -115,7 +178,7 @@ const sortTasks = (tasks: Task[], sortMode: SortMode) => {
         if (sortMode === 'По умолчанию') {
             return (
                 Number(left.position ?? 0) - Number(right.position ?? 0) ||
-                left.id - right.id
+                String(left.id).localeCompare(String(right.id), 'ru-RU')
             );
         }
 
@@ -150,58 +213,140 @@ const sortTasks = (tasks: Task[], sortMode: SortMode) => {
     return sortedTasks;
 };
 
-const HomePage = ({ scope = 'project' }: HomePageProps) => {
-    const { activeProjectTab } = useProjectTab();
-    const { activeBoardId, activeProjectId, projects } = useActiveProject();
+const selectTasksForScope = ({
+    activeBoardId,
+    activeProjectId,
+    isOrganizationScope,
+    selectedProjectId,
+    tasks,
+}: {
+    activeBoardId: string;
+    activeProjectId: string;
+    isOrganizationScope: boolean;
+    selectedProjectId: string;
+    tasks: Task[];
+}) => {
+    if (isOrganizationScope) {
+        if (selectedProjectId === 'all') {
+            return tasks;
+        }
+
+        return tasks.filter((task) => task.projectId === selectedProjectId);
+    }
+
+    const projectTasks = tasks.filter(
+        (task) => task.projectId === activeProjectId,
+    );
+
+    if (!activeBoardId) {
+        return projectTasks;
+    }
+
+    const boardTasks = projectTasks.filter(
+        (task) =>
+            task.boardId === activeBoardId || task.boardName === activeBoardId,
+    );
+
+    return boardTasks.length > 0 ? boardTasks : projectTasks;
+};
+
+const HomePageContent = ({
+    activeBoardId,
+    boardColumns,
+    createTaskError,
+    taskActionDebug,
+    canCreateTasks,
+    isOrganizationScope,
+    isCreatingTask,
+    loading,
+    projects,
+    selectedProjectId,
+    sourceTasks,
+    taskLoadError,
+    onCreateBoardTask,
+    onCreateWeeklyTask,
+    onMoveBoardTask,
+    onMoveScheduledTask,
+    onSelectedProjectIdChange,
+}: HomePageContentProps) => {
+    const canShowTaskCreate = !isOrganizationScope;
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const [customTasks, setCustomTasks] = useState<Task[]>([]);
-    const [activeViewMode, setActiveViewMode] = useState<ViewMode>('Неделя');
-    const [activeSortMode, setActiveSortMode] =
-        useState<SortMode>('По умолчанию');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState('all');
-    const [selectedTag, setSelectedTag] = useState('all');
+    const [activeViewMode, setActiveViewMode] = useState<ViewMode>(() => {
+        if (typeof window === 'undefined') {
+            return 'Неделя';
+        }
+
+        const storedViewMode = window.localStorage.getItem(
+            HOME_VIEW_MODE_STORAGE_KEY,
+        );
+
+        return storedViewMode && isViewMode(storedViewMode)
+            ? storedViewMode
+            : 'Неделя';
+    });
+    const [activeSortMode, setActiveSortMode] = useState<SortMode>(() => {
+        if (typeof window === 'undefined') {
+            return 'По умолчанию';
+        }
+
+        const storedSortMode = window.localStorage.getItem(
+            HOME_SORT_MODE_STORAGE_KEY,
+        );
+
+        return storedSortMode && isSortMode(storedSortMode)
+            ? storedSortMode
+            : 'По умолчанию';
+    });
+    const [searchQuery, setSearchQuery] = useState(() => {
+        if (typeof window === 'undefined') {
+            return '';
+        }
+
+        return window.localStorage.getItem(HOME_SEARCH_QUERY_STORAGE_KEY) ?? '';
+    });
+    const [selectedStatus, setSelectedStatus] = useState(() => {
+        if (typeof window === 'undefined') {
+            return 'all';
+        }
+
+        return (
+            window.localStorage.getItem(HOME_SELECTED_STATUS_STORAGE_KEY) ??
+            'all'
+        );
+    });
+    const [selectedTag, setSelectedTag] = useState(() => {
+        if (typeof window === 'undefined') {
+            return 'all';
+        }
+
+        return (
+            window.localStorage.getItem(HOME_SELECTED_TAG_STORAGE_KEY) ?? 'all'
+        );
+    });
     const [headerSettings, setHeaderSettings] =
         useState<HomeHeaderSettingsValue>({
             density: 'standard',
             showProjectName: true,
             showTaskCounters: true,
         });
-    const isOrganizationScope = scope === 'organization';
-    const [organizationProjectFilter, setOrganizationProjectFilter] =
-        useState<string>('all');
-    const filteredDays = useMemo<DayTasks[]>(() => {
-        if (isOrganizationScope) {
-            if (organizationProjectFilter === 'all') {
-                return organizationTaskDays;
-            }
 
-            return organizationTaskDays.map((day) => ({
-                ...day,
-                tasks: day.tasks.filter(
-                    (task) => task.projectSlug === organizationProjectFilter,
-                ),
-            }));
-        }
-
-        return organizationTaskDays.map((day) => ({
-            ...day,
-            tasks: day.tasks.filter(
-                (task) => task.projectSlug === activeProjectId,
-            ),
-        }));
-    }, [activeProjectId, isOrganizationScope, organizationProjectFilter]);
     const allTasks = useMemo(
         () =>
-            [
-                ...filteredDays.flatMap((day) => day.tasks),
-                ...customTasks,
-            ].filter((task) =>
-                isOrganizationScope ? true : task.boardId === activeBoardId,
+            sourceTasks.filter((task) =>
+                isOrganizationScope
+                    ? true
+                    : task.boardId === activeBoardId ||
+                      task.boardName === activeBoardId ||
+                      sourceTasks.every(
+                          (sourceTask) =>
+                              sourceTask.boardId !== activeBoardId &&
+                              sourceTask.boardName !== activeBoardId,
+                      ),
             ),
-        [activeBoardId, customTasks, filteredDays, isOrganizationScope],
+        [activeBoardId, isOrganizationScope, sourceTasks],
     );
+
     const filteredTasks = useMemo(
         () =>
             allTasks.filter((task) => {
@@ -217,30 +362,53 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                 const matchesTag =
                     selectedTag === 'all'
                         ? true
-                        : task.tags.includes(selectedTag);
+                        : task.tags.some((tag) => tag.id === selectedTag);
 
                 return matchesSearch && matchesStatus && matchesTag;
             }),
         [allTasks, searchQuery, selectedStatus, selectedTag],
     );
+
     const statusOptions = useMemo(
         () => [...new Set(allTasks.map((task) => task.status))].sort(),
         [allTasks],
     );
-    const tagOptions = useMemo(
-        () => [...new Set(allTasks.flatMap((task) => task.tags))].sort(),
-        [allTasks],
-    );
+    const tagOptions = useMemo(() => {
+        const tagMap = new Map<string, { label: string; value: string }>();
+
+        allTasks.forEach((task) => {
+            task.tags.forEach((tag) => {
+                if (!tagMap.has(tag.id)) {
+                    const label =
+                        isOrganizationScope &&
+                        selectedProjectId === 'all' &&
+                        tag.projectName
+                            ? `${tag.name} · ${tag.projectName}`
+                            : tag.name;
+
+                    tagMap.set(tag.id, {
+                        label,
+                        value: tag.id,
+                    });
+                }
+            });
+        });
+
+        return [...tagMap.values()].sort((left, right) =>
+            left.label.localeCompare(right.label, 'ru-RU'),
+        );
+    }, [allTasks, isOrganizationScope, selectedProjectId]);
     const [anchorDate, setAnchorDate] = useState<Date>(() =>
-        getInitialAnchorDate(filteredTasks),
+        getTodayAnchorDate(),
     );
     const [selectedRange, setSelectedRange] = useState<DateRange>(() =>
-        getInitialRange(filteredTasks),
+        getTodayRange(),
     );
     const sortedTasks = useMemo(
         () => sortTasks(filteredTasks, activeSortMode),
         [activeSortMode, filteredTasks],
     );
+
     const periodTasks = useMemo(() => {
         if (activeViewMode === 'Неделя') {
             const weekStart = startOfWeek(anchorDate);
@@ -297,12 +465,13 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         selectedRange.to,
         sortedTasks,
     ]);
+
     const days = useMemo<DayTasks[]>(() => {
         const weekStart = startOfWeek(anchorDate);
 
         return Array.from({ length: 7 }, (_, index) => {
             const date = addDays(weekStart, index);
-            const columnId = date.toISOString().slice(0, 10);
+            const columnId = formatDateKey(date);
             const dayTasks = periodTasks
                 .filter((task) => {
                     const dueDate = task.dueDate
@@ -310,8 +479,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                         : null;
 
                     return (
-                        dueDate !== null &&
-                        dueDate.toISOString().slice(0, 10) === columnId
+                        dueDate !== null && formatDateKey(dueDate) === columnId
                     );
                 })
                 .map((task, taskIndex) => ({
@@ -328,6 +496,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
             };
         });
     }, [anchorDate, periodTasks]);
+
     const totalTasks = useMemo(() => periodTasks.length, [periodTasks]);
     const boardTasks = useMemo(() => periodTasks, [periodTasks]);
     const periodInfo = useMemo(() => {
@@ -371,16 +540,28 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         };
     }, [activeViewMode, anchorDate, selectedRange.from, selectedRange.to]);
 
-    React.useEffect(() => {
-        setAnchorDate(getInitialAnchorDate(allTasks));
-        setSelectedRange(getInitialRange(allTasks));
-    }, [
-        activeProjectId,
-        allTasks,
-        allTasks.length,
-        isOrganizationScope,
-        organizationProjectFilter,
-    ]);
+    useEffect(() => {
+        window.localStorage.setItem(HOME_VIEW_MODE_STORAGE_KEY, activeViewMode);
+    }, [activeViewMode]);
+
+    useEffect(() => {
+        window.localStorage.setItem(HOME_SORT_MODE_STORAGE_KEY, activeSortMode);
+    }, [activeSortMode]);
+
+    useEffect(() => {
+        window.localStorage.setItem(HOME_SEARCH_QUERY_STORAGE_KEY, searchQuery);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        window.localStorage.setItem(
+            HOME_SELECTED_STATUS_STORAGE_KEY,
+            selectedStatus,
+        );
+    }, [selectedStatus]);
+
+    useEffect(() => {
+        window.localStorage.setItem(HOME_SELECTED_TAG_STORAGE_KEY, selectedTag);
+    }, [selectedTag]);
 
     const handleResetFilters = () => {
         setSearchQuery('');
@@ -391,10 +572,8 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const handlePreviousPeriod = () => {
         if (activeViewMode === 'Доски') {
             setSelectedRange((currentRange) => {
-                const { from: fromDate, to: toDate } = getResolvedRange(
-                    currentRange,
-                    allTasks,
-                );
+                const { from: fromDate, to: toDate } =
+                    getResolvedRange(currentRange);
                 const rangeLength = Math.max(
                     1,
                     Math.round(
@@ -421,10 +600,8 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
     const handleNextPeriod = () => {
         if (activeViewMode === 'Доски') {
             setSelectedRange((currentRange) => {
-                const { from: fromDate, to: toDate } = getResolvedRange(
-                    currentRange,
-                    allTasks,
-                );
+                const { from: fromDate, to: toDate } =
+                    getResolvedRange(currentRange);
                 const rangeLength = Math.max(
                     1,
                     Math.round(
@@ -450,216 +627,560 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
 
     const handleResetPeriod = () => {
         if (activeViewMode === 'Доски') {
-            setSelectedRange(getInitialRange(allTasks));
+            setSelectedRange(getTodayRange());
             return;
         }
 
-        setAnchorDate(getInitialAnchorDate(allTasks));
-    };
-
-    const createTask = (
-        title: string,
-        overrides: Partial<Task> &
-            Pick<Task, 'columnId' | 'project' | 'projectSlug'>,
-    ) => {
-        const dueDate =
-            overrides.dueDate ?? `${overrides.columnId}T09:00:00.000Z`;
-        const dueDateValue = normalizeDate(dueDate);
-        const nextId =
-            Math.max(
-                0,
-                ...organizationTaskDays.flatMap((day) =>
-                    day.tasks.map((task) => task.id),
-                ),
-                ...customTasks.map((task) => task.id),
-            ) + 1;
-
-        setCustomTasks((currentTasks) => [
-            ...currentTasks,
-            {
-                id: nextId,
-                title,
-                columnId: overrides.columnId,
-                position: overrides.position ?? '1000',
-                project: overrides.project,
-                projectSlug: overrides.projectSlug,
-                boardId: overrides.boardId ?? activeBoardId,
-                dueDate,
-                dueInDays:
-                    dueDateValue === null
-                        ? 0
-                        : Math.max(
-                              0,
-                              Math.ceil(
-                                  (dueDateValue.getTime() - Date.now()) /
-                                      (24 * 60 * 60 * 1000),
-                              ),
-                          ),
-                status: overrides.status ?? 'todo',
-                tags: overrides.tags ?? ['new'],
-                priority: overrides.priority ?? 3,
-                description: overrides.description,
-                projectId: overrides.projectId,
-                assigneeId: overrides.assigneeId,
-                storyPoints: overrides.storyPoints,
-            },
-        ]);
-    };
-
-    const handleCreateWeeklyTask = (columnId: string, title: string) => {
-        const visibleProject = projects.find(
-            (project) => project.id === activeProjectId,
-        );
-
-        createTask(title, {
-            columnId,
-            dueDate: `${columnId}T09:00:00.000Z`,
-            boardId: activeBoardId,
-            project: visibleProject?.name ?? 'Project',
-            projectSlug: activeProjectId,
-            status: 'todo',
-            tags: ['new'],
-        });
-    };
-
-    const handleCreateBoardTask = (columnId: string, title: string) => {
-        const visibleProject = projects.find(
-            (project) => project.id === activeProjectId,
-        );
-        const monthAnchor = startOfMonth(anchorDate);
-        const dueDate = `${monthAnchor.toISOString().slice(0, 10)}T09:00:00.000Z`;
-
-        createTask(title, {
-            columnId,
-            dueDate,
-            boardId: activeBoardId,
-            project: visibleProject?.name ?? 'Project',
-            projectSlug: activeProjectId,
-            status:
-                columnId === 'todo' ||
-                columnId === 'in progress' ||
-                columnId === 'review'
-                    ? columnId
-                    : 'todo',
-            tags: ['new'],
-        });
+        setAnchorDate(getTodayAnchorDate());
     };
 
     return (
         <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-            {!isOrganizationScope && activeProjectTab === 'Обзор' ? (
-                <Overview />
-            ) : (
-                <>
-                    <div className="shrink-0 border-b border-border bg-background px-3 py-2">
-                        {isOrganizationScope ? (
-                            <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-1 pt-1">
-                                <div>
-                                    <h1 className="text-xl font-semibold text-foreground">
-                                        Все задачи
-                                    </h1>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Задачи из всех проектов организации в
-                                        одном представлении.
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-                                    {totalTasks} задач
-                                </div>
-                            </div>
-                        ) : null}
-                        <Header
-                            activeViewMode={activeViewMode}
-                            onViewModeChange={setActiveViewMode}
-                            activeSortMode={activeSortMode}
-                            onSortModeChange={setActiveSortMode}
-                            searchQuery={searchQuery}
-                            onSearchQueryChange={setSearchQuery}
-                            selectedStatus={selectedStatus}
-                            onSelectedStatusChange={setSelectedStatus}
-                            selectedTag={selectedTag}
-                            onSelectedTagChange={setSelectedTag}
-                            statusOptions={statusOptions}
-                            tagOptions={tagOptions}
-                            onResetFilters={handleResetFilters}
-                            projectOptions={
-                                isOrganizationScope ? projects : undefined
-                            }
-                            selectedProjectId={
-                                isOrganizationScope
-                                    ? organizationProjectFilter
-                                    : undefined
-                            }
-                            onProjectChange={
-                                isOrganizationScope
-                                    ? setOrganizationProjectFilter
-                                    : undefined
-                            }
-                            periodTitle={periodInfo.title}
-                            periodSubtitle={periodInfo.subtitle}
-                            selectedDate={anchorDate}
-                            selectedRange={selectedRange}
-                            onSelectedDateChange={(date) => {
-                                if (date) {
-                                    if (activeViewMode === 'Месяц') {
-                                        setAnchorDate(startOfMonth(date));
-                                        return;
-                                    }
-
-                                    setAnchorDate(date);
-                                }
-                            }}
-                            onSelectedRangeChange={(range) => {
-                                if (range?.from) {
-                                    setSelectedRange({
-                                        from: range.from,
-                                        to: range.to ?? range.from,
-                                    });
-                                } else {
-                                    setSelectedRange(getInitialRange(allTasks));
-                                }
-                            }}
-                            onPreviousPeriod={handlePreviousPeriod}
-                            onNextPeriod={handleNextPeriod}
-                            onResetPeriod={handleResetPeriod}
-                            settings={headerSettings}
-                            onSettingsChange={setHeaderSettings}
-                        />
+            <div className="shrink-0 border-b border-border bg-background px-3 py-2">
+                {isOrganizationScope ? (
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-1 pt-1">
+                        <div>
+                            <h1 className="text-xl font-semibold text-foreground">
+                                Все задачи
+                            </h1>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Задачи из всех проектов организации в одном
+                                представлении.
+                            </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+                            {totalTasks} задач
+                        </div>
                     </div>
-                    {activeViewMode === 'Доски' ? (
-                        <TasksBoard
-                            tasks={boardTasks}
-                            setIsOpen={setIsOpen}
-                            setSelectedTask={setSelectedTask}
-                            onCreateTask={handleCreateBoardTask}
-                            settings={headerSettings}
-                        />
-                    ) : activeViewMode === 'Месяц' ? (
-                        <MonthBoard
-                            tasks={boardTasks}
-                            anchorDate={anchorDate}
-                            setIsOpen={setIsOpen}
-                            setSelectedTask={setSelectedTask}
-                            settings={headerSettings}
-                        />
-                    ) : (
-                        <Board
-                            days={days}
-                            setIsOpen={setIsOpen}
-                            setSelectedTask={setSelectedTask}
-                            onCreateTask={handleCreateWeeklyTask}
-                            settings={headerSettings}
-                        />
-                    )}
-                    <TaskSheet
-                        isOpen={isOpen}
-                        selectedTask={selectedTask}
-                        setIsOpen={setIsOpen}
-                        setSelectedTask={setSelectedTask}
-                    />
-                </>
+                ) : null}
+
+                {loading ? (
+                    <div className="mb-3 px-1">
+                        <Badge
+                            variant="subtle"
+                            className="bg-muted px-3 py-1.5"
+                        >
+                            Загрузка задач...
+                        </Badge>
+                    </div>
+                ) : null}
+
+                {taskLoadError ? (
+                    <div className="mb-3 px-1">
+                        <Badge
+                            variant="outline"
+                            className="border-destructive/30 px-3 py-1.5 text-destructive"
+                        >
+                            {taskLoadError}
+                        </Badge>
+                    </div>
+                ) : null}
+
+                {createTaskError ? (
+                    <div className="mb-3 px-1">
+                        <Badge
+                            variant="outline"
+                            className="border-destructive/30 px-3 py-1.5 text-destructive"
+                        >
+                            {createTaskError}
+                        </Badge>
+                    </div>
+                ) : null}
+
+                {taskActionDebug ? (
+                    <div className="mb-3 px-1">
+                        <Badge
+                            variant="outline"
+                            className="max-w-full whitespace-normal break-all px-3 py-1.5 text-muted-foreground"
+                        >
+                            {taskActionDebug}
+                        </Badge>
+                    </div>
+                ) : null}
+
+                {isCreatingTask ? (
+                    <div className="mb-3 px-1">
+                        <Badge
+                            variant="subtle"
+                            className="bg-muted px-3 py-1.5"
+                        >
+                            Создание задачи...
+                        </Badge>
+                    </div>
+                ) : null}
+
+                <Header
+                    activeViewMode={activeViewMode}
+                    onViewModeChange={setActiveViewMode}
+                    activeSortMode={activeSortMode}
+                    onSortModeChange={setActiveSortMode}
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                    selectedStatus={selectedStatus}
+                    onSelectedStatusChange={setSelectedStatus}
+                    selectedTag={selectedTag}
+                    onSelectedTagChange={setSelectedTag}
+                    statusOptions={statusOptions}
+                    tagOptions={tagOptions}
+                    onResetFilters={handleResetFilters}
+                    projectOptions={isOrganizationScope ? projects : undefined}
+                    selectedProjectId={
+                        isOrganizationScope ? selectedProjectId : undefined
+                    }
+                    onProjectChange={
+                        isOrganizationScope
+                            ? onSelectedProjectIdChange
+                            : undefined
+                    }
+                    periodTitle={periodInfo.title}
+                    periodSubtitle={periodInfo.subtitle}
+                    selectedDate={anchorDate}
+                    selectedRange={selectedRange}
+                    onSelectedDateChange={(date) => {
+                        if (date) {
+                            if (activeViewMode === 'Месяц') {
+                                setAnchorDate(startOfMonth(date));
+                                return;
+                            }
+
+                            setAnchorDate(date);
+                        }
+                    }}
+                    onSelectedRangeChange={(range) => {
+                        if (range?.from) {
+                            setSelectedRange({
+                                from: range.from,
+                                to: range.to ?? range.from,
+                            });
+                        } else {
+                            setSelectedRange(getTodayRange());
+                        }
+                    }}
+                    onPreviousPeriod={handlePreviousPeriod}
+                    onNextPeriod={handleNextPeriod}
+                    onResetPeriod={handleResetPeriod}
+                    settings={headerSettings}
+                    onSettingsChange={setHeaderSettings}
+                />
+            </div>
+            {activeViewMode === 'Доски' ? (
+                <TasksBoard
+                    tasks={boardTasks}
+                    setIsOpen={setIsOpen}
+                    setSelectedTask={setSelectedTask}
+                    columns={boardColumns}
+                    onCreateTask={
+                        canShowTaskCreate ? onCreateBoardTask : undefined
+                    }
+                    onMoveTask={canCreateTasks ? onMoveBoardTask : undefined}
+                    settings={headerSettings}
+                />
+            ) : activeViewMode === 'Месяц' ? (
+                <MonthBoard
+                    tasks={boardTasks}
+                    anchorDate={anchorDate}
+                    setIsOpen={setIsOpen}
+                    setSelectedTask={setSelectedTask}
+                    onMoveTask={onMoveScheduledTask}
+                    settings={headerSettings}
+                />
+            ) : (
+                <Board
+                    days={days}
+                    setIsOpen={setIsOpen}
+                    setSelectedTask={setSelectedTask}
+                    onCreateTask={
+                        canShowTaskCreate ? onCreateWeeklyTask : undefined
+                    }
+                    onMoveTask={
+                        onMoveScheduledTask
+                            ? ({ taskId, columnId, position }) =>
+                                  onMoveScheduledTask({
+                                      taskId,
+                                      dueDate: `${columnId}T09:00:00.000Z`,
+                                      position,
+                                  })
+                            : undefined
+                    }
+                    dragEnabled
+                    settings={headerSettings}
+                />
             )}
+            <TaskSheet
+                isOpen={isOpen}
+                selectedTask={selectedTask}
+                setIsOpen={setIsOpen}
+                setSelectedTask={setSelectedTask}
+            />
         </div>
+    );
+};
+
+const HomePage = ({ scope = 'project' }: HomePageProps) => {
+    const queryClient = useQueryClient();
+    const { activeProjectTab } = useProjectTab();
+    const { activeBoardId, activeProjectId, projects } = useActiveProject();
+    const isOrganizationScope = scope === 'organization';
+    const [organizationProjectFilter, setOrganizationProjectFilter] =
+        useState<string>('all');
+    const [taskActionError, setTaskActionError] = useState<string | null>(null);
+    const [taskActionDebug, setTaskActionDebug] = useState<string | null>(null);
+
+    const tasksQuery = useQuery({
+        queryKey: ['tasks', 'all'],
+        queryFn: () => getTasks(),
+    });
+    const boardsQuery = useQuery({
+        queryKey: ['boards', activeProjectId],
+        queryFn: () => getBoards(activeProjectId),
+        enabled: !isOrganizationScope && Boolean(activeProjectId),
+    });
+
+    const activeBoard = useMemo(
+        () =>
+            (boardsQuery.data ?? []).find(
+                (board) =>
+                    board.id === activeBoardId || board.name === activeBoardId,
+            ) ??
+            (boardsQuery.data ?? [])[0] ??
+            null,
+        [activeBoardId, boardsQuery.data],
+    );
+
+    const columnsQuery = useQuery({
+        queryKey: ['columns', activeBoard?.id],
+        queryFn: () => getColumns(activeBoard?.id as string),
+        enabled: Boolean(activeBoard?.id),
+    });
+
+    const liveTasks = useMemo(
+        () => (tasksQuery.data ?? []).map(mapTaskResponseToTask),
+        [tasksQuery.data],
+    );
+    const boardColumns = useMemo(
+        () =>
+            (columnsQuery.data ?? []).map((column) => ({
+                id: column.id,
+                name: column.name,
+            })),
+        [columnsQuery.data],
+    );
+
+    const createTaskMutation = useMutation({
+        mutationFn: createTask,
+        onMutate: async () => {
+            setTaskActionError(null);
+        },
+        onSuccess: async (createdTask) => {
+            console.log('createTask: success', createdTask);
+            setTaskActionDebug(
+                `createTask: success; taskId=${createdTask.id}; boardId=${createdTask.boardId}; columnId=${createdTask.columnId}`,
+            );
+            await queryClient.invalidateQueries({
+                queryKey: ['tasks'],
+            });
+            await queryClient.refetchQueries({
+                queryKey: ['tasks'],
+            });
+        },
+        onError: (error) => {
+            console.error('createTask: failed', error);
+        },
+    });
+    const moveTaskMutation = useMutation({
+        mutationFn: ({
+            taskId,
+            columnId,
+            position,
+        }: {
+            taskId: string;
+            columnId: string;
+            position: number;
+        }) => moveTask(taskId, { columnId, position }),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: ['tasks'],
+            });
+        },
+    });
+    const updateScheduledTaskMutation = useMutation({
+        mutationFn: ({
+            taskId,
+            dueDate,
+            position,
+        }: {
+            taskId: string;
+            dueDate: string;
+            position: number;
+        }) => updateTask(taskId, { dueDate, position }),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: ['tasks'],
+            });
+        },
+    });
+
+    const sourceTasks = useMemo(
+        () =>
+            selectTasksForScope({
+                activeBoardId,
+                activeProjectId,
+                isOrganizationScope,
+                selectedProjectId: organizationProjectFilter,
+                tasks: liveTasks,
+            }),
+        [
+            activeBoardId,
+            activeProjectId,
+            isOrganizationScope,
+            liveTasks,
+            organizationProjectFilter,
+        ],
+    );
+
+    const canCreateTasks =
+        !isOrganizationScope &&
+        Boolean(activeProjectId) &&
+        Boolean(activeBoard?.id) &&
+        boardColumns.length > 0;
+
+    const resolveCreateContext = async () => {
+        if (isOrganizationScope || !activeProjectId) {
+            const debugMessage =
+                'createTask: skipped because no active project or organization scope';
+            console.warn(debugMessage, {
+                isOrganizationScope,
+                activeProjectId,
+            });
+            setTaskActionDebug(debugMessage);
+            return null;
+        }
+
+        const boards =
+            boardsQuery.data ??
+            (await queryClient.fetchQuery({
+                queryKey: ['boards', activeProjectId],
+                queryFn: () => getBoards(activeProjectId),
+            })) ??
+            [];
+
+        console.log('createTask: boards resolved', {
+            activeProjectId,
+            activeBoardId,
+            boardsCount: boards.length,
+            boards,
+        });
+
+        const resolvedBoard =
+            boards.find(
+                (board) =>
+                    board.id === activeBoardId || board.name === activeBoardId,
+            ) ??
+            boards[0] ??
+            null;
+
+        if (!resolvedBoard) {
+            const debugMessage = `createTask: no board resolved; boards=${boards.length}; activeBoardId=${activeBoardId}`;
+            console.warn(debugMessage);
+            setTaskActionDebug(debugMessage);
+            return null;
+        }
+
+        const columns =
+            resolvedBoard.id === activeBoard?.id && columnsQuery.data
+                ? columnsQuery.data
+                : await queryClient.fetchQuery({
+                      queryKey: ['columns', resolvedBoard.id],
+                      queryFn: () => getColumns(resolvedBoard.id),
+                  });
+
+        console.log('createTask: columns resolved', {
+            resolvedBoardId: resolvedBoard.id,
+            resolvedBoardName: resolvedBoard.name,
+            columnsCount: columns.length,
+            columns,
+        });
+
+        const resolvedColumn = columns[0] ?? null;
+
+        if (!resolvedColumn) {
+            const debugMessage = `createTask: no column resolved; board=${resolvedBoard.name}; boardId=${resolvedBoard.id}; columns=${columns.length}`;
+            console.warn(debugMessage);
+            setTaskActionDebug(debugMessage);
+            return null;
+        }
+
+        setTaskActionDebug(
+            `createTask: board=${resolvedBoard.name}; boardId=${resolvedBoard.id}; column=${resolvedColumn.name}; columnId=${resolvedColumn.id}`,
+        );
+
+        return {
+            boardId: resolvedBoard.id,
+            columnId: resolvedColumn.id,
+        };
+    };
+
+    const handleCreateWeeklyTask = (
+        dateKey: string,
+        title: string,
+        isPrivate: boolean,
+    ) => {
+        void (async () => {
+            try {
+                const createContext = await resolveCreateContext();
+
+                if (!createContext) {
+                    setTaskActionError(
+                        'Не удалось определить активную доску или колонку для создания задачи.',
+                    );
+                    return;
+                }
+
+                setTaskActionError(null);
+                console.log('createTask: weekly mutate', {
+                    title,
+                    dateKey,
+                    isPrivate,
+                    createContext,
+                });
+                await createTaskMutation.mutateAsync({
+                    title,
+                    dueDate: `${dateKey}T09:00:00.000Z`,
+                    isPrivate,
+                    projectId: activeProjectId,
+                    boardId: createContext.boardId,
+                    columnId: createContext.columnId,
+                });
+            } catch (error) {
+                console.error('createTask: weekly mutate failed', error);
+            }
+        })();
+    };
+
+    const handleCreateBoardTask = (
+        columnId: string,
+        title: string,
+        isPrivate: boolean,
+    ) => {
+        void (async () => {
+            try {
+                const createContext = await resolveCreateContext();
+
+                if (!createContext) {
+                    setTaskActionError(
+                        'Не удалось определить активную доску или колонку для создания задачи.',
+                    );
+                    return;
+                }
+
+                setTaskActionError(null);
+
+                const resolvedColumnId =
+                    boardColumns.find((column) => column.id === columnId)?.id ??
+                    columnId ??
+                    createContext.columnId;
+
+                console.log('createTask: board mutate', {
+                    title,
+                    inputColumnId: columnId,
+                    resolvedColumnId,
+                    isPrivate,
+                    createContext,
+                });
+                await createTaskMutation.mutateAsync({
+                    title,
+                    dueDate: new Date().toISOString(),
+                    isPrivate,
+                    projectId: activeProjectId,
+                    boardId: createContext.boardId,
+                    columnId: resolvedColumnId,
+                });
+            } catch (error) {
+                console.error('createTask: board mutate failed', error);
+            }
+        })();
+    };
+
+    const handleMoveBoardTask = ({
+        taskId,
+        columnId,
+        position,
+    }: {
+        taskId: string;
+        columnId: string;
+        position: number;
+    }) => {
+        if (!canCreateTasks) {
+            setTaskActionError(
+                'Не удалось переместить задачу: активная доска или колонки не загружены.',
+            );
+            return;
+        }
+
+        moveTaskMutation.mutate({
+            taskId,
+            columnId,
+            position,
+        });
+    };
+
+    const handleMoveScheduledTask = ({
+        taskId,
+        dueDate,
+        position,
+    }: {
+        taskId: string;
+        dueDate: string;
+        position: number;
+    }) => {
+        updateScheduledTaskMutation.mutate({
+            taskId,
+            dueDate,
+            position,
+        });
+    };
+
+    if (!isOrganizationScope && activeProjectTab === 'Обзор') {
+        return (
+            <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
+                <Overview />
+            </div>
+        );
+    }
+
+    return (
+        <HomePageContent
+            key={`${scope}:${activeProjectId}:${activeBoardId}:${organizationProjectFilter}`}
+            activeBoardId={activeBoardId}
+            boardColumns={boardColumns}
+            createTaskError={
+                createTaskMutation.error instanceof Error
+                    ? createTaskMutation.error.message
+                    : moveTaskMutation.error instanceof Error
+                      ? moveTaskMutation.error.message
+                      : updateScheduledTaskMutation.error instanceof Error
+                        ? updateScheduledTaskMutation.error.message
+                        : taskActionError
+            }
+            taskActionDebug={taskActionDebug}
+            canCreateTasks={canCreateTasks}
+            isOrganizationScope={isOrganizationScope}
+            isCreatingTask={createTaskMutation.isPending}
+            loading={tasksQuery.isLoading}
+            projects={projects}
+            selectedProjectId={organizationProjectFilter}
+            sourceTasks={sourceTasks}
+            taskLoadError={
+                tasksQuery.error instanceof Error
+                    ? tasksQuery.error.message
+                    : null
+            }
+            onCreateBoardTask={handleCreateBoardTask}
+            onCreateWeeklyTask={handleCreateWeeklyTask}
+            onMoveBoardTask={handleMoveBoardTask}
+            onMoveScheduledTask={handleMoveScheduledTask}
+            onSelectedProjectIdChange={setOrganizationProjectFilter}
+        />
     );
 };
 

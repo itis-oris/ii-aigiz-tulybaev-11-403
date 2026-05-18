@@ -1,14 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronsUpDown, FolderPlus, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronsUpDown, FolderPlus, ImageUp, X } from 'lucide-react';
+import { ApiError, getUsers, type ProjectStatus } from '@/shared/api';
 import { Button, Input } from '@/shared/ui';
-import { useI18n, type ProjectFolder, type ProjectSummary } from '@/shared/lib';
+import {
+    useCurrentUser,
+    useI18n,
+    type ProjectFolder,
+    type ProjectSummary,
+} from '@/shared/lib';
+import { getImageUploadError, MAX_IMAGE_SIZE_MB } from '@/shared/lib/utils';
 
 type CreateProjectDialogProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSubmit: (project: ProjectSummary) => void;
+    onSubmit: (project: ProjectSummary) => Promise<void> | void;
     projectCount: number;
     folders: ProjectFolder[];
 };
@@ -53,9 +61,61 @@ const CreateProjectDialog = ({
     folders,
 }: CreateProjectDialogProps) => {
     const { t } = useI18n();
+    const { data: currentUser } = useCurrentUser();
+    const canManageUsers = Boolean(
+        currentUser?.roles.some(
+            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
+        ),
+    );
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [folderId, setFolderId] = useState('none');
+    const [status, setStatus] = useState<ProjectStatus>('PLANNING');
+    const [ownerId, setOwnerId] = useState('');
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [imageError, setImageError] = useState<string | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const usersQuery = useQuery({
+        queryKey: ['users'],
+        queryFn: getUsers,
+        enabled: open && canManageUsers,
+        retry: false,
+    });
+
+    const ownerOptions = useMemo(() => {
+        const currentUserOption = currentUser
+            ? {
+                  id: currentUser.userId,
+                  label:
+                      [currentUser.firstname, currentUser.lastname]
+                          .filter(Boolean)
+                          .join(' ')
+                          .trim() || currentUser.email,
+              }
+            : null;
+
+        const fetchedOptions = (usersQuery.data ?? []).map((user) => ({
+            id: user.id,
+            label:
+                [user.firstname, user.lastname]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() || user.email,
+        }));
+
+        const uniqueOptions = new Map<string, { id: string; label: string }>();
+
+        if (currentUserOption) {
+            uniqueOptions.set(currentUserOption.id, currentUserOption);
+        }
+
+        fetchedOptions.forEach((option) => {
+            uniqueOptions.set(option.id, option);
+        });
+
+        return [...uniqueOptions.values()];
+    }, [currentUser, usersQuery.data]);
 
     const handleOpenChange = useCallback(
         (nextOpen: boolean) => {
@@ -63,11 +123,19 @@ const CreateProjectDialog = ({
                 setName('');
                 setDescription('');
                 setFolderId('none');
+                setStatus('PLANNING');
+                setOwnerId('');
+                setSelectedImage(null);
+                setImageError(null);
+                setSubmitError(null);
+                setIsSubmitting(false);
+            } else {
+                setOwnerId(currentUser?.userId ?? '');
             }
 
             onOpenChange(nextOpen);
         },
-        [onOpenChange],
+        [currentUser?.userId, onOpenChange],
     );
 
     useEffect(() => {
@@ -141,18 +209,55 @@ const CreateProjectDialog = ({
                 </div>
 
                 <div className="space-y-5 px-5 py-4">
-                    <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/50 px-4 py-3">
-                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground">
-                            {previewInitials}
-                        </div>
-                        <div className="min-w-0">
-                            <div className="text-sm font-medium text-foreground">
-                                {trimmedName || t('dialogs.newProject')}
-                            </div>
-                            <div className="mt-1 text-sm text-muted-foreground">
-                                {t('dialogs.projectPreview')}
-                            </div>
-                        </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground mr-4">
+                            Изображение проекта
+                        </label>
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-input/20 px-3 py-2 text-sm text-foreground transition-colors hover:border-ring">
+                            <ImageUp className="size-4" />
+                            <span className="truncate">
+                                {selectedImage
+                                    ? selectedImage.name
+                                    : 'Выбрать файл'}
+                            </span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="sr-only"
+                                disabled={isSubmitting}
+                                onChange={(event) => {
+                                    const file =
+                                        event.target.files?.[0] ?? null;
+
+                                    if (!file) {
+                                        setSelectedImage(null);
+                                        setImageError(null);
+                                        return;
+                                    }
+
+                                    const nextImageError =
+                                        getImageUploadError(file);
+
+                                    if (nextImageError) {
+                                        setSelectedImage(null);
+                                        setImageError(nextImageError);
+                                        event.target.value = '';
+                                        return;
+                                    }
+
+                                    setSelectedImage(file);
+                                    setImageError(null);
+                                }}
+                            />
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                            Максимум {MAX_IMAGE_SIZE_MB} МБ
+                        </p>
+                        {imageError ? (
+                            <p className="text-sm text-destructive">
+                                {imageError}
+                            </p>
+                        ) : null}
                     </div>
 
                     <div className="space-y-2">
@@ -220,6 +325,72 @@ const CreateProjectDialog = ({
                             <ChevronsUpDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         </div>
                     </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <label
+                                htmlFor="project-status"
+                                className="text-sm font-medium text-foreground"
+                            >
+                                Статус
+                            </label>
+                            <select
+                                id="project-status"
+                                value={status}
+                                onChange={(event) =>
+                                    setStatus(
+                                        event.target.value as ProjectStatus,
+                                    )
+                                }
+                                className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 px-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
+                            >
+                                <option value="PLANNING">Планирование</option>
+                                <option value="ACTIVE">В работе</option>
+                                <option value="ON_HOLD">На паузе</option>
+                                <option value="COMPLETED">Завершен</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label
+                                htmlFor="project-owner"
+                                className="text-sm font-medium text-foreground"
+                            >
+                                Владелец
+                            </label>
+                            <select
+                                id="project-owner"
+                                value={ownerId}
+                                onChange={(event) =>
+                                    setOwnerId(event.target.value)
+                                }
+                                disabled={
+                                    usersQuery.isLoading &&
+                                    ownerOptions.length === 0
+                                }
+                                className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-input bg-input/20 px-3 text-sm text-foreground outline-none transition-colors hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                <option value="">
+                                    {usersQuery.isLoading
+                                        ? 'Загрузка...'
+                                        : ownerOptions.length > 0
+                                          ? 'Выберите владельца'
+                                          : 'Нет доступных участников'}
+                                </option>
+                                {ownerOptions.map((owner) => (
+                                    <option key={owner.id} value={owner.id}>
+                                        {owner.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {usersQuery.isError ? (
+                        <p className="text-sm text-destructive">
+                            Не удалось загрузить участников организации
+                        </p>
+                    ) : null}
                 </div>
 
                 <div className="flex flex-col-reverse gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
@@ -229,6 +400,7 @@ const CreateProjectDialog = ({
                         size="xl"
                         className="rounded-xl px-6"
                         onClick={() => handleOpenChange(false)}
+                        disabled={isSubmitting}
                     >
                         {t('common.cancel')}
                     </Button>
@@ -236,8 +408,8 @@ const CreateProjectDialog = ({
                         type="button"
                         size="xl"
                         className="rounded-xl px-6"
-                        disabled={!canSubmit}
-                        onClick={() => {
+                        disabled={!canSubmit || isSubmitting}
+                        onClick={async () => {
                             const nextProject: ProjectSummary = {
                                 id: `project-${Date.now()}`,
                                 name: trimmedName,
@@ -252,20 +424,40 @@ const CreateProjectDialog = ({
                                     description.trim() ||
                                     t('dialogs.newWorkspaceProject'),
                                 boardTabs: normalizeBoardTabs(trimmedName),
-                                lifecycleStatus: 'active',
+                                status,
                                 memberCount: 1,
+                                imageFile: selectedImage,
+                                ownerId: ownerId || undefined,
                                 folderId:
                                     folderId === 'none' ? undefined : folderId,
                             };
 
-                            onSubmit(nextProject);
-                            handleOpenChange(false);
+                            setSubmitError(null);
+                            setIsSubmitting(true);
+
+                            try {
+                                await onSubmit(nextProject);
+                                handleOpenChange(false);
+                            } catch (error) {
+                                setSubmitError(
+                                    error instanceof ApiError
+                                        ? error.message
+                                        : 'Не удалось создать проект',
+                                );
+                            } finally {
+                                setIsSubmitting(false);
+                            }
                         }}
                     >
                         <FolderPlus className="size-4" />
                         {t('dialogs.createProject')}
                     </Button>
                 </div>
+                {submitError ? (
+                    <div className="border-t border-border px-5 py-3 text-sm text-destructive">
+                        {submitError}
+                    </div>
+                ) : null}
             </div>
         </div>
     );

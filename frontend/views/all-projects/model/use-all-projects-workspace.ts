@@ -9,43 +9,69 @@ import {
 } from '@/shared/lib';
 import type { ProjectListItem } from '@/views/all-projects/ui/project-list-item';
 
-const projectOwners = [
-    {
-        ownerName: 'Расиль',
-        ownerInitials: 'Р',
-        ownerClassName: 'bg-slate-100 text-slate-600',
-        status: 'В работе' as const,
-        dateLabel: '-',
-    },
-    {
-        ownerName: 'София',
-        ownerInitials: 'С',
-        ownerClassName: 'bg-sky-100 text-sky-700',
-        status: 'В работе' as const,
-        dateLabel: '12 мая',
-    },
-    {
-        ownerName: 'Анна',
-        ownerInitials: 'А',
-        ownerClassName: 'bg-emerald-100 text-emerald-700',
-        status: 'Планирование' as const,
-        dateLabel: '18 мая',
-    },
-    {
-        ownerName: 'Илья',
-        ownerInitials: 'И',
-        ownerClassName: 'bg-violet-100 text-violet-700',
-        status: 'В работе' as const,
-        dateLabel: '24 мая',
-    },
-];
+const projectDateFormatter = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+});
 
-const fallbackOwner = {
-    ownerName: 'Артем',
-    ownerInitials: 'А',
-    ownerClassName: 'bg-zinc-100 text-zinc-700',
-    status: 'Планирование' as const,
-    dateLabel: 'Сегодня',
+const ownerAccentPalette = [
+    'bg-slate-100 text-slate-600',
+    'bg-sky-100 text-sky-700',
+    'bg-emerald-100 text-emerald-700',
+    'bg-violet-100 text-violet-700',
+    'bg-rose-100 text-rose-700',
+    'bg-cyan-100 text-cyan-700',
+] as const;
+
+const getOwnerName = (project: ProjectSummary) =>
+    project.ownerName || project.ownerEmail || 'Без владельца';
+
+const getOwnerInitials = (ownerName: string) =>
+    ownerName
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('')
+        .slice(0, 2) || 'PR';
+
+const getOwnerClassName = (seed: string) => {
+    const hash = [...seed].reduce(
+        (accumulator, char) => accumulator + char.charCodeAt(0),
+        0,
+    );
+
+    return ownerAccentPalette[hash % ownerAccentPalette.length];
+};
+
+const getStatusLabel = (
+    status: ProjectSummary['status'],
+): ProjectListItem['statusLabel'] => {
+    switch (status) {
+        case 'ACTIVE':
+            return 'В работе';
+        case 'ON_HOLD':
+            return 'На паузе';
+        case 'COMPLETED':
+            return 'Завершен';
+        case 'PLANNING':
+        default:
+            return 'Планирование';
+    }
+};
+
+const getDateLabel = (createdAt?: string) => {
+    if (!createdAt) {
+        return '-';
+    }
+
+    const parsedDate = new Date(createdAt);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return '-';
+    }
+
+    return projectDateFormatter.format(parsedDate);
 };
 
 export type GroupedProjectFolder = GroupedFolderProjects<ProjectListItem>;
@@ -54,7 +80,7 @@ type UseAllProjectsWorkspaceParams = {
     folders: ProjectFolder[];
     projects: ProjectSummary[];
     query: string;
-    statusFilter: 'all' | ProjectListItem['status'];
+    statusFilter: 'all' | ProjectListItem['statusLabel'];
     placementFilter: 'all' | 'foldered' | 'root';
 };
 
@@ -67,10 +93,20 @@ export const useAllProjectsWorkspace = ({
 }: UseAllProjectsWorkspaceParams) => {
     const projectItems = useMemo<ProjectListItem[]>(
         () =>
-            projects.map((project, index) => ({
-                ...project,
-                ...(projectOwners[index] ?? fallbackOwner),
-            })),
+            projects.map((project) => {
+                const ownerName = getOwnerName(project);
+                const ownerSeed =
+                    project.ownerId ?? project.ownerEmail ?? ownerName;
+
+                return {
+                    ...project,
+                    ownerName,
+                    ownerInitials: getOwnerInitials(ownerName),
+                    ownerClassName: getOwnerClassName(ownerSeed),
+                    statusLabel: getStatusLabel(project.status),
+                    dateLabel: getDateLabel(project.createdAt),
+                };
+            }),
         [projects],
     );
     const filteredProjectItems = useMemo(
@@ -79,7 +115,7 @@ export const useAllProjectsWorkspace = ({
                 const matchesStatus =
                     statusFilter === 'all'
                         ? true
-                        : project.status === statusFilter;
+                        : project.statusLabel === statusFilter;
                 const matchesPlacement =
                     placementFilter === 'all'
                         ? true
@@ -93,7 +129,9 @@ export const useAllProjectsWorkspace = ({
     );
     const statusOptions = useMemo(
         () =>
-            [...new Set(projectItems.map((project) => project.status))].sort(),
+            [
+                ...new Set(projectItems.map((project) => project.statusLabel)),
+            ].sort(),
         [projectItems],
     );
 
@@ -106,7 +144,7 @@ export const useAllProjectsWorkspace = ({
                 [
                     project.name,
                     project.ownerName,
-                    project.status,
+                    project.statusLabel,
                     project.boardTabs.join(' '),
                     project.description,
                 ]

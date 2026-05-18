@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -32,6 +33,8 @@ public class CreateTaskRequest {
 
     private OffsetDateTime dueDate;
 
+    private Boolean isPrivate;
+
     @NotNull
     private UUID projectId;
 
@@ -42,6 +45,8 @@ public class CreateTaskRequest {
     private UUID columnId;
 
     private UUID assigneeId;
+
+    private List<UUID> tagIds;
 
     @Min(0)
     private Long position;

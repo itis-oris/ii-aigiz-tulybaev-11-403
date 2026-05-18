@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
-import { myTasksGroups } from '@/views/my-tasks/model';
+import { myTasksGroups } from '@/views/my-tasks/model/mock';
 import MyTasksGroupSection from './my-tasks-group-section';
 
 const meta = {

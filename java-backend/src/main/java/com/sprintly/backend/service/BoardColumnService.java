@@ -28,10 +28,20 @@ public class BoardColumnService {
     private final BoardRepository boardRepository;
     private final BoardColumnMapper boardColumnMapper;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ColumnResponse> findAllByBoard(UUID boardId, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
-        return boardColumnRepository.findAllByBoard_IdAndDeletedAtIsNullOrderByPositionAsc(board.getId()).stream()
+        List<BoardColumn> columns = boardColumnRepository.findAllByBoard_IdAndDeletedAtIsNullOrderByPositionAsc(board.getId());
+
+        if (columns.isEmpty()) {
+            columns = List.of(
+                boardColumnRepository.save(BoardColumn.builder().name("Backlog").position(0L).board(board).build()),
+                boardColumnRepository.save(BoardColumn.builder().name("In Progress").position(1000L).board(board).build()),
+                boardColumnRepository.save(BoardColumn.builder().name("Done").position(2000L).board(board).build())
+            );
+        }
+
+        return columns.stream()
             .map(boardColumnMapper::toResponse)
             .toList();
     }

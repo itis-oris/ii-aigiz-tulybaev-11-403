@@ -1,8 +1,10 @@
 'use client';
 
+import React from 'react';
 import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react';
-import { Badge } from '@/shared/ui';
+import { Badge, Button, Input } from '@/shared/ui';
 import { cn } from '@/shared/lib';
+import { getTagBadgeStyle } from '@/shared/lib/tag-color/index';
 import { type Task } from '@/views/home/model/task';
 import type { DropPosition } from '@/views/home/model/use-month-board-dnd';
 import {
@@ -17,11 +19,12 @@ import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-h
 type MonthBoardGridProps = {
     monthStart: Date;
     weeks: CalendarCell[][];
-    draggingTaskId: number | null;
+    draggingTaskId: string | null;
     overDateKey: string | null;
-    overTaskId: number | null;
+    overTaskId: string | null;
     dropPosition: DropPosition;
     onOpen: (task: Task) => void;
+    onCreateTask?: (dateKey: string, title: string, isPrivate: boolean) => void;
     onDragStart: React.ComponentProps<typeof DragDropProvider>['onDragStart'];
     onDragMove: React.ComponentProps<typeof DragDropProvider>['onDragMove'];
     onDragOver: React.ComponentProps<typeof DragDropProvider>['onDragOver'];
@@ -31,7 +34,7 @@ type MonthBoardGridProps = {
 
 type MonthTaskCardProps = {
     task: Task;
-    draggingTaskId: number | null;
+    draggingTaskId: string | null;
     dropPosition: DropPosition;
     isOver: boolean;
     onOpen: (task: Task) => void;
@@ -98,17 +101,33 @@ const MonthTaskCard = ({
                         : ''}
                 </span>
             </div>
+            {task.tags.length ? (
+                <div className="pointer-events-none mt-1 flex flex-wrap gap-1">
+                    {task.tags.slice(0, 2).map((tag) => (
+                        <Badge
+                            key={tag.id}
+                            variant="outline"
+                            size="sm"
+                            style={getTagBadgeStyle(tag.color)}
+                            className="max-w-full"
+                        >
+                            <span className="truncate">{tag.name}</span>
+                        </Badge>
+                    ))}
+                </div>
+            ) : null}
         </button>
     );
 };
 
 type MonthDayCellProps = {
     cell: CalendarCell;
-    draggingTaskId: number | null;
+    draggingTaskId: string | null;
     dropPosition: DropPosition;
     overDateKey: string | null;
-    overTaskId: number | null;
+    overTaskId: string | null;
     onOpen: (task: Task) => void;
+    onCreateTask?: (dateKey: string, title: string, isPrivate: boolean) => void;
     settings?: HomeHeaderSettingsValue;
 };
 
@@ -119,11 +138,26 @@ const MonthDayCell = ({
     overDateKey,
     overTaskId,
     onOpen,
+    onCreateTask,
     settings,
 }: MonthDayCellProps) => {
     const { ref, isDropTarget } = useDroppable({
         id: getMonthDayDropId(cell.dateKey),
     });
+    const [newTaskTitle, setNewTaskTitle] = React.useState('');
+    const [isPrivate, setIsPrivate] = React.useState(false);
+
+    const handleCreateTask = () => {
+        const trimmedTitle = newTaskTitle.trim();
+
+        if (!trimmedTitle) {
+            return;
+        }
+
+        onCreateTask?.(cell.dateKey, trimmedTitle, isPrivate);
+        setNewTaskTitle('');
+        setIsPrivate(false);
+    };
 
     return (
         <div
@@ -151,6 +185,45 @@ const MonthDayCell = ({
                     </Badge>
                 ) : null}
             </div>
+            {onCreateTask ? (
+                <div className="mb-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                        <Input
+                            value={newTaskTitle}
+                            onChange={(event) =>
+                                setNewTaskTitle(event.target.value)
+                            }
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                    handleCreateTask();
+                                }
+                            }}
+                            placeholder="Добавить задачу"
+                            uiSize="md"
+                            className="h-8 border-border bg-background text-xs text-foreground placeholder:text-muted-foreground"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleCreateTask}
+                            disabled={!newTaskTitle.trim()}
+                        >
+                            Добавить
+                        </Button>
+                    </div>
+                    <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <input
+                            type="checkbox"
+                            checked={isPrivate}
+                            onChange={(event) =>
+                                setIsPrivate(event.target.checked)
+                            }
+                            className="size-4 rounded border-border"
+                        />
+                        <span>Приватная</span>
+                    </label>
+                </div>
+            ) : null}
             <div className="space-y-1">
                 {cell.tasks.map((task) => (
                     <MonthTaskCard
@@ -176,6 +249,7 @@ const MonthBoardGrid = ({
     overTaskId,
     dropPosition,
     onOpen,
+    onCreateTask,
     onDragStart,
     onDragMove,
     onDragOver,
@@ -223,6 +297,7 @@ const MonthBoardGrid = ({
                                     overDateKey={overDateKey}
                                     overTaskId={overTaskId}
                                     onOpen={onOpen}
+                                    onCreateTask={onCreateTask}
                                     settings={settings}
                                 />
                             ))}

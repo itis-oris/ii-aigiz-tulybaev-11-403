@@ -12,7 +12,6 @@ Content-Type: application/json
   "lastname": "Ivanov",
   "email": "admin-{{$timestamp}}@sprintly.local",
   "password": "{{password}}",
-  "organizationName": "Sprintly Team",
   "captchaToken": "{{captchaToken}}"
 }
 
@@ -42,6 +41,38 @@ client.global.set("userId", response.body.userId);
 ### Current user
 GET {{baseUrl}}/api/auth/me
 Authorization: Bearer {{token}}
+
+### List my organizations
+GET {{baseUrl}}/api/organizations
+Authorization: Bearer {{token}}
+
+### Create organization and switch to it
+POST {{baseUrl}}/api/organizations
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Sprintly Team"
+}
+
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organization.id);
+%}
+
+### Switch active organization
+POST {{baseUrl}}/api/organizations/switch
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "organizationId": "{{organizationId}}"
+}
+
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organization.id);
+%}
 
 ### Access protected endpoint without token, expect 401 JSON
 GET {{baseUrl}}/api/projects

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { EllipsisVertical, Plus } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { EllipsisVertical, PencilLine, Plus, Tags, Trash2 } from 'lucide-react';
 
 import {
     cn,
@@ -10,14 +11,26 @@ import {
     type ProjectTab,
     useActiveProject,
 } from '@/shared/lib';
+import { getTagBadgeStyle } from '@/shared/lib/tag-color/index';
 import {
-    Avatar,
+    createBoard,
+    createTag,
+    deleteBoard,
+    deleteTag,
+    getBoards,
+    getTags,
+    updateTag,
+    type BoardResponse,
+    type CreateBoardRequest,
+} from '@/shared/api';
+import {
     Badge,
     Button,
     Input,
     Popover,
     PopoverContent,
     PopoverTrigger,
+    ProjectAvatar,
 } from '@/shared/ui';
 
 type HeaderProps = React.ComponentProps<'header'>;
@@ -29,27 +42,27 @@ type HeaderViewProps = HeaderProps & {
 };
 
 const projectStatusOptions: Array<{
-    value: ProjectSummary['lifecycleStatus'];
+    value: ProjectSummary['status'];
     label: string;
     dotClassName: string;
 }> = [
     {
-        value: 'active',
+        value: 'ACTIVE',
         label: 'В работе',
         dotClassName: 'bg-green-500',
     },
     {
-        value: 'at_risk',
-        label: 'Есть риск',
+        value: 'PLANNING',
+        label: 'Планирование',
         dotClassName: 'bg-amber-500',
     },
     {
-        value: 'on_hold',
+        value: 'ON_HOLD',
         label: 'На паузе',
         dotClassName: 'bg-slate-400',
     },
     {
-        value: 'completed',
+        value: 'COMPLETED',
         label: 'Завершен',
         dotClassName: 'bg-sky-500',
     },
@@ -63,9 +76,127 @@ const Header = ({
     onProjectTabChange,
     ...props
 }: HeaderViewProps) => {
-    const { activeBoardId, setActiveBoardId, setProjects } = useActiveProject();
+    const queryClient = useQueryClient();
+    const { activeBoardId, setActiveBoardId, updateProject } =
+        useActiveProject();
     const [projectTab, setProjectTab] = useState<ProjectTab>('Задачи');
     const [newBoardName, setNewBoardName] = useState('');
+    const [newTagName, setNewTagName] = useState('');
+    const [newTagColor, setNewTagColor] = useState('#6366F1');
+    const [editingTagId, setEditingTagId] = useState<string | null>(null);
+    const [editingTagName, setEditingTagName] = useState('');
+    const [editingTagColor, setEditingTagColor] = useState('#6366F1');
+    const boardsQuery = useQuery({
+        queryKey: ['boards', project.id],
+        queryFn: () => getBoards(project.id),
+        enabled: Boolean(project.id) && project.id !== 'empty-project',
+        retry: false,
+    });
+    const tagsQuery = useQuery({
+        queryKey: ['project-tags', project.id],
+        queryFn: () => getTags({ projectId: project.id }),
+        enabled: Boolean(project.id) && project.id !== 'empty-project',
+        retry: false,
+    });
+    const createBoardMutation = useMutation<
+        BoardResponse,
+        Error,
+        CreateBoardRequest
+    >({
+        mutationFn: createBoard,
+        onSuccess: async (createdBoard) => {
+            setActiveBoardId(createdBoard.name);
+            setNewBoardName('');
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['projects'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['boards', project.id],
+                }),
+            ]);
+        },
+    });
+    const createTagMutation = useMutation({
+        mutationFn: createTag,
+        onSuccess: async () => {
+            setNewTagName('');
+            setNewTagColor('#6366F1');
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['project-tags', project.id],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task'],
+                }),
+            ]);
+        },
+    });
+    const updateTagMutation = useMutation({
+        mutationFn: ({
+            tagId,
+            name,
+            color,
+        }: {
+            tagId: string;
+            name: string;
+            color: string;
+        }) => updateTag(tagId, { name, color }),
+        onSuccess: async () => {
+            setEditingTagId(null);
+            setEditingTagName('');
+            setEditingTagColor('#6366F1');
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['project-tags', project.id],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task'],
+                }),
+            ]);
+        },
+    });
+    const deleteTagMutation = useMutation({
+        mutationFn: deleteTag,
+        onSuccess: async (_, deletedTagId) => {
+            if (editingTagId === deletedTagId) {
+                setEditingTagId(null);
+                setEditingTagName('');
+                setEditingTagColor('#6366F1');
+            }
+
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['project-tags', project.id],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['tasks'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['task'],
+                }),
+            ]);
+        },
+    });
+    const deleteBoardMutation = useMutation<null, Error, string>({
+        mutationFn: deleteBoard,
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['projects'],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['boards', project.id],
+                }),
+            ]);
+        },
+    });
 
     useEffect(() => {
         if (!project.boardTabs.includes(activeBoardId)) {
@@ -90,21 +221,11 @@ const Header = ({
             return;
         }
 
-        setProjects((currentProjects) =>
-            currentProjects.map((currentProject) =>
-                currentProject.id === project.id
-                    ? {
-                          ...currentProject,
-                          boardTabs: [
-                              ...currentProject.boardTabs,
-                              trimmedName.toUpperCase(),
-                          ],
-                      }
-                    : currentProject,
-            ),
-        );
-        setActiveBoardId(trimmedName.toUpperCase());
-        setNewBoardName('');
+        createBoardMutation.mutate({
+            name: trimmedName,
+            projectId: project.id,
+            position: project.boardTabs.length * 1000,
+        });
     };
 
     const handleDeleteBoard = (boardName: string) => {
@@ -112,42 +233,76 @@ const Header = ({
             return;
         }
 
-        const remainingBoards = project.boardTabs.filter(
-            (tab) => tab !== boardName,
+        const board = (boardsQuery.data ?? []).find(
+            (currentBoard: BoardResponse) => currentBoard.name === boardName,
         );
 
-        setProjects((currentProjects) =>
-            currentProjects.map((currentProject) =>
-                currentProject.id === project.id
-                    ? {
-                          ...currentProject,
-                          boardTabs: remainingBoards,
-                      }
-                    : currentProject,
-            ),
+        if (!board) {
+            return;
+        }
+
+        const remainingBoards = project.boardTabs.filter(
+            (tab) => tab !== boardName,
         );
 
         if (activeBoardId === boardName) {
             setActiveBoardId(remainingBoards[0]);
         }
+
+        deleteBoardMutation.mutate(board.id);
+    };
+
+    const handleCreateTag = () => {
+        const trimmedName = newTagName.trim();
+
+        if (!trimmedName) {
+            return;
+        }
+
+        createTagMutation.mutate({
+            name: trimmedName,
+            color: newTagColor,
+            projectId: project.id,
+        });
+    };
+
+    const handleStartEditTag = (tag: {
+        id: string;
+        name: string;
+        color: string;
+    }) => {
+        setEditingTagId(tag.id);
+        setEditingTagName(tag.name);
+        setEditingTagColor(tag.color);
+    };
+
+    const handleUpdateTag = () => {
+        const trimmedName = editingTagName.trim();
+
+        if (!editingTagId || !trimmedName) {
+            return;
+        }
+
+        updateTagMutation.mutate({
+            tagId: editingTagId,
+            name: trimmedName,
+            color: editingTagColor,
+        });
+    };
+
+    const handleCancelTagEdit = () => {
+        setEditingTagId(null);
+        setEditingTagName('');
+        setEditingTagColor('#6366F1');
     };
 
     const activeStatus =
         projectStatusOptions.find(
-            (status) => status.value === project.lifecycleStatus,
+            (status) => status.value === project.status,
         ) ?? projectStatusOptions[0];
 
-    const handleStatusChange = (status: ProjectSummary['lifecycleStatus']) => {
-        setProjects((currentProjects) =>
-            currentProjects.map((currentProject) =>
-                currentProject.id === project.id
-                    ? {
-                          ...currentProject,
-                          lifecycleStatus: status,
-                      }
-                    : currentProject,
-            ),
-        );
+    const handleStatusChange = (status: ProjectSummary['status']) => {
+        void updateProject({ ...project, status });
     };
 
     return (
@@ -161,13 +316,14 @@ const Header = ({
             <div className="flex w-full flex-col gap-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                        <Avatar
+                        <ProjectAvatar
                             size="md"
                             shape="soft"
                             className={project.avatarClassName}
-                        >
-                            {project.avatar}
-                        </Avatar>
+                            imageUrl={project.imageUrl}
+                            fallback={project.avatar}
+                            alt={project.name}
+                        />
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <div className="truncate text-base font-semibold leading-none">
@@ -211,7 +367,7 @@ const Header = ({
                                                         }
                                                         className={cn(
                                                             'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sidebar-accent',
-                                                            project.lifecycleStatus ===
+                                                            project.status ===
                                                                 status.value &&
                                                                 'bg-sidebar-accent',
                                                         )}
@@ -317,6 +473,249 @@ const Header = ({
                                 ) : null}
                             </div>
                         ))}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                    aria-label="Управление тегами"
+                                >
+                                    <Tags className="size-4" />
+                                    Теги
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="end"
+                                className="w-96 border-sidebar-border bg-sidebar p-3 text-sidebar-foreground"
+                            >
+                                <div className="space-y-3">
+                                    <div>
+                                        <div className="text-sm font-medium">
+                                            Теги проекта
+                                        </div>
+                                        <div className="mt-1 text-xs text-sidebar-foreground/60">
+                                            Создавайте, редактируйте и удаляйте
+                                            теги для задач текущего проекта.
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/60 p-2">
+                                        <Input
+                                            value={newTagName}
+                                            onChange={(event) =>
+                                                setNewTagName(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter') {
+                                                    handleCreateTag();
+                                                }
+                                            }}
+                                            placeholder="Новый тег"
+                                            uiSize="md"
+                                            className="border-sidebar-border bg-sidebar text-sidebar-foreground placeholder:text-sidebar-foreground/45"
+                                        />
+                                        <input
+                                            type="color"
+                                            value={newTagColor}
+                                            onChange={(event) =>
+                                                setNewTagColor(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className="h-9 w-11 cursor-pointer rounded-md border border-sidebar-border bg-transparent p-1"
+                                            aria-label="Цвет нового тега"
+                                        />
+                                        <Button
+                                            type="button"
+                                            onClick={handleCreateTag}
+                                            disabled={
+                                                !newTagName.trim() ||
+                                                createTagMutation.isPending
+                                            }
+                                            className="bg-sidebar text-sidebar-foreground hover:bg-sidebar/80"
+                                        >
+                                            <Plus className="size-4" />
+                                        </Button>
+                                    </div>
+
+                                    {createTagMutation.error instanceof
+                                    Error ? (
+                                        <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                            {createTagMutation.error.message}
+                                        </div>
+                                    ) : null}
+
+                                    <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                                        {tagsQuery.isFetching ? (
+                                            <div className="text-xs text-sidebar-foreground/60">
+                                                Загрузка тегов...
+                                            </div>
+                                        ) : null}
+
+                                        {tagsQuery.error instanceof Error ? (
+                                            <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                                {tagsQuery.error.message}
+                                            </div>
+                                        ) : null}
+
+                                        {(tagsQuery.data ?? []).length === 0 &&
+                                        !tagsQuery.isFetching ? (
+                                            <div className="rounded-md border border-dashed border-sidebar-border px-3 py-4 text-xs text-sidebar-foreground/60">
+                                                Тегов пока нет.
+                                            </div>
+                                        ) : null}
+
+                                        {(tagsQuery.data ?? []).map((tag) => {
+                                            const isEditing =
+                                                editingTagId === tag.id;
+
+                                            return (
+                                                <div
+                                                    key={tag.id}
+                                                    className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-2"
+                                                >
+                                                    {isEditing ? (
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Input
+                                                                    value={
+                                                                        editingTagName
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        setEditingTagName(
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    onKeyDown={(
+                                                                        event,
+                                                                    ) => {
+                                                                        if (
+                                                                            event.key ===
+                                                                            'Enter'
+                                                                        ) {
+                                                                            handleUpdateTag();
+                                                                        }
+                                                                    }}
+                                                                    uiSize="md"
+                                                                    className="border-sidebar-border bg-sidebar text-sidebar-foreground"
+                                                                />
+                                                                <input
+                                                                    type="color"
+                                                                    value={
+                                                                        editingTagColor
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        setEditingTagColor(
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    className="h-9 w-11 cursor-pointer rounded-md border border-sidebar-border bg-transparent p-1"
+                                                                    aria-label="Цвет тега"
+                                                                />
+                                                            </div>
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={
+                                                                        handleCancelTagEdit
+                                                                    }
+                                                                >
+                                                                    Отмена
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    onClick={
+                                                                        handleUpdateTag
+                                                                    }
+                                                                    disabled={
+                                                                        !editingTagName.trim() ||
+                                                                        updateTagMutation.isPending
+                                                                    }
+                                                                >
+                                                                    Сохранить
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <Badge
+                                                                variant="outline"
+                                                                size="sm"
+                                                                style={getTagBadgeStyle(
+                                                                    tag.color,
+                                                                )}
+                                                            >
+                                                                {tag.name}
+                                                            </Badge>
+                                                            <div className="flex items-center gap-1">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon-sm"
+                                                                    className="text-sidebar-foreground/70 hover:bg-sidebar hover:text-sidebar-foreground"
+                                                                    onClick={() =>
+                                                                        handleStartEditTag(
+                                                                            tag,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <PencilLine className="size-3.5" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon-sm"
+                                                                    className="text-destructive hover:bg-sidebar hover:text-destructive"
+                                                                    onClick={() =>
+                                                                        deleteTagMutation.mutate(
+                                                                            tag.id,
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        deleteTagMutation.isPending
+                                                                    }
+                                                                >
+                                                                    <Trash2 className="size-3.5" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {updateTagMutation.error instanceof
+                                    Error ? (
+                                        <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                            {updateTagMutation.error.message}
+                                        </div>
+                                    ) : null}
+
+                                    {deleteTagMutation.error instanceof
+                                    Error ? (
+                                        <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                            {deleteTagMutation.error.message}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button

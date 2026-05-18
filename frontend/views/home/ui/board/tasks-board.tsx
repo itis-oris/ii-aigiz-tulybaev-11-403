@@ -5,26 +5,43 @@ import { Button, Input } from '@/shared/ui';
 import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-header.types';
 import Board from './Board';
 
+type TaskBoardColumn = {
+    id: string;
+    name: string;
+};
+
 type TasksBoardProps = {
     tasks: Task[];
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
-    onCreateTask?: (columnId: string, title: string) => void;
+    onCreateTask?: (
+        columnId: string,
+        title: string,
+        isPrivate: boolean,
+    ) => void;
+    onMoveTask?: (payload: {
+        taskId: string;
+        columnId: string;
+        position: number;
+    }) => void;
     settings?: HomeHeaderSettingsValue;
+    columns?: TaskBoardColumn[];
 };
 
-const boardModeColumns = [
+const fallbackBoardModeColumns = [
     { day: 'К выполнению', date: 'todo', columnId: 'todo' },
     { day: 'В работе', date: 'in progress', columnId: 'in progress' },
-    { day: 'На проверке', date: 'review', columnId: 'review' },
+    { day: 'Готово', date: 'done', columnId: 'done' },
 ] as const;
 
-const statusLabels: Record<(typeof boardModeColumns)[number]['date'], string> =
-    {
-        todo: 'Новые задачи',
-        'in progress': 'Активные задачи',
-        review: 'Проверка и согласование',
-    };
+const fallbackColumnDescriptions: Record<
+    (typeof fallbackBoardModeColumns)[number]['date'],
+    string
+> = {
+    todo: 'Новые задачи',
+    'in progress': 'Активные задачи',
+    done: 'Завершенные задачи',
+};
 
 const getTaskCountLabel = (count: number) => {
     const mod10 = count % 10;
@@ -46,7 +63,9 @@ const TasksBoard = ({
     setIsOpen,
     setSelectedTask,
     onCreateTask,
+    onMoveTask,
     settings,
+    columns,
 }: TasksBoardProps) => {
     const [customColumns, setCustomColumns] = useState<
         Array<{ day: string; date: string; columnId: string }>
@@ -54,39 +73,52 @@ const TasksBoard = ({
     const [isCreatingColumn, setIsCreatingColumn] = useState(false);
     const [newColumnName, setNewColumnName] = useState('');
 
-    const days = useMemo<DayTasks[]>(
-        () =>
-            [...boardModeColumns, ...customColumns].map((column) => {
-                const columnTasks = tasks
-                    .filter((task) =>
-                        column.date in statusLabels
-                            ? task.status === column.date
-                            : task.columnId === column.columnId,
-                    )
-                    .map((task, index) => ({
-                        ...task,
-                        columnId: column.columnId,
-                        position: String((index + 1) * 1000),
-                    }));
+    const days = useMemo<DayTasks[]>(() => {
+        const baseColumns =
+            columns && columns.length > 0
+                ? columns.map((column) => ({
+                      day: column.name,
+                      date: column.name,
+                      columnId: column.id,
+                  }))
+                : fallbackBoardModeColumns;
 
-                return {
-                    day: column.day,
-                    date:
-                        column.date in statusLabels
-                            ? settings?.showTaskCounters === false
-                                ? statusLabels[
-                                      column.date as keyof typeof statusLabels
-                                  ]
-                                : `${getTaskCountLabel(columnTasks.length)} · ${statusLabels[column.date as keyof typeof statusLabels]}`
-                            : settings?.showTaskCounters === false
-                              ? 'Пользовательская колонка'
-                              : `${getTaskCountLabel(columnTasks.length)} · Пользовательская колонка`,
+        return [...baseColumns, ...customColumns].map((column) => {
+            const columnTasks = tasks
+                .filter((task) =>
+                    columns && columns.length > 0
+                        ? task.columnId === column.columnId
+                        : column.date in fallbackColumnDescriptions
+                          ? task.status === column.date
+                          : task.columnId === column.columnId,
+                )
+                .map((task, index) => ({
+                    ...task,
                     columnId: column.columnId,
-                    tasks: columnTasks,
-                };
-            }),
-        [customColumns, settings?.showTaskCounters, tasks],
-    );
+                    position: String((index + 1) * 1000),
+                }));
+
+            return {
+                day: column.day,
+                date:
+                    columns && columns.length > 0
+                        ? settings?.showTaskCounters === false
+                            ? 'Колонка доски'
+                            : `${getTaskCountLabel(columnTasks.length)} · Колонка доски`
+                        : column.date in fallbackColumnDescriptions
+                          ? settings?.showTaskCounters === false
+                              ? fallbackColumnDescriptions[
+                                    column.date as keyof typeof fallbackColumnDescriptions
+                                ]
+                              : `${getTaskCountLabel(columnTasks.length)} · ${fallbackColumnDescriptions[column.date as keyof typeof fallbackColumnDescriptions]}`
+                          : settings?.showTaskCounters === false
+                            ? 'Пользовательская колонка'
+                            : `${getTaskCountLabel(columnTasks.length)} · Пользовательская колонка`,
+                columnId: column.columnId,
+                tasks: columnTasks,
+            };
+        });
+    }, [columns, customColumns, settings?.showTaskCounters, tasks]);
 
     const handleCreateColumn = () => {
         const trimmedName = newColumnName.trim();
@@ -179,13 +211,18 @@ const TasksBoard = ({
         </div>
     );
 
+    const effectiveExtraColumn =
+        columns && columns.length > 0 ? undefined : extraColumn;
+
     return (
         <Board
             days={days}
             setIsOpen={setIsOpen}
             setSelectedTask={setSelectedTask}
-            extraColumn={extraColumn}
+            extraColumn={effectiveExtraColumn}
             onCreateTask={onCreateTask}
+            onMoveTask={onMoveTask}
+            dragEnabled={Boolean(columns && columns.length > 0)}
             settings={settings}
         />
     );

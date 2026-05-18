@@ -28,9 +28,8 @@ public class RegisterRequest {
     @Size(min = 6, max = 128)
     private String password;
 
-    @NotBlank
-    @Size(min = 2, max = 255)
-    private String organizationName;
+    @Size(max = 255)
+    private String invitationToken;
 
     @NotBlank
     private String captchaToken;

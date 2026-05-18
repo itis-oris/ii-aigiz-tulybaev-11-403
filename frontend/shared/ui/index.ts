@@ -13,6 +13,9 @@ import {
 import { Input } from './input';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { Calendar } from './calendar';
+import { GoogleRecaptcha } from './google-recaptcha';
+import { ProjectAvatar } from './project-avatar';
+import type { DateRange } from './calendar';
 
 export {
     Avatar,
@@ -29,8 +32,11 @@ export {
     CardDescription,
     CardContent,
     Input,
+    GoogleRecaptcha,
     Popover,
     PopoverContent,
     PopoverTrigger,
+    ProjectAvatar,
     Calendar,
 };
+export type { DateRange };

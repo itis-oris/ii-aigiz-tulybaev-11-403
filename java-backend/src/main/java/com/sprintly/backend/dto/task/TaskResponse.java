@@ -1,10 +1,12 @@
 package com.sprintly.backend.dto.task;
 
+import com.sprintly.backend.dto.tag.TagResponse;
 import com.sprintly.backend.entity.enums.TaskStatus;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -18,6 +20,7 @@ public class TaskResponse {
     private Integer storyPoints;
     private Integer priority;
     private OffsetDateTime dueDate;
+    private Boolean isPrivate;
     private Long position;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -32,4 +35,5 @@ public class TaskResponse {
     private String assigneeEmail;
     private UUID creatorId;
     private String creatorEmail;
+    private List<TagResponse> tags;
 }

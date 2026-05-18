@@ -1,13 +1,14 @@
 import React from 'react';
 import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react';
+import { Clock3, Lock, Plus } from 'lucide-react';
 import { Input } from '@/shared/ui/input';
 import {
     Badge,
+    Button,
     Card,
     CardAction,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from '@/shared/ui';
@@ -21,25 +22,64 @@ import {
 } from '@/views/home/model/use-board-dnd';
 import type { Column } from '@/views/home/ui/board/types';
 import { cn } from '@/shared/lib';
+import { getTagBadgeStyle } from '@/shared/lib/tag-color/index';
 import type { HomeHeaderSettingsValue } from '@/views/home/ui/home-header/home-header.types';
+
+const getStoryPointsLabel = (storyPoints?: number) => {
+    if (storyPoints === undefined) {
+        return null;
+    }
+
+    return `${storyPoints} ч`;
+};
+
+const getPriorityLabel = (priority?: number) => {
+    if (priority === undefined) {
+        return null;
+    }
+
+    if (priority <= 1) {
+        return 'Высокий';
+    }
+
+    if (priority === 2) {
+        return 'Средний';
+    }
+
+    return 'Низкий';
+};
 
 interface BoardProps {
     days: DayTasks[];
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
     extraColumn?: React.ReactNode;
-    onCreateTask?: (columnId: string, title: string) => void;
+    onCreateTask?: (
+        columnId: string,
+        title: string,
+        isPrivate: boolean,
+    ) => void;
+    onMoveTask?: (payload: {
+        taskId: string;
+        columnId: string;
+        position: number;
+    }) => void;
+    dragEnabled?: boolean;
     settings?: HomeHeaderSettingsValue;
 }
 
 type BoardColumnProps = {
     column: Column;
-    draggingTaskId: number | null;
+    draggingTaskId: string | null;
     dropPosition: DropPosition;
-    onCreateTask?: (columnId: string, title: string) => void;
+    onCreateTask?: (
+        columnId: string,
+        title: string,
+        isPrivate: boolean,
+    ) => void;
     onOpen: (task: Task) => void;
     overColumnId: string | null;
-    overTaskId: number | null;
+    overTaskId: string | null;
     settings?: HomeHeaderSettingsValue;
 };
 
@@ -57,6 +97,7 @@ const BoardColumn = ({
         id: getBoardColumnDropId(column.columnId),
     });
     const [newTaskTitle, setNewTaskTitle] = React.useState('');
+    const [isPrivate, setIsPrivate] = React.useState(false);
 
     const handleCreateTask = () => {
         const trimmedTitle = newTaskTitle.trim();
@@ -65,8 +106,9 @@ const BoardColumn = ({
             return;
         }
 
-        onCreateTask?.(column.columnId, trimmedTitle);
+        onCreateTask?.(column.columnId, trimmedTitle, isPrivate);
         setNewTaskTitle('');
+        setIsPrivate(false);
     };
 
     return (
@@ -88,21 +130,70 @@ const BoardColumn = ({
                         {column.date}
                     </span>
                 </div>
-                <Input
-                    value={newTaskTitle}
-                    onChange={(event) => setNewTaskTitle(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            handleCreateTask();
-                        }
-                    }}
-                    placeholder="Добавить задачу"
-                    uiSize="md"
-                    className={cn(
-                        'border-border bg-background text-foreground placeholder:text-muted-foreground',
-                        settings?.density === 'compact' && 'h-8 text-xs',
-                    )}
-                />
+                {onCreateTask ? (
+                    <div
+                        className={cn(
+                            'rounded-lg bg-card/40 p-2',
+                            settings?.density === 'compact' && 'p-1.5',
+                        )}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Input
+                                value={newTaskTitle}
+                                onChange={(event) =>
+                                    setNewTaskTitle(event.target.value)
+                                }
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        handleCreateTask();
+                                    }
+                                }}
+                                placeholder="Добавить задачу"
+                                uiSize="md"
+                                className={cn(
+                                    'h-9 border-transparent bg-background/80 text-foreground placeholder:text-muted-foreground focus-visible:border-ring',
+                                    settings?.density === 'compact' &&
+                                        'h-8 text-xs',
+                                )}
+                            />
+                            <Button
+                                type="button"
+                                variant={isPrivate ? 'secondary' : 'outline'}
+                                size="md"
+                                aria-pressed={isPrivate}
+                                title={
+                                    isPrivate
+                                        ? 'Приватная задача'
+                                        : 'Обычная задача'
+                                }
+                                onClick={() =>
+                                    setIsPrivate((current) => !current)
+                                }
+                                className={cn(
+                                    'shrink-0',
+                                    settings?.density === 'compact' &&
+                                        'h-8 px-2 text-xs',
+                                )}
+                            >
+                                <Lock className="size-4" />
+                            </Button>
+                            <Button
+                                type="button"
+                                size="md"
+                                title="Добавить задачу"
+                                onClick={handleCreateTask}
+                                disabled={!newTaskTitle.trim()}
+                                className={cn(
+                                    'shrink-0',
+                                    settings?.density === 'compact' &&
+                                        'h-8 px-2 text-xs',
+                                )}
+                            >
+                                <Plus className="size-4" />
+                            </Button>
+                        </div>
+                    </div>
+                ) : null}
             </div>
             <div className="scrollbar-hover-overlay min-h-0 flex-1 pt-1">
                 {column.tasks.map((task) => (
@@ -123,7 +214,7 @@ const BoardColumn = ({
 
 type BoardTaskCardProps = {
     task: Task;
-    draggingTaskId: number | null;
+    draggingTaskId: string | null;
     dropPosition: DropPosition;
     isOver: boolean;
     onOpen: (task: Task) => void;
@@ -149,6 +240,13 @@ const BoardTaskCard = ({
         dropRef(element);
         dragRef(element);
     };
+    const customTags = task.tags.filter(
+        (tag) => !(tag.system && task.boardId && tag.id === task.boardId),
+    );
+    const visibleTags = customTags.length > 0 ? customTags : task.tags;
+    const storyPointsLabel = getStoryPointsLabel(task.storyPoints);
+    const priorityLabel = getPriorityLabel(task.priority);
+    const normalizedDescription = task.description?.trim();
 
     return (
         <Card
@@ -185,20 +283,42 @@ const BoardTaskCard = ({
                 </CardAction>
             </CardHeader>
             <CardContent>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>#{task.id}</span>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <Badge variant="default" size="sm">
                         {task.status}
                     </Badge>
+                    {storyPointsLabel ? (
+                        <Badge variant="outline" size="sm">
+                            <Clock3 className="size-3" />
+                            {storyPointsLabel}
+                        </Badge>
+                    ) : null}
+                    {priorityLabel ? (
+                        <Badge variant="outline" size="sm">
+                            {priorityLabel}
+                        </Badge>
+                    ) : null}
                 </div>
+                {normalizedDescription ? (
+                    <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                        {normalizedDescription}
+                    </p>
+                ) : null}
+                {visibleTags.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {visibleTags.map((tag) => (
+                            <Badge
+                                key={tag.id}
+                                variant="outline"
+                                size="sm"
+                                style={getTagBadgeStyle(tag.color)}
+                            >
+                                {tag.name}
+                            </Badge>
+                        ))}
+                    </div>
+                ) : null}
             </CardContent>
-            <CardFooter className="flex flex-wrap gap-2">
-                {task.tags.map((tag) => (
-                    <Badge key={tag} variant="sidebar" size="sm">
-                        {tag}
-                    </Badge>
-                ))}
-            </CardFooter>
         </Card>
     );
 };
@@ -209,6 +329,8 @@ const Board = ({
     setSelectedTask,
     extraColumn,
     onCreateTask,
+    onMoveTask,
+    dragEnabled = true,
     settings,
 }: BoardProps) => {
     const {
@@ -221,7 +343,10 @@ const Board = ({
         handleDragMove,
         handleDragOver,
         handleDragStart,
-    } = useBoardDnd(days);
+    } = useBoardDnd(days, {
+        enabled: dragEnabled,
+        onCommitMove: onMoveTask,
+    });
 
     const handleOpen = (task: Task) => {
         setIsOpen(true);

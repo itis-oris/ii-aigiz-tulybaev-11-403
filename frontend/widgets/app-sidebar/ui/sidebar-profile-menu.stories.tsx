@@ -10,6 +10,7 @@ const meta = {
         label: 'Профиль',
         email: 'user@example.com',
         initials: 'LI',
+        avatarUrl: null,
     },
     parameters: {
         layout: 'padded',

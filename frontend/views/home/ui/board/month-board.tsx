@@ -16,6 +16,8 @@ const MonthBoard = ({
     anchorDate,
     setIsOpen,
     setSelectedTask,
+    onCreateTask,
+    onMoveTask,
     settings,
 }: MonthBoardProps) => {
     const monthStart = useMemo(
@@ -35,7 +37,9 @@ const MonthBoard = ({
         handleDragMove,
         handleDragOver,
         handleDragEnd,
-    } = useMonthBoardDnd(tasks, monthStart);
+    } = useMonthBoardDnd(tasks, monthStart, {
+        onCommitMove: onMoveTask,
+    });
     const cells = useMemo(
         () => buildCalendarCells(monthDays, monthStart),
         [monthDays, monthStart],
@@ -56,6 +60,7 @@ const MonthBoard = ({
             overTaskId={overTaskId}
             dropPosition={dropPosition}
             onOpen={handleOpen}
+            onCreateTask={onCreateTask}
             onDragStart={handleDragStart}
             onDragMove={handleDragMove}
             onDragOver={handleDragOver}

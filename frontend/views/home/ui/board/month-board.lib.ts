@@ -13,7 +13,13 @@ export const dayFormatter = new Intl.DateTimeFormat('ru-RU', {
     month: 'short',
 });
 
-export const normalizeDateKey = (date: Date) => date.toISOString().slice(0, 10);
+export const normalizeDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
 
 export const sortTasks = (tasks: Task[]) =>
     [...tasks].sort(
@@ -83,13 +89,9 @@ const withDateKey = (task: Task, dateKey: string) => {
         return task;
     }
 
-    const [year, month, day] = dateKey.split('-').map(Number);
-    const nextDueDate = new Date(baseDate);
-    nextDueDate.setFullYear(year, month - 1, day);
-
     return {
         ...task,
-        dueDate: nextDueDate.toISOString(),
+        dueDate: `${dateKey}T09:00:00.000Z`,
         columnId: dateKey,
     };
 };

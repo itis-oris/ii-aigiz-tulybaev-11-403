@@ -1,5 +1,5 @@
-import type { DateRange } from 'react-day-picker';
 import type { ProjectSummary } from '@/shared/lib';
+import type { DateRange } from '@/shared/ui';
 import type { SortMode } from '@/views/home/ui/home-header/sort-mode';
 import type { ViewMode } from '@/views/home/ui/home-header/view-mode';
 
@@ -12,6 +12,11 @@ export type HomeHeaderSettingsValue = {
     density: 'standard' | 'compact';
     showProjectName: boolean;
     showTaskCounters: boolean;
+};
+
+export type HomeHeaderTagOption = {
+    label: string;
+    value: string;
 };
 
 export type HomeHeaderProps = {
@@ -29,7 +34,7 @@ export type HomeHeaderProps = {
     selectedTag?: string;
     onSelectedTagChange?: (value: string) => void;
     statusOptions?: string[];
-    tagOptions?: string[];
+    tagOptions?: HomeHeaderTagOption[];
     onResetFilters?: () => void;
     periodTitle: string;
     periodSubtitle: string;
@@ -52,7 +57,7 @@ export type HomeHeaderFiltersProps = {
     selectedTag: string;
     onSelectedTagChange?: (value: string) => void;
     statusOptions: string[];
-    tagOptions: string[];
+    tagOptions: HomeHeaderTagOption[];
     onResetFilters?: () => void;
 };
 

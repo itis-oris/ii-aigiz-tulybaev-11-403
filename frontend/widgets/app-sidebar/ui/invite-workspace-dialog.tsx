@@ -1,18 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Link2, PlusCircle, X } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { Link2, X } from 'lucide-react';
+import { ApiError, createOrganizationInvitations } from '@/shared/api';
 import { Button, Input } from '@/shared/ui';
-import { cn, useI18n } from '@/shared/lib';
+import { cn, useCurrentUser, useI18n } from '@/shared/lib';
 
 type InviteWorkspaceDialogProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-};
-
-type InviteRow = {
-    id: number;
-    email: string;
 };
 
 export function InviteWorkspaceDialog({
@@ -20,8 +17,39 @@ export function InviteWorkspaceDialog({
     onOpenChange,
 }: InviteWorkspaceDialogProps) {
     const { t } = useI18n();
-    const [inviteByLink, setInviteByLink] = useState(false);
-    const [rows, setRows] = useState<InviteRow[]>([{ id: 1, email: '' }]);
+    const { data: currentUser } = useCurrentUser();
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [inviteLink, setInviteLink] = useState('');
+
+    const createInvitationsMutation = useMutation({
+        mutationFn: ({
+            organizationId,
+            emails,
+        }: {
+            organizationId: string;
+            emails: string[];
+        }) =>
+            createOrganizationInvitations(organizationId, {
+                emails,
+                createLinkInvitation: true,
+            }),
+        onSuccess: (data) => {
+            const linkInvitation = data.find((invitation) => !invitation.email);
+            if (linkInvitation && typeof window !== 'undefined') {
+                setInviteLink(
+                    `${window.location.origin}/invite/${linkInvitation.token}`,
+                );
+            }
+            setSubmitError(null);
+        },
+        onError: (error) => {
+            setSubmitError(
+                error instanceof ApiError
+                    ? error.message
+                    : 'Не удалось создать приглашения',
+            );
+        },
+    });
 
     useEffect(() => {
         if (!open) {
@@ -41,10 +69,7 @@ export function InviteWorkspaceDialog({
         };
     }, [onOpenChange, open]);
 
-    const canSubmit = useMemo(
-        () => rows.some((row) => row.email.trim().length > 0) || inviteByLink,
-        [inviteByLink, rows],
-    );
+    const canSubmit = useMemo(() => true, []);
 
     if (!open) {
         return null;
@@ -72,7 +97,9 @@ export function InviteWorkspaceDialog({
                                 {t('dialogs.inviteWorkspaceTitle')}
                             </h2>
                             <p className="mt-2 text-base leading-6 text-muted-foreground">
-                                {t('dialogs.inviteWorkspaceDescription')}
+                                Подготовьте ссылку и отправьте её своим
+                                коллегам, чтобы пригласить их в рабочее
+                                пространство.
                             </p>
                         </div>
 
@@ -93,44 +120,14 @@ export function InviteWorkspaceDialog({
 
                 <div className="space-y-5 px-5 py-8">
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                            <span className="text-sm font-medium text-foreground">
-                                {t('dialogs.inviteLink')}
-                            </span>
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={inviteByLink}
-                                onClick={() =>
-                                    setInviteByLink((current) => !current)
-                                }
-                                className={cn(
-                                    'relative inline-flex h-6 w-10 shrink-0 rounded-full transition-colors',
-                                    inviteByLink ? 'bg-primary' : 'bg-muted',
-                                )}
-                            >
-                                <span
-                                    className={cn(
-                                        'absolute top-0.5 size-5 rounded-full bg-background shadow-sm transition-transform',
-                                        inviteByLink
-                                            ? 'translate-x-[1.15rem]'
-                                            : 'translate-x-0.5',
-                                    )}
-                                />
-                                <span className="sr-only">
-                                    {t('dialogs.toggleInviteLink')}
-                                </span>
-                            </button>
-                        </div>
+                        <span className="text-sm font-medium text-foreground">
+                            {t('dialogs.inviteLink')}
+                        </span>
 
                         <div className="flex gap-2">
                             <div className="relative flex-1">
                                 <Input
-                                    value={
-                                        inviteByLink
-                                            ? 'https://sprintly.app/invite/campus-team'
-                                            : ''
-                                    }
+                                    value={inviteLink}
                                     readOnly
                                     uiSize="lg"
                                     placeholder={t('dialogs.linkPending')}
@@ -142,96 +139,28 @@ export function InviteWorkspaceDialog({
                                 type="button"
                                 variant="outline"
                                 size="xl"
-                                disabled={!inviteByLink}
+                                disabled={!inviteLink}
                                 className="min-w-[8.5rem] rounded-xl"
+                                onClick={async () => {
+                                    if (!inviteLink) {
+                                        return;
+                                    }
+
+                                    await navigator.clipboard.writeText(
+                                        inviteLink,
+                                    );
+                                }}
                             >
                                 {t('dialogs.copy')}
                             </Button>
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        {rows.map((row) => (
-                            <div
-                                key={row.id}
-                                className="flex flex-col gap-2 sm:flex-row sm:items-center"
-                            >
-                                <Input
-                                    value={row.email}
-                                    onChange={(event) =>
-                                        setRows((currentRows) =>
-                                            currentRows.map((currentRow) =>
-                                                currentRow.id === row.id
-                                                    ? {
-                                                          ...currentRow,
-                                                          email: event.target
-                                                              .value,
-                                                      }
-                                                    : currentRow,
-                                            ),
-                                        )
-                                    }
-                                    uiSize="lg"
-                                    placeholder={t('dialogs.emailPlaceholder')}
-                                    className="flex-1"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="self-end rounded-lg text-muted-foreground sm:self-auto"
-                                    onClick={() =>
-                                        setRows((currentRows) =>
-                                            currentRows.length === 1
-                                                ? currentRows.map(
-                                                      (currentRow) =>
-                                                          currentRow.id ===
-                                                          row.id
-                                                              ? {
-                                                                    ...currentRow,
-                                                                    email: '',
-                                                                }
-                                                              : currentRow,
-                                                  )
-                                                : currentRows.filter(
-                                                      (currentRow) =>
-                                                          currentRow.id !==
-                                                          row.id,
-                                                  ),
-                                        )
-                                    }
-                                >
-                                    <X className="size-4" />
-                                    <span className="sr-only">
-                                        {t('dialogs.removeInviteRow')}
-                                    </span>
-                                </Button>
-                            </div>
-                        ))}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setRows((currentRows) => [
-                                    ...currentRows,
-                                    {
-                                        id:
-                                            Math.max(
-                                                0,
-                                                ...currentRows.map(
-                                                    (row) => row.id,
-                                                ),
-                                            ) + 1,
-                                        email: '',
-                                    },
-                                ])
-                            }
-                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        >
-                            <PlusCircle className="size-4" />
-                            {t('dialogs.addMore')}
-                        </button>
-                    </div>
+                    {submitError ? (
+                        <p className="text-sm text-destructive">
+                            {submitError}
+                        </p>
+                    ) : null}
                 </div>
 
                 <div className="flex flex-col-reverse gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
@@ -249,6 +178,17 @@ export function InviteWorkspaceDialog({
                         size="xl"
                         disabled={!canSubmit}
                         className="rounded-xl px-6"
+                        onClick={async () => {
+                            if (!currentUser?.organizationId) {
+                                setSubmitError('Нет активной организации');
+                                return;
+                            }
+
+                            await createInvitationsMutation.mutateAsync({
+                                organizationId: currentUser.organizationId,
+                                emails: [],
+                            });
+                        }}
                     >
                         {t('dialogs.invitePeople')}
                     </Button>

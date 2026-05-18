@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -46,9 +47,26 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded(
+        MaxUploadSizeExceededException ex,
+        HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Image size must not exceed 5 MB", request, null);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(StorageUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleStorageUnavailable(
+        StorageUnavailableException ex,
+        HttpServletRequest request
+    ) {
+        log.warn("Storage temporarily unavailable", ex);
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(Exception.class)

@@ -12,6 +12,8 @@ public class TaskFilterRequest {
 
     private UUID projectId;
     private UUID assigneeId;
+    private UUID creatorId;
+    private Boolean isPrivate;
     private TaskStatus status;
     private Integer priority;
     private String search;

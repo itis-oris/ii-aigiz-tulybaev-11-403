@@ -4,16 +4,16 @@ import com.sprintly.backend.dto.board.BoardResponse;
 import com.sprintly.backend.dto.board.CreateBoardRequest;
 import com.sprintly.backend.dto.board.UpdateBoardRequest;
 import com.sprintly.backend.entity.Board;
+import com.sprintly.backend.entity.BoardColumn;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.mapper.BoardMapper;
+import com.sprintly.backend.repository.BoardColumnRepository;
 import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,17 +26,21 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BoardService {
 
-    private static final String BOARDS_BY_PROJECT_CACHE = "boardsByProject";
-
     private final BoardRepository boardRepository;
+    private final BoardColumnRepository boardColumnRepository;
     private final ProjectRepository projectRepository;
     private final BoardMapper boardMapper;
 
-    @Transactional(readOnly = true)
-    @Cacheable(value = BOARDS_BY_PROJECT_CACHE, key = "#projectId")
+    @Transactional
     public List<BoardResponse> findAllByProject(UUID projectId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        return boardRepository.findAllByProject_IdAndDeletedAtIsNullOrderByPositionAsc(project.getId()).stream()
+        List<Board> boards = boardRepository.findAllByProject_IdAndDeletedAtIsNullOrderByPositionAsc(project.getId());
+
+        if (boards.isEmpty()) {
+            boards = List.of(createDefaultBoard(project));
+        }
+
+        return boards.stream()
             .map(boardMapper::toResponse)
             .toList();
     }
@@ -47,7 +51,6 @@ public class BoardService {
     }
 
     @Transactional
-    @CacheEvict(value = BOARDS_BY_PROJECT_CACHE, key = "#request.projectId")
     public BoardResponse create(CreateBoardRequest request, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
@@ -63,7 +66,6 @@ public class BoardService {
     }
 
     @Transactional
-    @CacheEvict(value = BOARDS_BY_PROJECT_CACHE, allEntries = true)
     public BoardResponse update(UUID boardId, UpdateBoardRequest request, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
@@ -73,7 +75,6 @@ public class BoardService {
     }
 
     @Transactional
-    @CacheEvict(value = BOARDS_BY_PROJECT_CACHE, allEntries = true)
     public void delete(UUID boardId, CustomUserDetails currentUser) {
         ensureManagerAccess(currentUser);
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
@@ -123,5 +124,32 @@ public class BoardService {
         if (!hasAccess) {
             throw new AccessDeniedException("Недостаточно прав для изменения досок");
         }
+    }
+
+    private Board createDefaultBoard(Project project) {
+        Board board = boardRepository.save(Board.builder()
+            .name("Main")
+            .position(0L)
+            .createdAt(OffsetDateTime.now())
+            .project(project)
+            .build());
+
+        boardColumnRepository.save(BoardColumn.builder()
+            .name("Backlog")
+            .position(0L)
+            .board(board)
+            .build());
+        boardColumnRepository.save(BoardColumn.builder()
+            .name("In Progress")
+            .position(1000L)
+            .board(board)
+            .build());
+        boardColumnRepository.save(BoardColumn.builder()
+            .name("Done")
+            .position(2000L)
+            .board(board)
+            .build());
+
+        return board;
     }
 }

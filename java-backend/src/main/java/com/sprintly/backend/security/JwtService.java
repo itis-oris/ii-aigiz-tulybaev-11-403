@@ -9,6 +9,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,13 +26,17 @@ public class JwtService {
 
     public String generateAccessToken(CustomUserDetails userDetails) {
         Instant now = Instant.now();
+        Map<String, Object> claims = new HashMap<>();
+
+        claims.put("userId", userDetails.getId().toString());
+
+        if (userDetails.getOrganizationId() != null) {
+            claims.put("organizationId", userDetails.getOrganizationId().toString());
+        }
 
         return Jwts.builder()
             .subject(userDetails.getUsername())
-            .claims(Map.of(
-                "userId", userDetails.getId().toString(),
-                "organizationId", userDetails.getOrganizationId().toString()
-            ))
+            .claims(claims)
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plusMillis(jwtProperties.accessTokenExpiration())))
             .signWith(secretKey)

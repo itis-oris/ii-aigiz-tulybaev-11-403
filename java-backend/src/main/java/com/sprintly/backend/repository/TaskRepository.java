@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public interface TaskRepository extends JpaRepository<Task, UUID>, TaskRepositoryCustom {
 
-    @EntityGraph(attributePaths = {"project", "board", "column", "assignee", "creator"})
+    @EntityGraph(attributePaths = {"project", "board", "column", "assignee", "creator", "tags"})
     Optional<Task> findById(UUID id);
 
     List<Task> findAllByProject_IdAndDeletedAtIsNull(UUID projectId);

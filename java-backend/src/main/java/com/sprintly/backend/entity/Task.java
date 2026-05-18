@@ -11,7 +11,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -22,7 +24,9 @@ import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -55,6 +59,10 @@ public class Task {
 
     @Column(name = "due_date")
     private OffsetDateTime dueDate;
+
+    @Builder.Default
+    @Column(name = "is_private", nullable = false)
+    private Boolean isPrivate = false;
 
     private Long position;
 
@@ -90,4 +98,13 @@ public class Task {
     @Builder.Default
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL)
     private List<Comment> comments = new ArrayList<>();
+
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "task_tags",
+        joinColumns = @JoinColumn(name = "task_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
 }
