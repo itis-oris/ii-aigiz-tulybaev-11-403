@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,18 +33,12 @@ public class ProjectFolderService {
     private final UserRepository userRepository;
     private final ProjectFolderMapper projectFolderMapper;
     private final ProjectAccessService projectAccessService;
+    private final CachedViewService cachedViewService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     @Transactional(readOnly = true)
     public List<ProjectFolderResponse> findAll(CustomUserDetails currentUser) {
-        List<ProjectFolderResponse> responses = new ArrayList<>();
-        List<ProjectFolder> folders = projectFolderRepository
-            .findAllByOrganization_IdAndDeletedAtIsNullOrderByCreatedAtAsc(currentUser.getOrganizationId());
-
-        for (ProjectFolder folder : folders) {
-            responses.add(projectFolderMapper.toResponse(folder));
-        }
-
-        return responses;
+        return cachedViewService.getProjectFolders(currentUser.getOrganizationId());
     }
 
     @Transactional
@@ -68,6 +61,7 @@ public class ProjectFolderService {
                 .createdAt(OffsetDateTime.now())
                 .build()
         );
+        cacheInvalidationService.evictProjectFolders(currentUser.getOrganizationId());
 
         return projectFolderMapper.toResponse(folder);
     }
@@ -91,7 +85,9 @@ public class ProjectFolderService {
             );
         }
 
-        return projectFolderMapper.toResponse(projectFolderRepository.save(folder));
+        ProjectFolder savedFolder = projectFolderRepository.save(folder);
+        cacheInvalidationService.evictProjectFolders(currentUser.getOrganizationId());
+        return projectFolderMapper.toResponse(savedFolder);
     }
 
     @Transactional
@@ -105,6 +101,7 @@ public class ProjectFolderService {
 
         folder.setDeletedAt(OffsetDateTime.now());
         projectFolderRepository.save(folder);
+        cacheInvalidationService.evictProjectFolders(currentUser.getOrganizationId());
     }
 
     private ProjectFolder getFolderInOrganization(UUID folderId, UUID organizationId) {

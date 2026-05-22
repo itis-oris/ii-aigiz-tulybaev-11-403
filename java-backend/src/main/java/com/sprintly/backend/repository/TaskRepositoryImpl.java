@@ -15,6 +15,7 @@ import jakarta.persistence.criteria.Subquery;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,7 +32,8 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
         UUID creatorId,
         TaskStatus status,
         Integer priority,
-        String search
+        String search,
+        Collection<UUID> tagIds
     ) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Task> cq = cb.createQuery(Task.class);
@@ -77,6 +79,10 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
 
         if (StringUtils.hasText(search)) {
             predicates.add(cb.like(cb.lower(task.get("title")), "%" + search.toLowerCase() + "%"));
+        }
+
+        if (tagIds != null && !tagIds.isEmpty()) {
+            predicates.add(task.join("tags", JoinType.LEFT).get("id").in(tagIds));
         }
 
         cq.select(task)

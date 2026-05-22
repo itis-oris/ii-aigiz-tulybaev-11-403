@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-01-project-members-add-id-column
+      author: codex
+      comment: Add UUID id column for project_members.
+      changes:
+        - addColumn:
+            tableName: project_members
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+
+  - changeSet:
+      id: 004-02-project-members-backfill-id
+      author: codex
+      comment: Backfill UUID ids for existing project_members rows.
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              UPDATE project_members
+              SET id = (
+                substr(md5(project_id::text || ':' || user_id::text), 1, 8) || '-' ||
+                substr(md5(project_id::text || ':' || user_id::text), 9, 4) || '-' ||
+                substr(md5(project_id::text || ':' || user_id::text), 13, 4) || '-' ||
+                substr(md5(project_id::text || ':' || user_id::text), 17, 4) || '-' ||
+                substr(md5(project_id::text || ':' || user_id::text), 21, 12)
+              )::uuid
+              WHERE id IS NULL;
+
+  - changeSet:
+      id: 004-03-project-members-id-not-null
+      author: codex
+      comment: Require UUID id for project_members.
+      changes:
+        - addNotNullConstraint:
+            tableName: project_members
+            columnName: id
+            columnDataType: uuid
+
+  - changeSet:
+      id: 004-04-project-members-switch-primary-key
+      author: codex
+      comment: Replace composite primary key with UUID primary key.
+      changes:
+        - dropPrimaryKey:
+            tableName: project_members
+        - addPrimaryKey:
+            tableName: project_members
+            columnNames: id
+            constraintName: pk_project_members
+
+  - changeSet:
+      id: 004-05-project-members-project-user-unique
+      author: codex
+      comment: Preserve unique membership per project and user.
+      changes:
+        - addUniqueConstraint:
+            tableName: project_members
+            columnNames: project_id, user_id
+            constraintName: uk_project_members_project_user

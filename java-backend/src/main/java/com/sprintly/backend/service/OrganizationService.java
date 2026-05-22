@@ -114,7 +114,7 @@ public class OrganizationService {
         Organization fallbackOrganization = getFallbackOrganization(currentUserOrganizations, organization);
 
         Set<User> impactedUsers = new HashSet<>(organization.getMembers());
-        impactedUsers.addAll(organization.getUsers());
+        impactedUsers.addAll(userRepository.findAllByOrganization_Id(organization.getId()));
 
         for (User impactedUser : impactedUsers) {
             if (

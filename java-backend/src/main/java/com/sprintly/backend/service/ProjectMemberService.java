@@ -4,7 +4,6 @@ import com.sprintly.backend.dto.project.AddProjectMembersRequest;
 import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.ProjectMember;
-import com.sprintly.backend.entity.ProjectMemberId;
 import com.sprintly.backend.entity.User;
 import com.sprintly.backend.entity.enums.ProjectRole;
 import com.sprintly.backend.exception.AccessDeniedException;
@@ -22,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -145,29 +143,22 @@ public class ProjectMemberService {
 
         return "MEMBER";
     }
-    private void assignProjectRole(Project project, User user, ProjectRole role) {
-        ProjectMemberId id = new ProjectMemberId(project.getId(), user.getId());
-        Optional<ProjectMember> member = projectMemberRepository.findById(id);
 
-        if (member.isPresent()) {
-            ProjectMember existingMember = member.get();
-            if (existingMember.getRole() == role) {
+    private void assignProjectRole(Project project, User user, ProjectRole role) {
+        ProjectMember member = projectMemberRepository.findByProject_IdAndUser_Id(project.getId(), user.getId())
+            .orElse(null);
+
+        if (member != null) {
+            if (member.getRole() == role) {
                 return;
             }
 
-            existingMember.setRole(role);
-            projectMemberRepository.save(existingMember);
+            member.setRole(role);
+            projectMemberRepository.save(member);
             return;
         }
 
-        ProjectMember newMember = ProjectMember.builder()
-            .id(id)
-            .project(project)
-            .user(user)
-            .role(role)
-            .build();
-
-        projectMemberRepository.save(newMember);
+        projectMemberRepository.save(ProjectMember.create(project, user, role));
     }
 
     private void removeProjectMembership(Project project, User user) {

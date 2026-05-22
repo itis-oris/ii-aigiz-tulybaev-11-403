@@ -7,3 +7,5 @@ databaseChangeLog:
       file: db/changelog/changes/002-drop-task-privacy.yaml
   - include:
       file: db/changelog/changes/003-drop-organization-role-tables.yaml
+  - include:
+      file: db/changelog/changes/004-project-members-uuid-id.yaml

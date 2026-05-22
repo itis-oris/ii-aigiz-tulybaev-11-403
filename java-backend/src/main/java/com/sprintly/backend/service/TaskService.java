@@ -98,15 +98,7 @@ public class TaskService {
             getUserInOrganization(filter.getCreatorId(), currentUser.getOrganizationId());
         }
 
-        List<Task> tasks = taskRepository.findByFilters(
-            currentUser.getOrganizationId(),
-            filter.getProjectId(),
-            filter.getAssigneeId(),
-            filter.getCreatorId(),
-            filter.getStatus(),
-            filter.getPriority(),
-            filter.getSearch()
-        );
+        List<Task> tasks = findTasksByFilter(filter, currentUser.getOrganizationId());
 
         List<TaskResponse> responses = new ArrayList<>();
         for (Task task : tasks) {
@@ -116,6 +108,41 @@ public class TaskService {
         }
 
         return responses;
+    }
+
+    private List<Task> findTasksByFilter(TaskFilterRequest filter, UUID organizationId) {
+        if (canUseTagQuery(filter)) {
+            return taskRepository.findActiveTasksByOrganizationAndTagIds(organizationId, filter.getTagIds());
+        }
+
+        return taskRepository.findByFilters(
+            organizationId,
+            filter.getProjectId(),
+            filter.getAssigneeId(),
+            filter.getCreatorId(),
+            filter.getStatus(),
+            filter.getPriority(),
+            filter.getSearch(),
+            filter.getTagIds()
+        );
+    }
+
+    private boolean canUseTagQuery(TaskFilterRequest filter) {
+        return hasItems(filter.getTagIds())
+            && filter.getProjectId() == null
+            && filter.getAssigneeId() == null
+            && filter.getCreatorId() == null
+            && filter.getStatus() == null
+            && filter.getPriority() == null
+            && !hasText(filter.getSearch());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private boolean hasItems(List<UUID> values) {
+        return values != null && !values.isEmpty();
     }
 
     @Transactional(readOnly = true)

@@ -1,20 +1,24 @@
 package com.sprintly.backend.entity;
 
 import com.sprintly.backend.entity.enums.ProjectRole;
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -22,18 +26,22 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "project_members")
+@Table(
+    name = "project_members",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_project_members_project_user", columnNames = {"project_id", "user_id"})
+    }
+)
 public class ProjectMember {
 
-    @EmbeddedId
-    private ProjectMemberId id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @MapsId("projectId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @MapsId("userId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -41,4 +49,12 @@ public class ProjectMember {
     @Enumerated(EnumType.STRING)
     @jakarta.persistence.Column(name = "role", nullable = false, length = 50)
     private ProjectRole role;
+
+    public static ProjectMember create(Project project, User user, ProjectRole role) {
+        ProjectMember projectMember = new ProjectMember();
+        projectMember.setProject(project);
+        projectMember.setUser(user);
+        projectMember.setRole(role);
+        return projectMember;
+    }
 }

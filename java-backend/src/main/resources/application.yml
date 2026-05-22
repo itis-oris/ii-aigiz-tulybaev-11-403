@@ -5,6 +5,8 @@ spring:
       - optional:file:java-backend/.env[.properties]
   application:
     name: sprintly-java-backend
+  cache:
+    type: redis
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sprintly}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}

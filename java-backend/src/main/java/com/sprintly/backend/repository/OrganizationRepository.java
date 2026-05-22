@@ -9,6 +9,4 @@ import java.util.UUID;
 public interface OrganizationRepository extends JpaRepository<Organization, UUID> {
 
     Optional<Organization> findByIdAndDeletedAtIsNull(UUID id);
-
-    Optional<Organization> findByNameAndDeletedAtIsNull(String name);
 }

@@ -31,6 +31,8 @@ public class TagService {
     private final TaskRepository taskRepository;
     private final TagMapper tagMapper;
     private final ProjectAccessService projectAccessService;
+    private final CachedViewService cachedViewService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     @Transactional(readOnly = true)
     public List<TagResponse> findAll(UUID projectId, UUID taskId, CustomUserDetails currentUser) {
@@ -49,13 +51,7 @@ public class TagService {
     public List<TagResponse> findAllByProject(UUID projectId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
         projectAccessService.ensureProjectMember(currentUser, project, "Insufficient permissions for tag access");
-
-        List<TagResponse> responses = new ArrayList<>();
-        for (Tag tag : tagRepository.findAllByProject_IdAndDeletedAtIsNullOrderByNameAsc(project.getId())) {
-            responses.add(tagMapper.toResponse(tag));
-        }
-
-        return responses;
+        return cachedViewService.getProjectTags(project.getId());
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +73,7 @@ public class TagService {
     public TagResponse findById(UUID tagId, CustomUserDetails currentUser) {
         Tag tag = getTagInOrganization(tagId, currentUser.getOrganizationId());
         projectAccessService.ensureProjectMember(currentUser, tag.getProject(), "Insufficient permissions for tag access");
-        return tagMapper.toResponse(tag);
+        return cachedViewService.getTag(tag.getId());
     }
 
     @Transactional
@@ -96,6 +92,8 @@ public class TagService {
             .updatedAt(OffsetDateTime.now())
             .project(project)
             .build());
+        cacheInvalidationService.evictProjectTags(project.getId());
+        cacheInvalidationService.evictTag(tag.getId());
 
         return tagMapper.toResponse(tag);
     }
@@ -112,8 +110,10 @@ public class TagService {
         tag.setName(normalizedName);
         tag.setColor(normalizedColor);
         tag.setUpdatedAt(OffsetDateTime.now());
-
-        return tagMapper.toResponse(tagRepository.save(tag));
+        Tag savedTag = tagRepository.save(tag);
+        cacheInvalidationService.evictProjectTags(savedTag.getProject().getId());
+        cacheInvalidationService.evictTag(savedTag.getId());
+        return tagMapper.toResponse(savedTag);
     }
 
     @Transactional
@@ -124,6 +124,8 @@ public class TagService {
         tag.setDeletedAt(OffsetDateTime.now());
         tag.setUpdatedAt(OffsetDateTime.now());
         tagRepository.save(tag);
+        cacheInvalidationService.evictProjectTags(tag.getProject().getId());
+        cacheInvalidationService.evictTag(tag.getId());
     }
 
     private void ensureUniqueTagName(UUID projectId, String name, UUID excludedTagId) {

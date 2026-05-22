@@ -4,6 +4,7 @@ import com.sprintly.backend.entity.enums.TaskStatus;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -16,4 +17,5 @@ public class TaskFilterRequest {
     private TaskStatus status;
     private Integer priority;
     private String search;
+    private List<UUID> tagIds;
 }

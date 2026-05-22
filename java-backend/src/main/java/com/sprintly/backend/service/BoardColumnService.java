@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +27,8 @@ public class BoardColumnService {
     private final BoardRepository boardRepository;
     private final BoardColumnMapper boardColumnMapper;
     private final ProjectAccessService projectAccessService;
+    private final CachedViewService cachedViewService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     @Transactional
     public List<ColumnResponse> findAllByBoard(UUID boardId, CustomUserDetails currentUser) {
@@ -36,22 +37,16 @@ public class BoardColumnService {
         List<BoardColumn> columns = boardColumnRepository.findAllByBoard_IdAndDeletedAtIsNullOrderByPositionAsc(board.getId());
 
         if (columns.isEmpty()) {
-            columns = createDefaultColumns(board);
+            createDefaultColumns(board);
         }
-
-        List<ColumnResponse> responses = new ArrayList<>();
-        for (BoardColumn column : columns) {
-            responses.add(boardColumnMapper.toResponse(column));
-        }
-
-        return responses;
+        return cachedViewService.getBoardColumns(board.getId());
     }
 
     @Transactional(readOnly = true)
     public ColumnResponse findById(UUID columnId, CustomUserDetails currentUser) {
         BoardColumn column = getColumnInOrganization(columnId, currentUser.getOrganizationId());
         projectAccessService.ensureProjectMember(currentUser, column.getBoard().getProject(), "Insufficient permissions for column access");
-        return boardColumnMapper.toResponse(column);
+        return cachedViewService.getColumn(column.getId());
     }
 
     @Transactional
@@ -64,6 +59,8 @@ public class BoardColumnService {
             .position(request.getPosition())
             .board(board)
             .build());
+        cacheInvalidationService.evictBoardColumns(board.getId());
+        cacheInvalidationService.evictColumn(column.getId());
 
         return boardColumnMapper.toResponse(column);
     }
@@ -74,7 +71,10 @@ public class BoardColumnService {
         projectAccessService.ensureProjectManager(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
         column.setName(request.getName().trim());
         column.setPosition(request.getPosition());
-        return boardColumnMapper.toResponse(boardColumnRepository.save(column));
+        BoardColumn savedColumn = boardColumnRepository.save(column);
+        cacheInvalidationService.evictBoardColumns(savedColumn.getBoard().getId());
+        cacheInvalidationService.evictColumn(savedColumn.getId());
+        return boardColumnMapper.toResponse(savedColumn);
     }
 
     @Transactional
@@ -83,6 +83,8 @@ public class BoardColumnService {
         projectAccessService.ensureProjectManager(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
         column.setDeletedAt(OffsetDateTime.now());
         boardColumnRepository.save(column);
+        cacheInvalidationService.evictBoardColumns(column.getBoard().getId());
+        cacheInvalidationService.evictColumn(column.getId());
     }
 
     private BoardColumn getColumnInOrganization(UUID columnId, UUID organizationId) {
@@ -119,11 +121,13 @@ public class BoardColumnService {
     }
 
     private List<BoardColumn> createDefaultColumns(Board board) {
-        return List.of(
+        List<BoardColumn> columns = List.of(
             createDefaultColumn(board, "Backlog", 0L),
             createDefaultColumn(board, "In Progress", 1000L),
             createDefaultColumn(board, "Done", 2000L)
         );
+        cacheInvalidationService.evictBoardColumns(board.getId());
+        return columns;
     }
 
     private BoardColumn createDefaultColumn(Board board, String name, long position) {

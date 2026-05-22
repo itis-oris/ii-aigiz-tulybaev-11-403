@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +30,8 @@ public class BoardService {
     private final ProjectRepository projectRepository;
     private final BoardMapper boardMapper;
     private final ProjectAccessService projectAccessService;
+    private final CachedViewService cachedViewService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     @Transactional
     public List<BoardResponse> findAllByProject(UUID projectId, CustomUserDetails currentUser) {
@@ -39,22 +40,16 @@ public class BoardService {
         List<Board> boards = boardRepository.findAllByProject_IdAndDeletedAtIsNullOrderByPositionAsc(project.getId());
 
         if (boards.isEmpty()) {
-            boards = List.of(createDefaultBoard(project));
+            createDefaultBoard(project);
         }
-
-        List<BoardResponse> responses = new ArrayList<>();
-        for (Board board : boards) {
-            responses.add(boardMapper.toResponse(board));
-        }
-
-        return responses;
+        return cachedViewService.getProjectBoards(project.getId());
     }
 
     @Transactional(readOnly = true)
     public BoardResponse findById(UUID boardId, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
         projectAccessService.ensureProjectMember(currentUser, board.getProject(), "Insufficient permissions for board access");
-        return boardMapper.toResponse(board);
+        return cachedViewService.getBoard(board.getId());
     }
 
     @Transactional
@@ -70,6 +65,8 @@ public class BoardService {
             .createdAt(OffsetDateTime.now())
             .project(project)
             .build());
+        cacheInvalidationService.evictProjectBoards(project.getId());
+        cacheInvalidationService.evictBoard(board.getId());
 
         return boardMapper.toResponse(board);
     }
@@ -82,7 +79,10 @@ public class BoardService {
         ensureUniqueBoardName(board.getProject().getId(), normalizedName, board.getId());
         board.setName(normalizedName);
         board.setPosition(request.getPosition());
-        return boardMapper.toResponse(boardRepository.save(board));
+        Board savedBoard = boardRepository.save(board);
+        cacheInvalidationService.evictProjectBoards(savedBoard.getProject().getId());
+        cacheInvalidationService.evictBoard(savedBoard.getId());
+        return boardMapper.toResponse(savedBoard);
     }
 
     @Transactional
@@ -91,6 +91,9 @@ public class BoardService {
         projectAccessService.ensureProjectManager(currentUser, board.getProject(), "Insufficient permissions for board modification");
         board.setDeletedAt(OffsetDateTime.now());
         boardRepository.save(board);
+        cacheInvalidationService.evictProjectBoards(board.getProject().getId());
+        cacheInvalidationService.evictBoard(board.getId());
+        cacheInvalidationService.evictBoardColumns(board.getId());
     }
 
     private Board getBoardInOrganization(UUID boardId, UUID organizationId) {
@@ -148,6 +151,9 @@ public class BoardService {
         createDefaultColumn(board, "Backlog", 0L);
         createDefaultColumn(board, "In Progress", 1000L);
         createDefaultColumn(board, "Done", 2000L);
+        cacheInvalidationService.evictProjectBoards(project.getId());
+        cacheInvalidationService.evictBoard(board.getId());
+        cacheInvalidationService.evictBoardColumns(board.getId());
 
         return board;
     }

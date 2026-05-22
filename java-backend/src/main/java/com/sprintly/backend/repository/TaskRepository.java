@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,19 +19,15 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, TaskRepositor
     @EntityGraph(attributePaths = {"project", "board", "column", "assignee", "creator", "tags"})
     Optional<Task> findByIdAndDeletedAtIsNull(UUID id);
 
-    List<Task> findAllByProject_IdAndDeletedAtIsNull(UUID projectId);
-
-    List<Task> findAllByColumn_IdAndDeletedAtIsNullOrderByPositionAsc(UUID columnId);
-
-    List<Task> findAllByAssignee_IdAndDeletedAtIsNull(UUID assigneeId);
-
+    @EntityGraph(attributePaths = {"project", "board", "column", "assignee", "creator", "tags"})
     @Query("""
-        select t
+        select distinct t
         from Task t
+        join t.tags tag
         where t.deletedAt is null
           and t.project.organization.id = :organizationId
-          and t.status = :status
+          and tag.id in :tagIds
         order by t.createdAt desc
         """)
-    List<Task> findActiveTasksByOrganizationAndStatus(UUID organizationId, TaskStatus status);
+    List<Task> findActiveTasksByOrganizationAndTagIds(UUID organizationId, Collection<UUID> tagIds);
 }
