@@ -88,16 +88,6 @@ public class ProjectAccessService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isProjectManager(CustomUserDetails currentUser, Project project) {
-        return isProjectOwner(currentUser, project);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isProjectManager(User user, Project project) {
-        return isProjectOwner(user, project);
-    }
-
-    @Transactional(readOnly = true)
     public boolean canEditTask(CustomUserDetails currentUser, Task task) {
         if (task == null || task.getProject() == null) {
             return false;
@@ -133,11 +123,6 @@ public class ProjectAccessService {
         if (!isProjectOwner(currentUser, project)) {
             throw new AccessDeniedException(message);
         }
-    }
-
-    @Transactional
-    public void ensureProjectManager(CustomUserDetails currentUser, Project project, String message) {
-        ensureProjectOwner(currentUser, project, message);
     }
 
     @Transactional

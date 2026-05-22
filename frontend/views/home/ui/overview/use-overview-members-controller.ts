@@ -44,8 +44,8 @@ export const useOverviewMembersController = () => {
             return true;
         }
 
-        return activeProject?.currentUserProjectRole === PROJECT_OWNER_ROLE;
-    }, [activeProject?.currentUserProjectRole, currentUser?.roles]);
+        return activeProject?.currentUserAccessLevel === PROJECT_OWNER_ROLE;
+    }, [activeProject?.currentUserAccessLevel, currentUser?.roles]);
 
     const { data: users = [], isLoading: isUsersLoading } = useQuery({
         queryKey: ['users'],

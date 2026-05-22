@@ -18,7 +18,7 @@ public class ProjectMapper {
         return toResponse(project, null);
     }
 
-    public ProjectResponse toResponse(Project project, String currentUserProjectRole) {
+    public ProjectResponse toResponse(Project project, String currentUserAccessLevel) {
         List<String> boardTabs = getBoardTabs(project);
 
         return ProjectResponse.builder()
@@ -35,7 +35,7 @@ public class ProjectMapper {
             .ownerLastname(project.getOwner() != null ? project.getOwner().getLastname() : null)
             .ownerMiddlename(project.getOwner() != null ? project.getOwner().getMiddlename() : null)
             .ownerAvatarUrl(project.getOwner() != null ? project.getOwner().getAvatarUrl() : null)
-            .currentUserProjectRole(currentUserProjectRole)
+            .currentUserAccessLevel(currentUserAccessLevel)
             .folderId(project.getFolder() != null ? project.getFolder().getId() : null)
             .boardTabs(boardTabs)
             .createdAt(project.getCreatedAt())

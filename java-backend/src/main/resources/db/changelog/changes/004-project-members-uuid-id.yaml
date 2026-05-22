@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 004-01-project-members-add-id-column
-      author: codex
+      author: aigiz
       comment: Add UUID id column for project_members.
       changes:
         - addColumn:
@@ -13,7 +13,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 004-02-project-members-backfill-id
-      author: codex
+      author: aigiz
       comment: Backfill UUID ids for existing project_members rows.
       changes:
         - sql:
@@ -32,7 +32,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 004-03-project-members-id-not-null
-      author: codex
+      author: aigiz
       comment: Require UUID id for project_members.
       changes:
         - addNotNullConstraint:
@@ -42,7 +42,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 004-04-project-members-switch-primary-key
-      author: codex
+      author: aigiz
       comment: Replace composite primary key with UUID primary key.
       changes:
         - dropPrimaryKey:
@@ -54,7 +54,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 004-05-project-members-project-user-unique
-      author: codex
+      author: aigiz
       comment: Preserve unique membership per project and user.
       changes:
         - addUniqueConstraint:

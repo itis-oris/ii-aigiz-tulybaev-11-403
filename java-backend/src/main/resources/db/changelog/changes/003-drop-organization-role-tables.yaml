@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 003-01-drop-organization-member-roles-table
-      author: codex
+      author: aigiz
       comment: Remove obsolete organization member role mapping table.
       preConditions:
         - onFail: MARK_RAN
@@ -14,7 +14,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 003-02-drop-roles-table
-      author: codex
+      author: aigiz
       comment: Remove obsolete shared roles table.
       preConditions:
         - onFail: MARK_RAN

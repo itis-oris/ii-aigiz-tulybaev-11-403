@@ -79,7 +79,7 @@ public class TagService {
     @Transactional
     public TagResponse create(CreateTagRequest request, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for tag creation");
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for tag creation");
 
         String normalizedName = request.getName().trim();
         String normalizedColor = request.getColor().trim().toUpperCase();
@@ -101,7 +101,7 @@ public class TagService {
     @Transactional
     public TagResponse update(UUID tagId, UpdateTagRequest request, CustomUserDetails currentUser) {
         Tag tag = getTagInOrganization(tagId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, tag.getProject(), "Insufficient permissions for tag update");
+        projectAccessService.ensureProjectOwner(currentUser, tag.getProject(), "Insufficient permissions for tag update");
 
         String normalizedName = request.getName().trim();
         String normalizedColor = request.getColor().trim().toUpperCase();
@@ -119,7 +119,7 @@ public class TagService {
     @Transactional
     public void delete(UUID tagId, CustomUserDetails currentUser) {
         Tag tag = getTagInOrganization(tagId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, tag.getProject(), "Insufficient permissions for tag deletion");
+        projectAccessService.ensureProjectOwner(currentUser, tag.getProject(), "Insufficient permissions for tag deletion");
 
         tag.setDeletedAt(OffsetDateTime.now());
         tag.setUpdatedAt(OffsetDateTime.now());

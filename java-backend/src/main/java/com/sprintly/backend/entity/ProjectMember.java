@@ -1,9 +1,6 @@
 package com.sprintly.backend.entity;
 
-import com.sprintly.backend.entity.enums.ProjectRole;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,15 +43,10 @@ public class ProjectMember {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @jakarta.persistence.Column(name = "role", nullable = false, length = 50)
-    private ProjectRole role;
-
-    public static ProjectMember create(Project project, User user, ProjectRole role) {
+    public static ProjectMember create(Project project, User user) {
         ProjectMember projectMember = new ProjectMember();
         projectMember.setProject(project);
         projectMember.setUser(user);
-        projectMember.setRole(role);
         return projectMember;
     }
 }

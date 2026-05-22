@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 001-01-project-members-role-column
-      author: codex
+      author: aigiz
       comment: Add explicit project-scoped role storage to project_members.
       changes:
         - addColumn:
@@ -13,7 +13,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 001-02-project-members-ensure-owner-membership
-      author: codex
+      author: aigiz
       comment: Ensure every project owner is present in project_members before role backfill.
       changes:
         - sql:
@@ -33,7 +33,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 001-03-project-members-backfill-manager-role
-      author: codex
+      author: aigiz
       comment: Mark project owners as project managers.
       changes:
         - sql:
@@ -50,7 +50,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 001-04-project-members-backfill-member-role
-      author: codex
+      author: aigiz
       comment: Mark remaining project members as project members.
       changes:
         - update:
@@ -63,7 +63,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 001-05-project-members-role-not-null
-      author: codex
+      author: aigiz
       comment: Require role for all project memberships.
       changes:
         - addNotNullConstraint:
@@ -73,7 +73,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 001-06-project-members-role-check
-      author: codex
+      author: aigiz
       comment: Limit project membership roles to the supported values.
       changes:
         - sql:
@@ -86,7 +86,7 @@ databaseChangeLog:
 
   - changeSet:
       id: 001-07-project-members-role-index
-      author: codex
+      author: aigiz
       comment: Add index to support lookups by project and role.
       changes:
         - createIndex:

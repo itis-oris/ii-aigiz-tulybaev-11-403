@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-01-drop-project-members-role-index
+      author: aigiz
+      comment: Drop project_members role index because project role is no longer stored separately.
+      changes:
+        - dropIndex:
+            tableName: project_members
+            indexName: idx_project_members_project_role
+
+  - changeSet:
+      id: 005-02-drop-project-members-role-check
+      author: aigiz
+      comment: Drop old project_members role check constraint.
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              ALTER TABLE project_members
+              DROP CONSTRAINT IF EXISTS chk_project_members_role;
+
+  - changeSet:
+      id: 005-03-drop-project-members-role-column
+      author: aigiz
+      comment: Drop role column from project_members because project access is now owner or member only.
+      changes:
+        - dropColumn:
+            tableName: project_members
+            columnName: role

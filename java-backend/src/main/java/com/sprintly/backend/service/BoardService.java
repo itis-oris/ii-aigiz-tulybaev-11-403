@@ -55,7 +55,7 @@ public class BoardService {
     @Transactional
     public BoardResponse create(CreateBoardRequest request, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for board modification");
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for board modification");
         String normalizedName = request.getName().trim();
         ensureUniqueBoardName(project.getId(), normalizedName);
 
@@ -74,7 +74,7 @@ public class BoardService {
     @Transactional
     public BoardResponse update(UUID boardId, UpdateBoardRequest request, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, board.getProject(), "Insufficient permissions for board modification");
+        projectAccessService.ensureProjectOwner(currentUser, board.getProject(), "Insufficient permissions for board modification");
         String normalizedName = request.getName().trim();
         ensureUniqueBoardName(board.getProject().getId(), normalizedName, board.getId());
         board.setName(normalizedName);
@@ -88,7 +88,7 @@ public class BoardService {
     @Transactional
     public void delete(UUID boardId, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, board.getProject(), "Insufficient permissions for board modification");
+        projectAccessService.ensureProjectOwner(currentUser, board.getProject(), "Insufficient permissions for board modification");
         board.setDeletedAt(OffsetDateTime.now());
         boardRepository.save(board);
         cacheInvalidationService.evictProjectBoards(board.getProject().getId());

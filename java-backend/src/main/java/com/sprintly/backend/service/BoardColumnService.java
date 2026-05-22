@@ -52,7 +52,7 @@ public class BoardColumnService {
     @Transactional
     public ColumnResponse create(CreateColumnRequest request, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(request.getBoardId(), currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, board.getProject(), "Insufficient permissions for column modification");
+        projectAccessService.ensureProjectOwner(currentUser, board.getProject(), "Insufficient permissions for column modification");
 
         BoardColumn column = boardColumnRepository.save(BoardColumn.builder()
             .name(request.getName().trim())
@@ -68,7 +68,7 @@ public class BoardColumnService {
     @Transactional
     public ColumnResponse update(UUID columnId, UpdateColumnRequest request, CustomUserDetails currentUser) {
         BoardColumn column = getColumnInOrganization(columnId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
+        projectAccessService.ensureProjectOwner(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
         column.setName(request.getName().trim());
         column.setPosition(request.getPosition());
         BoardColumn savedColumn = boardColumnRepository.save(column);
@@ -80,7 +80,7 @@ public class BoardColumnService {
     @Transactional
     public void delete(UUID columnId, CustomUserDetails currentUser) {
         BoardColumn column = getColumnInOrganization(columnId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
+        projectAccessService.ensureProjectOwner(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
         column.setDeletedAt(OffsetDateTime.now());
         boardColumnRepository.save(column);
         cacheInvalidationService.evictBoardColumns(column.getBoard().getId());

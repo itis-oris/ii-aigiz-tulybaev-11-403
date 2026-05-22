@@ -5,7 +5,6 @@ import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.ProjectMember;
 import com.sprintly.backend.entity.User;
-import com.sprintly.backend.entity.enums.ProjectRole;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.mapper.UserMapper;
@@ -81,7 +80,7 @@ public class ProjectMemberService {
 
     @Transactional
     public void ensureProjectMembership(Project project, User user) {
-        assignProjectRole(project, user, ProjectRole.PROJECT_MEMBER);
+        ensureProjectMemberRecord(project, user);
     }
 
     private Project getProjectInOrganization(UUID projectId, UUID organizationId) {
@@ -144,21 +143,15 @@ public class ProjectMemberService {
         return "MEMBER";
     }
 
-    private void assignProjectRole(Project project, User user, ProjectRole role) {
+    private void ensureProjectMemberRecord(Project project, User user) {
         ProjectMember member = projectMemberRepository.findByProject_IdAndUser_Id(project.getId(), user.getId())
             .orElse(null);
 
         if (member != null) {
-            if (member.getRole() == role) {
-                return;
-            }
-
-            member.setRole(role);
-            projectMemberRepository.save(member);
             return;
         }
 
-        projectMemberRepository.save(ProjectMember.create(project, user, role));
+        projectMemberRepository.save(ProjectMember.create(project, user));
     }
 
     private void removeProjectMembership(Project project, User user) {

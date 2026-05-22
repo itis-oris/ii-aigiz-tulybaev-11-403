@@ -26,7 +26,7 @@ export type ProjectSummary = {
     ownerName?: string;
     ownerEmail?: string;
     ownerAvatarUrl?: string | null;
-    currentUserProjectRole?: 'OWNER' | 'MEMBER' | null;
+    currentUserAccessLevel?: 'OWNER' | 'MEMBER' | null;
     folderId?: string;
 };
 
