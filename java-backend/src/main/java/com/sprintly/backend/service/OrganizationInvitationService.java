@@ -81,9 +81,7 @@ public class OrganizationInvitationService {
     }
 
     @Transactional(readOnly = true)
-    public OrganizationInvitationDetailsResponse getInvitationDetails(String token) {
-        OrganizationInvitation invitation = getInvitation(token);
-
+    public OrganizationInvitationDetailsResponse getInvitationDetails(OrganizationInvitation invitation) {
         return OrganizationInvitationDetailsResponse.builder()
             .organizationId(invitation.getOrganization().getId())
             .organizationName(invitation.getOrganization().getName())
@@ -96,10 +94,13 @@ public class OrganizationInvitationService {
     }
 
     @Transactional
-    public OrganizationSessionResponse acceptInvitation(String token, CustomUserDetails currentUser) {
+    public OrganizationSessionResponse acceptInvitation(
+        OrganizationInvitation invitation,
+        CustomUserDetails currentUser
+    ) {
         User user = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        OrganizationInvitation invitation = getActiveInvitation(token);
+        invitation = requireActiveInvitation(invitation);
 
         ensureInvitationAcceptable(invitation, user);
         validateInvitationEmail(invitation, user.getEmail());
@@ -119,7 +120,7 @@ public class OrganizationInvitationService {
 
     @Transactional(readOnly = true)
     public OrganizationInvitation requireInvitationForRegistration(String token, String email) {
-        OrganizationInvitation invitation = getActiveInvitation(token);
+        OrganizationInvitation invitation = requireActiveInvitation(getInvitation(token));
         if (invitation.getAcceptedAt() != null) {
             throw new IllegalStateException("Invitation has already been accepted");
         }
@@ -176,8 +177,10 @@ public class OrganizationInvitationService {
     }
 
     private OrganizationInvitation getActiveInvitation(String token) {
-        OrganizationInvitation invitation = getInvitation(token);
+        return requireActiveInvitation(getInvitation(token));
+    }
 
+    private OrganizationInvitation requireActiveInvitation(OrganizationInvitation invitation) {
         if (invitation.getRevokedAt() != null) {
             throw new IllegalStateException("Invitation has been revoked");
         }
