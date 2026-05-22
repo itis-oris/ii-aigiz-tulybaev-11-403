@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/001-project-member-roles-prep.yaml
   - include:
       file: db/changelog/changes/002-drop-task-privacy.yaml
+  - include:
+      file: db/changelog/changes/003-drop-organization-role-tables.yaml

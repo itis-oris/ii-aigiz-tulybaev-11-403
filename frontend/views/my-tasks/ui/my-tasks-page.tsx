@@ -156,10 +156,6 @@ const getTaskFilters = (task: Task, userId?: string): MyTasksFilter[] => {
         filters.push('Порученные мной');
     }
 
-    if (userId && task.creatorId === userId && task.isPrivate) {
-        filters.push('Мои приватные задачи');
-    }
-
     return filters;
 };
 
@@ -233,13 +229,6 @@ const buildGroups = (tasks: Task[], filter: MyTasksFilter, userId?: string) => {
 const getTaskQueryFilters = (filter: MyTasksFilter, userId?: string) => {
     if (!userId) {
         return {};
-    }
-
-    if (filter === 'Мои приватные задачи') {
-        return {
-            creatorId: userId,
-            isPrivate: true,
-        };
     }
 
     if (filter === 'Назначенные мне') {

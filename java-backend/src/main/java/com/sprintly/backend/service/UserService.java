@@ -9,7 +9,6 @@ import com.sprintly.backend.entity.User;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.mapper.UserMapper;
-import com.sprintly.backend.repository.OrganizationRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -31,7 +28,6 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final OrganizationRepository organizationRepository;
     private final UserMapper userMapper;
     private final OrganizationRoleService organizationRoleService;
     private final S3StorageService s3StorageService;
@@ -39,37 +35,12 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<UserResponse> findAllInCurrentOrganization(CustomUserDetails currentUser) {
         List<User> users = userRepository.findAllByOrganizations_Id(currentUser.getOrganizationId());
-        List<UUID> userIds = new ArrayList<>();
-        for (User user : users) {
-            userIds.add(user.getId());
-        }
-
-        Map<UUID, Set<String>> roleNamesByUserId = new LinkedHashMap<>(
-            organizationRoleService.getRoleNamesByUserIdsInOrganization(
-                currentUser.getOrganizationId(),
-                userIds
-            )
-        );
-        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(currentUser.getOrganizationId())
-            .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
-
-        if (organization.getOwnerId() != null) {
-            roleNamesByUserId
-                .computeIfAbsent(organization.getOwnerId(), ignored -> new HashSet<>())
-                .add("ADMIN");
-        }
 
         List<UserResponse> responses = new ArrayList<>();
         for (User user : users) {
             responses.add(userMapper.toResponse(
                 user,
-                roleNamesByUserId.getOrDefault(
-                    user.getId(),
-                    organizationRoleService.getRoleNamesInOrganization(
-                        user,
-                        currentUser.getOrganizationId()
-                    )
-                )
+                organizationRoleService.getRoleNamesInOrganization(user, currentUser.getOrganizationId())
             ));
         }
 

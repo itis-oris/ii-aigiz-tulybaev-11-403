@@ -47,7 +47,6 @@ export type TaskSheetBodyProps = {
         storyPoints?: number;
         priority?: number;
         dueDate?: string;
-        isPrivate: boolean;
         tagIds: string[];
     }) => void;
     onSaveTags: (tagIds: string[]) => void;

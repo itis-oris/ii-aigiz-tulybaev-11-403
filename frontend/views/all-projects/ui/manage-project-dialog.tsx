@@ -32,7 +32,7 @@ export function ManageProjectDialog({
     const { data: currentUser } = useCurrentUser();
     const canManageProject = Boolean(
         hasOrgAdminRole(currentUser?.roles) ||
-        project?.currentUserProjectRole === 'PROJECT_MANAGER',
+        project?.currentUserProjectRole === 'OWNER',
     );
     const canManageUsers = canManageProject;
     const [name, setName] = useState(project?.name ?? '');

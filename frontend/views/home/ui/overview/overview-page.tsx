@@ -19,13 +19,10 @@ const Overview = () => {
         isProjectMembersLoading,
         isProjectMembersError,
         isAddingMembers,
-        updatingMemberId,
         removingMemberId,
         transferringOwnerMemberId,
-        roleUpdateError,
         memberRemovalError,
         ownershipTransferError,
-        handleRoleChange,
         handleTransferOwnership,
         handleRemoveMember,
         addMembers,
@@ -66,10 +63,8 @@ const Overview = () => {
                         isProjectMembersLoading={isProjectMembersLoading}
                         isProjectMembersError={isProjectMembersError}
                         isAddingMembers={isAddingMembers}
-                        updatingMemberId={updatingMemberId}
                         removingMemberId={removingMemberId}
                         transferringOwnerMemberId={transferringOwnerMemberId}
-                        roleUpdateError={roleUpdateError}
                         memberRemovalError={memberRemovalError}
                         ownershipTransferError={ownershipTransferError}
                         participants={participants}
@@ -79,7 +74,6 @@ const Overview = () => {
                             setIsAddMemberDialogOpen(true)
                         }
                         onOpenChangeAddMemberDialog={setIsAddMemberDialogOpen}
-                        onRoleChange={handleRoleChange}
                         onTransferOwnership={handleTransferOwnership}
                         onRemoveMember={handleRemoveMember}
                         onAddMembers={addMembers}

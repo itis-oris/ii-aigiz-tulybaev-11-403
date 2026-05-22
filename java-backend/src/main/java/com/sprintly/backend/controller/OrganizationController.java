@@ -8,6 +8,7 @@ import com.sprintly.backend.dto.organization.OrganizationSessionResponse;
 import com.sprintly.backend.dto.organization.SwitchOrganizationRequest;
 import com.sprintly.backend.dto.organization.UpdateOrganizationRequest;
 import com.sprintly.backend.security.CustomUserDetails;
+import com.sprintly.backend.service.OrganizationInvitationService;
 import com.sprintly.backend.service.OrganizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -37,7 +38,7 @@ import java.util.UUID;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
-    private final com.sprintly.backend.service.OrganizationInvitationService organizationInvitationService;
+    private final OrganizationInvitationService organizationInvitationService;
 
     @GetMapping
     @Operation(summary = "List my organizations")

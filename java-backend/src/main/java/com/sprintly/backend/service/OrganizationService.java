@@ -7,7 +7,6 @@ import com.sprintly.backend.dto.organization.SwitchOrganizationRequest;
 import com.sprintly.backend.dto.organization.UpdateOrganizationRequest;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.User;
-import com.sprintly.backend.entity.enums.RoleName;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.repository.OrganizationRepository;
@@ -62,7 +61,6 @@ public class OrganizationService {
         user.getOrganizations().add(organization);
         user.setOrganization(organization);
         userRepository.save(user);
-        organizationRoleService.assignRole(user, organization, RoleName.ADMIN);
 
         return buildSessionResponse(user, organization);
     }

@@ -73,7 +73,7 @@ export function ProjectRow({
                     {project.name}
                 </Link>
 
-                {project.currentUserProjectRole === 'PROJECT_MANAGER' ? (
+                {project.currentUserProjectRole === 'OWNER' ? (
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button

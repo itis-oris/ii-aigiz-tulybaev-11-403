@@ -7,7 +7,6 @@ import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.ProjectFolder;
 import com.sprintly.backend.entity.User;
-import com.sprintly.backend.entity.enums.ProjectRole;
 import com.sprintly.backend.entity.enums.ProjectStatus;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
@@ -87,7 +86,7 @@ public class ProjectService {
                 .createdAt(OffsetDateTime.now())
                 .build()
         );
-        projectMemberService.assignProjectManager(project, owner);
+        projectMemberService.ensureProjectMembership(project, owner);
         boardService.createDefaultBoard(project);
 
         return toResponse(project, currentUser);
@@ -96,7 +95,7 @@ public class ProjectService {
     @Transactional
     public ProjectResponse update(UUID projectId, UpdateProjectRequest request, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for project modification");
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
 
         updateProjectFields(project, request);
         updateProjectOwner(project, request, currentUser);
@@ -125,14 +124,14 @@ public class ProjectService {
                 currentUser.getOrganizationId()
             );
             project.setOwner(owner);
-            projectMemberService.assignProjectManager(project, owner);
+            projectMemberService.ensureProjectMembership(project, owner);
         }
     }
 
     @Transactional
     public void delete(UUID projectId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for project modification");
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
 
         project.setDeletedAt(OffsetDateTime.now());
         projectRepository.save(project);
@@ -141,7 +140,7 @@ public class ProjectService {
     @Transactional
     public ProjectResponse uploadImage(UUID projectId, MultipartFile file, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for project modification");
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
         String imageUrl = s3StorageService.uploadImage(file, "projects/" + project.getId() + "/image");
         project.setImageUrl(imageUrl);
 
@@ -218,9 +217,9 @@ public class ProjectService {
     private ProjectResponse toResponse(Project project, CustomUserDetails currentUser) {
         return projectMapper.toResponse(
             project,
-            projectAccessService.isProjectManager(currentUser, project)
-                ? ProjectRole.PROJECT_MANAGER.name()
-                : ProjectRole.PROJECT_MEMBER.name()
+            projectAccessService.isProjectOwner(currentUser, project)
+                ? "OWNER"
+                : "MEMBER"
         );
     }
 

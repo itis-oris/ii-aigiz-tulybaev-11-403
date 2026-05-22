@@ -209,7 +209,6 @@ export const TaskSheet = ({
             storyPoints?: number;
             priority?: number;
             dueDate?: string;
-            isPrivate: boolean;
             tagIds: string[];
         }) => updateTask(selectedTaskId as string, payload),
         onSuccess: async () => {
@@ -330,7 +329,6 @@ export const TaskSheet = ({
             storyPoints: liveTask.storyPoints ?? selectedTask.storyPoints,
             priority: liveTask.priority ?? selectedTask.priority,
             dueDate: liveTask.dueDate ?? selectedTask.dueDate,
-            isPrivate: liveTask.isPrivate ?? selectedTask.isPrivate,
             columnId: liveTask.columnId ?? selectedTask.columnId,
             position:
                 liveTask.position !== null && liveTask.position !== undefined

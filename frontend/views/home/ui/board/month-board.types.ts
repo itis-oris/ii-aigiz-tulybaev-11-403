@@ -6,7 +6,7 @@ export type MonthBoardProps = {
     anchorDate?: Date;
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
-    onCreateTask?: (dateKey: string, title: string, isPrivate: boolean) => void;
+    onCreateTask?: (dateKey: string, title: string) => void;
     onMoveTask?: (payload: {
         taskId: string;
         dueDate: string;

@@ -4,7 +4,6 @@ import com.sprintly.backend.dto.project.CreateProjectRequest;
 import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
 import com.sprintly.backend.dto.project.AddProjectMembersRequest;
-import com.sprintly.backend.dto.project.UpdateProjectMemberRoleRequest;
 import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.service.ProjectMemberService;
@@ -113,17 +112,6 @@ public class ProjectController {
         @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return projectMemberService.addMembers(projectId, request, currentUser);
-    }
-
-    @PutMapping("/{projectId}/members/{userId}/role")
-    @Operation(summary = "Update project member role")
-    public List<UserResponse> updateMemberRole(
-        @PathVariable UUID projectId,
-        @PathVariable UUID userId,
-        @Valid @RequestBody UpdateProjectMemberRoleRequest request,
-        @AuthenticationPrincipal CustomUserDetails currentUser
-    ) {
-        return projectMemberService.updateMemberRole(projectId, userId, request, currentUser);
     }
 
     @DeleteMapping("/{projectId}/members/{userId}")

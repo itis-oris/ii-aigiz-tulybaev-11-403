@@ -8,7 +8,6 @@ import com.sprintly.backend.dto.organization.OrganizationSessionResponse;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.OrganizationInvitation;
 import com.sprintly.backend.entity.User;
-import com.sprintly.backend.entity.enums.RoleName;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.repository.OrganizationInvitationRepository;

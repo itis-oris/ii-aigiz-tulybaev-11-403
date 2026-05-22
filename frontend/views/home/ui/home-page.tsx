@@ -52,16 +52,8 @@ type HomePageContentProps = {
     selectedProjectId: string;
     sourceTasks: Task[];
     taskLoadError: string | null;
-    onCreateBoardTask?: (
-        columnId: string,
-        title: string,
-        isPrivate: boolean,
-    ) => void;
-    onCreateWeeklyTask?: (
-        dateKey: string,
-        title: string,
-        isPrivate: boolean,
-    ) => void;
+    onCreateBoardTask?: (columnId: string, title: string) => void;
+    onCreateWeeklyTask?: (dateKey: string, title: string) => void;
     onMoveBoardTask?: (payload: {
         taskId: string;
         columnId: string;
@@ -957,11 +949,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         };
     };
 
-    const handleCreateWeeklyTask = (
-        dateKey: string,
-        title: string,
-        isPrivate: boolean,
-    ) => {
+    const handleCreateWeeklyTask = (dateKey: string, title: string) => {
         void (async () => {
             try {
                 const createContext = await resolveCreateContext();
@@ -977,7 +965,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                 await createTaskMutation.mutateAsync({
                     title,
                     dueDate: `${dateKey}T09:00:00.000Z`,
-                    isPrivate,
                     projectId: activeProjectId,
                     boardId: createContext.boardId,
                     columnId: createContext.columnId,
@@ -988,11 +975,7 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
         })();
     };
 
-    const handleCreateBoardTask = (
-        columnId: string,
-        title: string,
-        isPrivate: boolean,
-    ) => {
+    const handleCreateBoardTask = (columnId: string, title: string) => {
         void (async () => {
             try {
                 const createContext = await resolveCreateContext();
@@ -1014,7 +997,6 @@ const HomePage = ({ scope = 'project' }: HomePageProps) => {
                 await createTaskMutation.mutateAsync({
                     title,
                     dueDate: new Date().toISOString(),
-                    isPrivate,
                     projectId: activeProjectId,
                     boardId: createContext.boardId,
                     columnId: resolvedColumnId,

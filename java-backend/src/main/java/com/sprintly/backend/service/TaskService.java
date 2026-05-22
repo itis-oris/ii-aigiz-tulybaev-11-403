@@ -130,9 +130,9 @@ public class TaskService {
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
         projectAccessService.ensureTaskEditor(currentUser, task, "Insufficient permissions for task update");
 
-        Project project = updateTaskPlace(task, request, currentUser.getOrganizationId());
+        updateTaskColumn(task, request);
         updateTaskAssignee(task, request, currentUser.getOrganizationId());
-        updateTaskTags(task, request, project, currentUser.getOrganizationId());
+        updateTaskTags(task, request, task.getProject(), currentUser.getOrganizationId());
         updateTaskFields(task, request);
         task.setUpdatedAt(OffsetDateTime.now());
 
@@ -142,7 +142,7 @@ public class TaskService {
     @Transactional
     public TaskResponse assign(UUID taskId, AssignTaskRequest request, CustomUserDetails currentUser) {
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, task.getProject(), "Insufficient permissions for task assignment");
+        projectAccessService.ensureProjectMember(currentUser, task.getProject(), "Insufficient permissions for task assignment");
         User assignee = request.getAssigneeId() != null
             ? getUserInOrganization(request.getAssigneeId(), currentUser.getOrganizationId())
             : null;
@@ -156,7 +156,7 @@ public class TaskService {
     @Transactional
     public TaskResponse move(UUID taskId, MoveTaskRequest request, CustomUserDetails currentUser) {
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, task.getProject(), "Insufficient permissions for task move");
+        projectAccessService.ensureProjectMember(currentUser, task.getProject(), "Insufficient permissions for task move");
         BoardColumn column = getColumnInBoard(request.getColumnId(), task.getBoard().getId());
 
         task.setColumn(column);
@@ -232,30 +232,13 @@ public class TaskService {
         return user;
     }
 
-    private Project updateTaskPlace(Task task, UpdateTaskRequest request, UUID organizationId) {
-        Project project = task.getProject();
-        if (request.getProjectId() != null) {
-            project = getProjectInOrganization(request.getProjectId(), organizationId);
-            task.setProject(project);
-        }
-
-        Board board = task.getBoard();
-        if (request.getBoardId() != null) {
-            if (project == null) {
-                throw new IllegalArgumentException("Task must belong to a project");
-            }
-            board = getBoardInProject(request.getBoardId(), project.getId());
-            task.setBoard(board);
-        }
-
+    private void updateTaskColumn(Task task, UpdateTaskRequest request) {
         if (request.getColumnId() != null) {
-            if (board == null) {
+            if (task.getBoard() == null) {
                 throw new IllegalArgumentException("Task must belong to a board");
             }
-            task.setColumn(getColumnInBoard(request.getColumnId(), board.getId()));
+            task.setColumn(getColumnInBoard(request.getColumnId(), task.getBoard().getId()));
         }
-
-        return project;
     }
 
     private void updateTaskAssignee(Task task, UpdateTaskRequest request, UUID organizationId) {
@@ -270,8 +253,6 @@ public class TaskService {
                 throw new IllegalArgumentException("Task must belong to a project");
             }
             task.setTags(resolveTags(request.getTagIds(), project, organizationId));
-        } else if (request.getProjectId() != null) {
-            task.setTags(new LinkedHashSet<>());
         }
     }
 

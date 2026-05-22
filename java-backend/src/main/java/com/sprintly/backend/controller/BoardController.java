@@ -29,56 +29,56 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/boards")
 @RequiredArgsConstructor
-@Tag(name = "Boards", description = "Эндпоинты управления досками")
+@Tag(name = "Boards", description = "Board management endpoints")
 @SecurityRequirement(name = "bearerAuth")
 public class BoardController {
 
     private final BoardService boardService;
 
     @GetMapping
-    @Operation(summary = "Получить доски проекта")
+    @Operation(summary = "List boards by project")
     public List<BoardResponse> findAllByProject(
-        @RequestParam UUID projectId,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @RequestParam UUID projectId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardService.findAllByProject(projectId, currentUser);
     }
 
     @GetMapping("/{boardId}")
-    @Operation(summary = "Получить доску по id")
+    @Operation(summary = "Get board by id")
     public BoardResponse findById(
-        @PathVariable UUID boardId,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @PathVariable UUID boardId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardService.findById(boardId, currentUser);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Создать доску")
+    @Operation(summary = "Create board")
     public BoardResponse create(
-        @Valid @RequestBody CreateBoardRequest request,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @Valid @RequestBody CreateBoardRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardService.create(request, currentUser);
     }
 
     @PutMapping("/{boardId}")
-    @Operation(summary = "Обновить доску")
+    @Operation(summary = "Update board")
     public BoardResponse update(
-        @PathVariable UUID boardId,
-        @Valid @RequestBody UpdateBoardRequest request,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @PathVariable UUID boardId,
+            @Valid @RequestBody UpdateBoardRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardService.update(boardId, request, currentUser);
     }
 
     @DeleteMapping("/{boardId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Мягко удалить доску")
+    @Operation(summary = "Soft delete board")
     public void delete(
-        @PathVariable UUID boardId,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @PathVariable UUID boardId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         boardService.delete(boardId, currentUser);
     }

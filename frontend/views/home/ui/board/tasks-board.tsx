@@ -14,11 +14,7 @@ type TasksBoardProps = {
     tasks: Task[];
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
-    onCreateTask?: (
-        columnId: string,
-        title: string,
-        isPrivate: boolean,
-    ) => void;
+    onCreateTask?: (columnId: string, title: string) => void;
     onMoveTask?: (payload: {
         taskId: string;
         columnId: string;

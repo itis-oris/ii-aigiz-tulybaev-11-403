@@ -8,6 +8,11 @@ const meta = {
     tags: ['autodocs'],
     args: {
         member: projectOverview.members[0],
+        canManageRole: true,
+        isRemoving: false,
+        isTransferringOwnership: false,
+        onTransferOwnership: () => {},
+        onRemove: () => {},
     },
     parameters: {
         layout: 'padded',

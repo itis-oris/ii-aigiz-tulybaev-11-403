@@ -17,7 +17,7 @@ export type ProjectResponse = {
     ownerLastname: string | null;
     ownerMiddlename: string | null;
     ownerAvatarUrl: string | null;
-    currentUserProjectRole: 'PROJECT_MANAGER' | 'PROJECT_MEMBER' | null;
+    currentUserProjectRole: 'OWNER' | 'MEMBER' | null;
     folderId: string | null;
     boardTabs?: string[];
     createdAt: string;
@@ -42,10 +42,6 @@ export type UpdateProjectRequest = {
 
 export type AddProjectMembersRequest = {
     userIds: string[];
-};
-
-export type UpdateProjectMemberRoleRequest = {
-    role: 'PROJECT_MANAGER' | 'PROJECT_MEMBER';
 };
 
 export function getProjects() {
@@ -97,20 +93,6 @@ export function addProjectMembers(
         method: 'POST',
         body: payload,
     });
-}
-
-export function updateProjectMemberRole(
-    projectId: string,
-    userId: string,
-    payload: UpdateProjectMemberRoleRequest,
-) {
-    return apiClient<UserResponse[]>(
-        `/api/projects/${projectId}/members/${userId}/role`,
-        {
-            method: 'PUT',
-            body: payload,
-        },
-    );
 }
 
 export function removeProjectMember(projectId: string, userId: string) {

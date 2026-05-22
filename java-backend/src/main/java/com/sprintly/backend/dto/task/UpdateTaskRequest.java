@@ -30,8 +30,6 @@ public class UpdateTaskRequest {
 
     private OffsetDateTime dueDate;
 
-    private UUID projectId;
-    private UUID boardId;
     private UUID columnId;
     private UUID assigneeId;
     private List<UUID> tagIds;

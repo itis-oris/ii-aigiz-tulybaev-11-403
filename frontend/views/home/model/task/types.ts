@@ -14,7 +14,6 @@ export type Task = {
     storyPoints?: number;
     priority?: number;
     dueDate?: string;
-    isPrivate?: boolean;
     columnId: string;
     position?: string;
     projectId?: string;

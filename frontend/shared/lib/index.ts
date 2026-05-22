@@ -27,10 +27,10 @@ import { getPostAuthRedirectPath } from './auth-redirect/index';
 import { useCurrentUser } from './use-current-user';
 import {
     hasOrgAdminRole,
-    hasProjectManagerRole,
+    hasProjectOwnerRole,
     hasProjectMemberRole,
     ORG_ADMIN_ROLE,
-    PROJECT_MANAGER_ROLE,
+    PROJECT_OWNER_ROLE,
     PROJECT_MEMBER_ROLE,
 } from './access';
 
@@ -44,13 +44,13 @@ export {
     getAccessToken,
     getPostAuthRedirectPath,
     hasOrgAdminRole,
-    hasProjectManagerRole,
+    hasProjectOwnerRole,
     hasProjectMemberRole,
     LOCALE_STORAGE_KEY,
     LocaleProvider,
     organizationProjects,
     projectTabs,
-    PROJECT_MANAGER_ROLE,
+    PROJECT_OWNER_ROLE,
     PROJECT_MEMBER_ROLE,
     ProjectTabProvider,
     ORG_ADMIN_ROLE,

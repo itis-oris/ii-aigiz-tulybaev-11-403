@@ -1,7 +1,6 @@
 package com.sprintly.backend.service;
 
 import com.sprintly.backend.dto.project.AddProjectMembersRequest;
-import com.sprintly.backend.dto.project.UpdateProjectMemberRoleRequest;
 import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.ProjectMember;
@@ -52,7 +51,7 @@ public class ProjectMemberService {
         CustomUserDetails currentUser
     ) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for project modification");
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
 
         Set<UUID> userIds = new HashSet<>(request.getUserIds());
         List<User> users = userRepository.findAllByIdInAndOrganizations_Id(userIds, currentUser.getOrganizationId());
@@ -62,31 +61,8 @@ public class ProjectMemberService {
         }
 
         for (User user : users) {
-            assignProjectRole(project, user, ProjectRole.PROJECT_MEMBER);
+            ensureProjectMembership(project, user);
         }
-        ensureOwnerIsManager(project);
-
-        return getMemberResponses(project);
-    }
-
-    @Transactional
-    public List<UserResponse> updateMemberRole(
-        UUID projectId,
-        UUID userId,
-        UpdateProjectMemberRoleRequest request,
-        CustomUserDetails currentUser
-    ) {
-        Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for project modification");
-
-        User user = getUserInOrganization(userId, currentUser.getOrganizationId());
-        ensureProjectMemberExists(project, user);
-        ensureOwnerStaysManager(project, user, request.getRole());
-        if (request.getRole() != ProjectRole.PROJECT_MANAGER) {
-            ensureUserIsNotLastManager(project, user);
-        }
-
-        assignProjectRole(project, user, request.getRole());
 
         return getMemberResponses(project);
     }
@@ -94,12 +70,11 @@ public class ProjectMemberService {
     @Transactional
     public List<UserResponse> removeMember(UUID projectId, UUID userId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for project modification");
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
 
         User user = getUserInOrganization(userId, currentUser.getOrganizationId());
         ensureProjectMemberExists(project, user);
         ensureOwnerIsNotRemoved(project, user);
-        ensureUserIsNotLastManager(project, user);
 
         removeProjectMembership(project, user);
 
@@ -107,8 +82,8 @@ public class ProjectMemberService {
     }
 
     @Transactional
-    public void assignProjectManager(Project project, User user) {
-        assignProjectRole(project, user, ProjectRole.PROJECT_MANAGER);
+    public void ensureProjectMembership(Project project, User user) {
+        assignProjectRole(project, user, ProjectRole.PROJECT_MEMBER);
     }
 
     private Project getProjectInOrganization(UUID projectId, UUID organizationId) {
@@ -132,34 +107,15 @@ public class ProjectMemberService {
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private void ensureOwnerIsManager(Project project) {
-        if (project.getOwner() != null) {
-            assignProjectRole(project, project.getOwner(), ProjectRole.PROJECT_MANAGER);
-        }
-    }
-
     private void ensureProjectMemberExists(Project project, User user) {
         if (!projectAccessService.isProjectMember(user, project)) {
             throw new ResourceNotFoundException("Project member not found");
         }
     }
 
-    private void ensureOwnerStaysManager(Project project, User user, ProjectRole newRole) {
-        if (isProjectOwner(project, user) && newRole != ProjectRole.PROJECT_MANAGER) {
-            throw new IllegalArgumentException("Project owner must remain a project manager");
-        }
-    }
-
     private void ensureOwnerIsNotRemoved(Project project, User user) {
         if (isProjectOwner(project, user)) {
             throw new IllegalArgumentException("Project owner cannot be removed from the project");
-        }
-    }
-
-    private void ensureUserIsNotLastManager(Project project, User user) {
-        if (projectAccessService.isProjectManager(user, project)
-            && !projectAccessService.hasAnotherProjectManager(project, user.getId())) {
-            throw new IllegalArgumentException("Project must have at least one project manager");
         }
     }
 
@@ -183,15 +139,11 @@ public class ProjectMemberService {
     }
 
     private String resolveProjectRoleName(ProjectMember projectMember, Project project) {
-        if (projectMember.getRole() != null) {
-            return projectMember.getRole().name();
-        }
-
         if (projectMember.getUser() != null && isProjectOwner(project, projectMember.getUser())) {
-            return ProjectRole.PROJECT_MANAGER.name();
+            return "OWNER";
         }
 
-        return ProjectRole.PROJECT_MEMBER.name();
+        return "MEMBER";
     }
     private void assignProjectRole(Project project, User user, ProjectRole role) {
         ProjectMemberId id = new ProjectMemberId(project.getId(), user.getId());

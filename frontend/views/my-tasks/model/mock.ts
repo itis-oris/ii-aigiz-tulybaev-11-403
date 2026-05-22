@@ -3,7 +3,6 @@ import type { MyTasksFilter, TaskGroup } from './types';
 export const myTasksFilters: MyTasksFilter[] = [
     'Назначенные мне',
     'Порученные мной',
-    'Мои приватные задачи',
 ];
 
 export const myTasksGroups: TaskGroup[] = [
@@ -108,7 +107,7 @@ export const myTasksGroups: TaskGroup[] = [
                 id: 'other-2',
                 title: 'Сделать схему',
                 number: '#23',
-                filters: ['Мои приватные задачи'],
+                filters: ['Порученные мной'],
                 assignees: [
                     {
                         name: 'Flay',

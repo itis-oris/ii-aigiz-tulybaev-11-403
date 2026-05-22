@@ -1,6 +1,6 @@
 import React from 'react';
 import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react';
-import { Clock3, Lock, Plus } from 'lucide-react';
+import { Clock3, Plus } from 'lucide-react';
 import { Input } from '@/shared/ui/input';
 import {
     Badge,
@@ -54,11 +54,7 @@ interface BoardProps {
     setIsOpen: (open: boolean) => void;
     setSelectedTask: (task: Task | null) => void;
     extraColumn?: React.ReactNode;
-    onCreateTask?: (
-        columnId: string,
-        title: string,
-        isPrivate: boolean,
-    ) => void;
+    onCreateTask?: (columnId: string, title: string) => void;
     onMoveTask?: (payload: {
         taskId: string;
         columnId: string;
@@ -72,11 +68,7 @@ type BoardColumnProps = {
     column: Column;
     draggingTaskId: string | null;
     dropPosition: DropPosition;
-    onCreateTask?: (
-        columnId: string,
-        title: string,
-        isPrivate: boolean,
-    ) => void;
+    onCreateTask?: (columnId: string, title: string) => void;
     onOpen: (task: Task) => void;
     overColumnId: string | null;
     overTaskId: string | null;
@@ -97,7 +89,6 @@ const BoardColumn = ({
         id: getBoardColumnDropId(column.columnId),
     });
     const [newTaskTitle, setNewTaskTitle] = React.useState('');
-    const [isPrivate, setIsPrivate] = React.useState(false);
 
     const handleCreateTask = () => {
         const trimmedTitle = newTaskTitle.trim();
@@ -106,9 +97,8 @@ const BoardColumn = ({
             return;
         }
 
-        onCreateTask?.(column.columnId, trimmedTitle, isPrivate);
+        onCreateTask?.(column.columnId, trimmedTitle);
         setNewTaskTitle('');
-        setIsPrivate(false);
     };
 
     return (
@@ -156,27 +146,6 @@ const BoardColumn = ({
                                         'h-8 text-xs',
                                 )}
                             />
-                            <Button
-                                type="button"
-                                variant={isPrivate ? 'secondary' : 'outline'}
-                                size="md"
-                                aria-pressed={isPrivate}
-                                title={
-                                    isPrivate
-                                        ? 'Приватная задача'
-                                        : 'Обычная задача'
-                                }
-                                onClick={() =>
-                                    setIsPrivate((current) => !current)
-                                }
-                                className={cn(
-                                    'shrink-0',
-                                    settings?.density === 'compact' &&
-                                        'h-8 px-2 text-xs',
-                                )}
-                            >
-                                <Lock className="size-4" />
-                            </Button>
                             <Button
                                 type="button"
                                 size="md"

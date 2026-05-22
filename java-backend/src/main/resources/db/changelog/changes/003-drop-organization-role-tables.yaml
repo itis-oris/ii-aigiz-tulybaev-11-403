@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-01-drop-organization-member-roles-table
+      author: codex
+      comment: Remove obsolete organization member role mapping table.
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: HALT
+        - tableExists:
+            tableName: organization_member_roles
+      changes:
+        - dropTable:
+            tableName: organization_member_roles
+
+  - changeSet:
+      id: 003-02-drop-roles-table
+      author: codex
+      comment: Remove obsolete shared roles table.
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: HALT
+        - tableExists:
+            tableName: roles
+      changes:
+        - dropTable:
+            tableName: roles

@@ -13,13 +13,8 @@ import type { ProjectParticipant } from '@/views/home/model/project-overview';
 type OverviewMemberItemProps = {
     member: ProjectParticipant;
     canManageRole: boolean;
-    isUpdatingRole: boolean;
     isRemoving: boolean;
     isTransferringOwnership: boolean;
-    onRoleChange: (
-        memberId: string,
-        role: 'PROJECT_MANAGER' | 'PROJECT_MEMBER',
-    ) => void;
     onTransferOwnership: (memberId: string) => void;
     onRemove: (memberId: string) => void;
 };
@@ -27,10 +22,8 @@ type OverviewMemberItemProps = {
 const OverviewMemberItem = ({
     member,
     canManageRole,
-    isUpdatingRole,
     isRemoving,
     isTransferringOwnership,
-    onRoleChange,
     onTransferOwnership,
     onRemove,
 }: OverviewMemberItemProps) => {
@@ -64,74 +57,18 @@ const OverviewMemberItem = ({
                                 size="sm"
                                 variant="outline"
                                 className="h-8 rounded-lg px-3 text-xs"
-                                disabled={
-                                    isUpdatingRole ||
-                                    isRemoving ||
-                                    isTransferringOwnership
-                                }
+                                disabled={isRemoving || isTransferringOwnership}
                                 onClick={() => onTransferOwnership(member.id)}
                             >
                                 <Crown className="size-3.5" />
                                 Владелец
                             </Button>
-                            <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-muted/30 p-1">
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={
-                                        member.roleCode === 'PROJECT_MEMBER'
-                                            ? 'default'
-                                            : 'ghost'
-                                    }
-                                    className="h-8 rounded-lg px-3 text-xs"
-                                    disabled={
-                                        isUpdatingRole ||
-                                        isRemoving ||
-                                        isTransferringOwnership
-                                    }
-                                    onClick={() =>
-                                        onRoleChange(
-                                            member.id,
-                                            'PROJECT_MEMBER',
-                                        )
-                                    }
-                                >
-                                    Участник
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={
-                                        member.roleCode === 'PROJECT_MANAGER'
-                                            ? 'default'
-                                            : 'ghost'
-                                    }
-                                    className="h-8 rounded-lg px-3 text-xs"
-                                    disabled={
-                                        isUpdatingRole ||
-                                        isRemoving ||
-                                        isTransferringOwnership
-                                    }
-                                    onClick={() =>
-                                        onRoleChange(
-                                            member.id,
-                                            'PROJECT_MANAGER',
-                                        )
-                                    }
-                                >
-                                    Менеджер
-                                </Button>
-                            </div>
                             <Button
                                 type="button"
                                 size="icon-sm"
                                 variant="ghost"
                                 className="rounded-lg text-muted-foreground"
-                                disabled={
-                                    isUpdatingRole ||
-                                    isRemoving ||
-                                    isTransferringOwnership
-                                }
+                                disabled={isRemoving || isTransferringOwnership}
                                 onClick={() => onRemove(member.id)}
                             >
                                 <Trash2 className="size-4" />

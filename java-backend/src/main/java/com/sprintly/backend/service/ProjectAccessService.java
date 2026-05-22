@@ -5,7 +5,6 @@ import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.Task;
 import com.sprintly.backend.entity.User;
-import com.sprintly.backend.entity.enums.ProjectRole;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.repository.ProjectMemberRepository;
 import com.sprintly.backend.security.CustomUserDetails;
@@ -46,7 +45,7 @@ public class ProjectAccessService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isProjectManager(CustomUserDetails currentUser, Project project) {
+    public boolean isProjectOwner(CustomUserDetails currentUser, Project project) {
         if (project == null) {
             return false;
         }
@@ -59,11 +58,7 @@ public class ProjectAccessService {
             return true;
         }
 
-        return projectMemberRepository.existsByProject_IdAndUser_IdAndRole(
-            project.getId(),
-            currentUser.getId(),
-            ProjectRole.PROJECT_MANAGER
-        );
+        return false;
     }
 
     @Transactional(readOnly = true)
@@ -80,7 +75,7 @@ public class ProjectAccessService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isProjectManager(User user, Project project) {
+    public boolean isProjectOwner(User user, Project project) {
         if (project == null || user == null) {
             return false;
         }
@@ -89,30 +84,17 @@ public class ProjectAccessService {
             return true;
         }
 
-        return projectMemberRepository.existsByProject_IdAndUser_IdAndRole(
-            project.getId(),
-            user.getId(),
-            ProjectRole.PROJECT_MANAGER
-        );
+        return false;
     }
 
     @Transactional(readOnly = true)
-    public boolean hasAnotherProjectManager(Project project, UUID excludedUserId) {
-        if (project == null) {
-            return false;
-        }
+    public boolean isProjectManager(CustomUserDetails currentUser, Project project) {
+        return isProjectOwner(currentUser, project);
+    }
 
-        if (project.getOwner() != null
-            && project.getOwner().getId() != null
-            && !project.getOwner().getId().equals(excludedUserId)) {
-            return true;
-        }
-
-        return projectMemberRepository.existsByProject_IdAndRoleAndUser_IdNot(
-            project.getId(),
-            ProjectRole.PROJECT_MANAGER,
-            excludedUserId
-        );
+    @Transactional(readOnly = true)
+    public boolean isProjectManager(User user, Project project) {
+        return isProjectOwner(user, project);
     }
 
     @Transactional(readOnly = true)
@@ -121,11 +103,7 @@ public class ProjectAccessService {
             return false;
         }
 
-        if (isProjectManager(currentUser, task.getProject())) {
-            return true;
-        }
-
-        return task.getCreator() != null && currentUser.getId().equals(task.getCreator().getId());
+        return isProjectMember(currentUser, task.getProject());
     }
 
     @Transactional(readOnly = true)
@@ -134,14 +112,7 @@ public class ProjectAccessService {
             return false;
         }
 
-        if (isProjectManager(currentUser, task.getProject())) {
-            return true;
-        }
-
-        boolean isCreator = task.getCreator() != null && currentUser.getId().equals(task.getCreator().getId());
-        boolean isAssignee = task.getAssignee() != null && currentUser.getId().equals(task.getAssignee().getId());
-
-        return isCreator || isAssignee;
+        return isProjectMember(currentUser, task.getProject());
     }
 
     @Transactional(readOnly = true)
@@ -150,7 +121,7 @@ public class ProjectAccessService {
             return false;
         }
 
-        if (isProjectManager(currentUser, comment.getTask().getProject())) {
+        if (isProjectOwner(currentUser, comment.getTask().getProject())) {
             return true;
         }
 
@@ -158,10 +129,15 @@ public class ProjectAccessService {
     }
 
     @Transactional
-    public void ensureProjectManager(CustomUserDetails currentUser, Project project, String message) {
-        if (!isProjectManager(currentUser, project)) {
+    public void ensureProjectOwner(CustomUserDetails currentUser, Project project, String message) {
+        if (!isProjectOwner(currentUser, project)) {
             throw new AccessDeniedException(message);
         }
+    }
+
+    @Transactional
+    public void ensureProjectManager(CustomUserDetails currentUser, Project project, String message) {
+        ensureProjectOwner(currentUser, project, message);
     }
 
     @Transactional

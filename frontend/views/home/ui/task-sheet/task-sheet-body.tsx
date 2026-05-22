@@ -79,9 +79,6 @@ export const TaskSheetBody = ({
             ? String(resolvedTask.priority)
             : '',
     );
-    const [isPrivateDraft, setIsPrivateDraft] = useState(
-        Boolean(resolvedTask.isPrivate),
-    );
     const [selectedTagIds, setSelectedTagIds] = useState(
         resolvedTask.tags.filter((tag) => !tag.system).map((tag) => tag.id),
     );
@@ -107,7 +104,6 @@ export const TaskSheetBody = ({
             (resolvedTask.priority !== undefined
                 ? String(resolvedTask.priority)
                 : '') ||
-        isPrivateDraft !== Boolean(resolvedTask.isPrivate) ||
         initialTagIds.join(',') !== normalizedSelectedTagIds.join(',');
 
     const handleReset = () => {
@@ -124,7 +120,6 @@ export const TaskSheetBody = ({
                 ? String(resolvedTask.priority)
                 : '',
         );
-        setIsPrivateDraft(Boolean(resolvedTask.isPrivate));
         setSelectedTagIds(initialTagIds);
     };
 
@@ -172,11 +167,6 @@ export const TaskSheetBody = ({
                             <Badge variant="accent" size="sm">
                                 {draftDueDateLabel}
                             </Badge>
-                            {isPrivateDraft ? (
-                                <Badge variant="outline" size="sm">
-                                    Приватная
-                                </Badge>
-                            ) : null}
                             {isTaskRefreshing ? (
                                 <Badge variant="outline" size="sm">
                                     <LoaderCircle className="size-3.5 animate-spin" />
@@ -261,7 +251,6 @@ export const TaskSheetBody = ({
                                     priority: normalizedPriority
                                         ? Number(normalizedPriority)
                                         : undefined,
-                                    isPrivate: isPrivateDraft,
                                     tagIds: normalizedSelectedTagIds,
                                 })
                             }
@@ -420,20 +409,6 @@ export const TaskSheetBody = ({
                                 )}
                             </span>
                         </div>
-                    </TaskSheetMetaRow>
-
-                    <TaskSheetMetaRow label="Приватность">
-                        <label className="flex h-9 items-center gap-2 rounded-md border border-input bg-input/20 px-3 text-sm text-foreground">
-                            <input
-                                type="checkbox"
-                                checked={isPrivateDraft}
-                                onChange={(event) =>
-                                    setIsPrivateDraft(event.target.checked)
-                                }
-                                className="size-4 rounded border-border"
-                            />
-                            <span>Приватная задача</span>
-                        </label>
                     </TaskSheetMetaRow>
 
                     <TaskSheetMetaRow label="Создатель">

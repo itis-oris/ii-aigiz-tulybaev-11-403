@@ -1,7 +1,7 @@
 import type { ProjectStatus, UserResponse } from '@/shared/api';
 import {
     ORG_ADMIN_ROLE,
-    PROJECT_MANAGER_ROLE,
+    PROJECT_OWNER_ROLE,
     PROJECT_MEMBER_ROLE,
 } from '@/shared/lib';
 
@@ -47,7 +47,7 @@ const projectStatusLabelMap: Record<ProjectStatus, string> = {
 
 const rolePriority = [
     ORG_ADMIN_ROLE,
-    PROJECT_MANAGER_ROLE,
+    PROJECT_OWNER_ROLE,
     PROJECT_MEMBER_ROLE,
 ] as const;
 
@@ -91,8 +91,8 @@ export const getUserRoleLabel = (roles: string[]) => {
     switch (primaryRole) {
         case ORG_ADMIN_ROLE:
             return 'Администратор';
-        case PROJECT_MANAGER_ROLE:
-            return 'Менеджер';
+        case PROJECT_OWNER_ROLE:
+            return 'Владелец проекта';
         default:
             return 'Участник';
     }
@@ -129,7 +129,7 @@ export const projectOverview = {
             id: 'member-1',
             name: 'Alex Johnson',
             role: 'Владелец проекта',
-            roleCode: PROJECT_MANAGER_ROLE,
+            roleCode: PROJECT_OWNER_ROLE,
             initials: 'AJ',
             accentClassName: getParticipantAccentClassName(0),
             isOwner: true,
@@ -137,8 +137,8 @@ export const projectOverview = {
         {
             id: 'member-2',
             name: 'Mia Harper',
-            role: 'Менеджер',
-            roleCode: PROJECT_MANAGER_ROLE,
+            role: 'Участник',
+            roleCode: PROJECT_MEMBER_ROLE,
             initials: 'MH',
             accentClassName: getParticipantAccentClassName(1),
             isOwner: false,

@@ -11,7 +11,6 @@ export type TaskResponse = {
     storyPoints: number | null;
     priority: number | null;
     dueDate: string | null;
-    isPrivate: boolean | null;
     position: number | null;
     createdAt: string;
     updatedAt: string | null;
@@ -33,7 +32,6 @@ export type TaskFilterRequest = {
     projectId?: string;
     assigneeId?: string;
     creatorId?: string;
-    isPrivate?: boolean;
     status?: TaskStatus;
     priority?: number;
     search?: string;
@@ -45,7 +43,6 @@ export type CreateTaskRequest = {
     storyPoints?: number;
     priority?: number;
     dueDate?: string;
-    isPrivate?: boolean;
     projectId: string;
     boardId: string;
     columnId: string;
@@ -60,9 +57,6 @@ export type UpdateTaskRequest = {
     storyPoints?: number;
     priority?: number;
     dueDate?: string;
-    isPrivate?: boolean;
-    projectId?: string;
-    boardId?: string;
     columnId?: string;
     assigneeId?: string;
     tagIds?: string[];
