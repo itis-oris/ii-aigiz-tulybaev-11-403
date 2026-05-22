@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LoaderCircle, Trash2, X } from 'lucide-react';
 import { ApiError, getUsers } from '@/shared/api';
-import { type ProjectFolder, useCurrentUser } from '@/shared/lib';
+import {
+    hasOrgAdminRole,
+    type ProjectFolder,
+    useCurrentUser,
+} from '@/shared/lib';
 import { Button, Input } from '@/shared/ui';
 
 type ManageProjectFolderDialogProps = {
@@ -23,11 +27,7 @@ export function ManageProjectFolderDialog({
     onDelete,
 }: ManageProjectFolderDialogProps) {
     const { data: currentUser } = useCurrentUser();
-    const canManageUsers = Boolean(
-        currentUser?.roles.some(
-            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
-        ),
-    );
+    const canManageUsers = hasOrgAdminRole(currentUser?.roles);
     const [name, setName] = useState(folder?.name ?? '');
     const [ownerId, setOwnerId] = useState(folder?.ownerId ?? '');
     const [submitError, setSubmitError] = useState<string | null>(null);

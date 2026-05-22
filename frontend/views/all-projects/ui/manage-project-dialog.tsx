@@ -6,7 +6,11 @@ import { ImageUp, LoaderCircle, Trash2, X } from 'lucide-react';
 import { ApiError, getUsers, type ProjectStatus } from '@/shared/api';
 import { getImageUploadError, MAX_IMAGE_SIZE_MB } from '@/shared/lib/utils';
 import { Button, Input, ProjectAvatar } from '@/shared/ui';
-import { type ProjectSummary, useCurrentUser } from '@/shared/lib';
+import {
+    hasOrgAdminRole,
+    type ProjectSummary,
+    useCurrentUser,
+} from '@/shared/lib';
 
 type ManageProjectDialogProps = {
     open: boolean;
@@ -26,11 +30,11 @@ export function ManageProjectDialog({
     onDelete,
 }: ManageProjectDialogProps) {
     const { data: currentUser } = useCurrentUser();
-    const canManageUsers = Boolean(
-        currentUser?.roles.some(
-            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
-        ),
+    const canManageProject = Boolean(
+        hasOrgAdminRole(currentUser?.roles) ||
+        project?.currentUserProjectRole === 'PROJECT_MANAGER',
     );
+    const canManageUsers = canManageProject;
     const [name, setName] = useState(project?.name ?? '');
     const [description, setDescription] = useState(project?.description ?? '');
     const [status, setStatus] = useState<ProjectStatus>(

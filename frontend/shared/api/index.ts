@@ -16,7 +16,9 @@ export {
     deleteProject,
     getProjectMembers,
     getProjects,
+    removeProjectMember,
     uploadProjectImage,
+    updateProjectMemberRole,
     updateProject,
 } from './project';
 export {
@@ -60,6 +62,7 @@ export type {
     CreateProjectRequest,
     ProjectResponse,
     ProjectStatus,
+    UpdateProjectMemberRoleRequest,
     UpdateProjectRequest,
 } from './project';
 export type {

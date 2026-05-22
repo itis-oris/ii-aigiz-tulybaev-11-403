@@ -9,8 +9,10 @@ import {
     SlidersHorizontal,
 } from 'lucide-react';
 import {
+    hasOrgAdminRole,
     type ProjectFolder,
     type ProjectSummary,
+    useCurrentUser,
     useProjectFolderDndController,
     useWorkspaceProjectsController,
 } from '@/shared/lib';
@@ -41,6 +43,7 @@ const placementOptions = [
 ] as const;
 
 const AllProjectsPage = () => {
+    const { data: currentUser } = useCurrentUser();
     const {
         activeProjectId,
         collapsedFolderIds,
@@ -108,6 +111,7 @@ const AllProjectsPage = () => {
         setStatusFilter('all');
         setPlacementFilter('all');
     };
+    const canManageOrganizationProjects = hasOrgAdminRole(currentUser?.roles);
 
     return (
         <>
@@ -278,6 +282,9 @@ const AllProjectsPage = () => {
                                     <div className="flex flex-wrap items-center gap-2">
                                         <Button
                                             size="md"
+                                            disabled={
+                                                !canManageOrganizationProjects
+                                            }
                                             onClick={() =>
                                                 setIsCreateProjectDialogOpen(
                                                     true,
@@ -289,6 +296,9 @@ const AllProjectsPage = () => {
                                         <Button
                                             variant="outline"
                                             size="md"
+                                            disabled={
+                                                !canManageOrganizationProjects
+                                            }
                                             onClick={() =>
                                                 setIsCreateFolderDialogOpen(
                                                     true,

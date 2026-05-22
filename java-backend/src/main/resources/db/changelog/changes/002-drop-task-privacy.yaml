@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-01-drop-task-privacy-column
+      author: codex
+      comment: Remove task privacy from the schema as private tasks are no longer supported.
+      preConditions:
+        - columnExists:
+            tableName: tasks
+            columnName: is_private
+        - onFail: MARK_RAN
+        - onError: HALT
+      changes:
+        - dropColumn:
+            tableName: tasks
+            columnName: is_private

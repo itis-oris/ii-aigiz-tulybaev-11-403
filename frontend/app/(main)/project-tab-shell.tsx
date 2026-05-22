@@ -121,6 +121,7 @@ const mapProjectResponseToSummary = (
         ownerName: getOwnerName(project),
         ownerEmail: project.ownerEmail ?? undefined,
         ownerAvatarUrl: project.ownerAvatarUrl,
+        currentUserProjectRole: project.currentUserProjectRole,
         folderId: project.folderId ?? undefined,
     };
 };

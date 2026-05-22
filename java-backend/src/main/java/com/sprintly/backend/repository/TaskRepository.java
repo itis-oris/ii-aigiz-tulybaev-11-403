@@ -15,6 +15,9 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, TaskRepositor
     @EntityGraph(attributePaths = {"project", "board", "column", "assignee", "creator", "tags"})
     Optional<Task> findById(UUID id);
 
+    @EntityGraph(attributePaths = {"project", "board", "column", "assignee", "creator", "tags"})
+    Optional<Task> findByIdAndDeletedAtIsNull(UUID id);
+
     List<Task> findAllByProject_IdAndDeletedAtIsNull(UUID projectId);
 
     List<Task> findAllByColumn_IdAndDeletedAtIsNullOrderByPositionAsc(UUID columnId);

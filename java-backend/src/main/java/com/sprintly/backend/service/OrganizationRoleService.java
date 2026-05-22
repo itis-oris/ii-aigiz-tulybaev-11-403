@@ -18,7 +18,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,11 +32,19 @@ public class OrganizationRoleService {
             return Set.of();
         }
 
-        return organizationMemberRoleRepository
-            .findAllByUser_IdAndOrganization_Id(user.getId(), organizationId)
-            .stream()
-            .map(memberRole -> memberRole.getRole().getName().name())
-            .collect(Collectors.toCollection(HashSet::new));
+        Set<String> roleNames = new HashSet<>();
+        for (OrganizationMemberRole memberRole : organizationMemberRoleRepository.findAllByUser_IdAndOrganization_Id(
+            user.getId(),
+            organizationId
+        )) {
+            roleNames.add(memberRole.getRole().getName().name());
+        }
+
+        if (isOrganizationOwner(user, organizationId)) {
+            roleNames.add(RoleName.ADMIN.name());
+        }
+
+        return roleNames;
     }
 
     @Transactional(readOnly = true)
@@ -47,21 +54,28 @@ public class OrganizationRoleService {
     ) {
         Map<UUID, Set<String>> roleNamesByUserId = new HashMap<>();
 
-        organizationMemberRoleRepository.findAllByOrganization_IdAndUser_IdIn(
+        for (OrganizationMemberRole memberRole : organizationMemberRoleRepository.findAllByOrganization_IdAndUser_IdIn(
             organizationId,
             userIds
-        ).forEach(memberRole -> roleNamesByUserId
-            .computeIfAbsent(memberRole.getUser().getId(), ignored -> new HashSet<>())
-            .add(memberRole.getRole().getName().name()));
+        )) {
+            UUID userId = memberRole.getUser().getId();
+            if (!roleNamesByUserId.containsKey(userId)) {
+                roleNamesByUserId.put(userId, new HashSet<>());
+            }
+            roleNamesByUserId.get(userId).add(memberRole.getRole().getName().name());
+        }
 
         return roleNamesByUserId;
     }
 
     @Transactional(readOnly = true)
     public Set<SimpleGrantedAuthority> getAuthoritiesInOrganization(User user, UUID organizationId) {
-        return getRoleNamesInOrganization(user, organizationId).stream()
-            .map(roleName -> new SimpleGrantedAuthority("ROLE_" + roleName))
-            .collect(Collectors.toCollection(HashSet::new));
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+        for (String roleName : getRoleNamesInOrganization(user, organizationId)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + roleName));
+        }
+
+        return authorities;
     }
 
     @Transactional
@@ -84,5 +98,24 @@ public class OrganizationRoleService {
                 .role(role)
                 .build()
         );
+    }
+
+    private boolean isOrganizationOwner(User user, UUID organizationId) {
+        if (user.getOrganization() != null
+            && organizationId.equals(user.getOrganization().getId())
+            && user.getOrganization().getOwnerId() != null
+            && user.getOrganization().getOwnerId().equals(user.getId())) {
+            return true;
+        }
+
+        for (Organization organization : user.getOrganizations()) {
+            if (organizationId.equals(organization.getId())
+                && organization.getOwnerId() != null
+                && organization.getOwnerId().equals(user.getId())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

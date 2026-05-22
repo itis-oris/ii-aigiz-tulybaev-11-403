@@ -12,11 +12,11 @@ import com.sprintly.backend.repository.BoardColumnRepository;
 import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,34 +27,37 @@ public class BoardColumnService {
     private final BoardColumnRepository boardColumnRepository;
     private final BoardRepository boardRepository;
     private final BoardColumnMapper boardColumnMapper;
+    private final ProjectAccessService projectAccessService;
 
     @Transactional
     public List<ColumnResponse> findAllByBoard(UUID boardId, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
+        projectAccessService.ensureProjectMember(currentUser, board.getProject(), "Insufficient permissions for column access");
         List<BoardColumn> columns = boardColumnRepository.findAllByBoard_IdAndDeletedAtIsNullOrderByPositionAsc(board.getId());
 
         if (columns.isEmpty()) {
-            columns = List.of(
-                boardColumnRepository.save(BoardColumn.builder().name("Backlog").position(0L).board(board).build()),
-                boardColumnRepository.save(BoardColumn.builder().name("In Progress").position(1000L).board(board).build()),
-                boardColumnRepository.save(BoardColumn.builder().name("Done").position(2000L).board(board).build())
-            );
+            columns = createDefaultColumns(board);
         }
 
-        return columns.stream()
-            .map(boardColumnMapper::toResponse)
-            .toList();
+        List<ColumnResponse> responses = new ArrayList<>();
+        for (BoardColumn column : columns) {
+            responses.add(boardColumnMapper.toResponse(column));
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
     public ColumnResponse findById(UUID columnId, CustomUserDetails currentUser) {
-        return boardColumnMapper.toResponse(getColumnInOrganization(columnId, currentUser.getOrganizationId()));
+        BoardColumn column = getColumnInOrganization(columnId, currentUser.getOrganizationId());
+        projectAccessService.ensureProjectMember(currentUser, column.getBoard().getProject(), "Insufficient permissions for column access");
+        return boardColumnMapper.toResponse(column);
     }
 
     @Transactional
     public ColumnResponse create(CreateColumnRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
         Board board = getBoardInOrganization(request.getBoardId(), currentUser.getOrganizationId());
+        projectAccessService.ensureProjectManager(currentUser, board.getProject(), "Insufficient permissions for column modification");
 
         BoardColumn column = boardColumnRepository.save(BoardColumn.builder()
             .name(request.getName().trim())
@@ -67,8 +70,8 @@ public class BoardColumnService {
 
     @Transactional
     public ColumnResponse update(UUID columnId, UpdateColumnRequest request, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
         BoardColumn column = getColumnInOrganization(columnId, currentUser.getOrganizationId());
+        projectAccessService.ensureProjectManager(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
         column.setName(request.getName().trim());
         column.setPosition(request.getPosition());
         return boardColumnMapper.toResponse(boardColumnRepository.save(column));
@@ -76,26 +79,17 @@ public class BoardColumnService {
 
     @Transactional
     public void delete(UUID columnId, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
         BoardColumn column = getColumnInOrganization(columnId, currentUser.getOrganizationId());
-        if (column.getDeletedAt() != null) {
-            throw new IllegalStateException("Column already deleted");
-        }
+        projectAccessService.ensureProjectManager(currentUser, column.getBoard().getProject(), "Insufficient permissions for column modification");
         column.setDeletedAt(OffsetDateTime.now());
         boardColumnRepository.save(column);
     }
 
     private BoardColumn getColumnInOrganization(UUID columnId, UUID organizationId) {
-        BoardColumn column = boardColumnRepository.findById(columnId)
+        BoardColumn column = boardColumnRepository.findByIdAndDeletedAtIsNull(columnId)
             .orElseThrow(() -> new ResourceNotFoundException("Column not found"));
 
-        if (column.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Column not found");
-        }
-
-        if (column.getBoard() == null || column.getBoard().getProject() == null
-            || column.getBoard().getProject().getOrganization() == null
-            || !organizationId.equals(column.getBoard().getProject().getOrganization().getId())) {
+        if (!belongsToOrganization(column, organizationId)) {
             throw new AccessDeniedException("Column does not belong to current organization");
         }
 
@@ -103,28 +97,41 @@ public class BoardColumnService {
     }
 
     private Board getBoardInOrganization(UUID boardId, UUID organizationId) {
-        Board board = boardRepository.findById(boardId)
+        Board board = boardRepository.findByIdAndDeletedAtIsNull(boardId)
             .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
 
-        if (board.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Board not found");
-        }
-
-        if (board.getProject() == null || board.getProject().getOrganization() == null
-            || !organizationId.equals(board.getProject().getOrganization().getId())) {
+        if (!belongsToOrganization(board, organizationId)) {
             throw new AccessDeniedException("Board does not belong to current organization");
         }
 
         return board;
     }
 
-    private void ensureManagerAccess(CustomUserDetails currentUser) {
-        boolean hasAccess = currentUser.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
-
-        if (!hasAccess) {
-            throw new AccessDeniedException("Недостаточно прав для изменения колонок");
-        }
+    private boolean belongsToOrganization(BoardColumn column, UUID organizationId) {
+        return column.getBoard() != null
+            && belongsToOrganization(column.getBoard(), organizationId);
     }
+
+    private boolean belongsToOrganization(Board board, UUID organizationId) {
+        return board.getProject() != null
+            && board.getProject().getOrganization() != null
+            && organizationId.equals(board.getProject().getOrganization().getId());
+    }
+
+    private List<BoardColumn> createDefaultColumns(Board board) {
+        return List.of(
+            createDefaultColumn(board, "Backlog", 0L),
+            createDefaultColumn(board, "In Progress", 1000L),
+            createDefaultColumn(board, "Done", 2000L)
+        );
+    }
+
+    private BoardColumn createDefaultColumn(Board board, String name, long position) {
+        return boardColumnRepository.save(BoardColumn.builder()
+            .name(name)
+            .position(position)
+            .board(board)
+            .build());
+    }
+
 }

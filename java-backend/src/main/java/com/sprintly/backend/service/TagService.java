@@ -14,11 +14,11 @@ import com.sprintly.backend.repository.TagRepository;
 import com.sprintly.backend.repository.TaskRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +30,7 @@ public class TagService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final TagMapper tagMapper;
+    private final ProjectAccessService projectAccessService;
 
     @Transactional(readOnly = true)
     public List<TagResponse> findAll(UUID projectId, UUID taskId, CustomUserDetails currentUser) {
@@ -47,33 +48,42 @@ public class TagService {
     @Transactional(readOnly = true)
     public List<TagResponse> findAllByProject(UUID projectId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, project, "Insufficient permissions for tag access");
+        projectAccessService.ensureProjectMember(currentUser, project, "Insufficient permissions for tag access");
 
-        return tagRepository.findAllByProject_IdAndDeletedAtIsNullOrderByNameAsc(project.getId()).stream()
-            .map(tagMapper::toResponse)
-            .toList();
+        List<TagResponse> responses = new ArrayList<>();
+        for (Tag tag : tagRepository.findAllByProject_IdAndDeletedAtIsNullOrderByNameAsc(project.getId())) {
+            responses.add(tagMapper.toResponse(tag));
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
     public List<TagResponse> findAllByTask(UUID taskId, CustomUserDetails currentUser) {
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, task.getProject(), "Insufficient permissions for tag access");
+        projectAccessService.ensureProjectMember(currentUser, task.getProject(), "Insufficient permissions for tag access");
 
-        return task.getTags().stream()
-            .filter(tag -> tag.getDeletedAt() == null)
-            .map(tagMapper::toResponse)
-            .toList();
+        List<TagResponse> responses = new ArrayList<>();
+        for (Tag tag : task.getTags()) {
+            if (tag.getDeletedAt() == null) {
+                responses.add(tagMapper.toResponse(tag));
+            }
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
     public TagResponse findById(UUID tagId, CustomUserDetails currentUser) {
-        return tagMapper.toResponse(getTagInOrganization(tagId, currentUser.getOrganizationId()));
+        Tag tag = getTagInOrganization(tagId, currentUser.getOrganizationId());
+        projectAccessService.ensureProjectMember(currentUser, tag.getProject(), "Insufficient permissions for tag access");
+        return tagMapper.toResponse(tag);
     }
 
     @Transactional
     public TagResponse create(CreateTagRequest request, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, project, "Insufficient permissions for tag creation");
+        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for tag creation");
 
         String normalizedName = request.getName().trim();
         String normalizedColor = request.getColor().trim().toUpperCase();
@@ -93,7 +103,7 @@ public class TagService {
     @Transactional
     public TagResponse update(UUID tagId, UpdateTagRequest request, CustomUserDetails currentUser) {
         Tag tag = getTagInOrganization(tagId, currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, tag.getProject(), "Insufficient permissions for tag update");
+        projectAccessService.ensureProjectManager(currentUser, tag.getProject(), "Insufficient permissions for tag update");
 
         String normalizedName = request.getName().trim();
         String normalizedColor = request.getColor().trim().toUpperCase();
@@ -109,11 +119,7 @@ public class TagService {
     @Transactional
     public void delete(UUID tagId, CustomUserDetails currentUser) {
         Tag tag = getTagInOrganization(tagId, currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, tag.getProject(), "Insufficient permissions for tag deletion");
-
-        if (tag.getDeletedAt() != null) {
-            throw new IllegalStateException("Tag already deleted");
-        }
+        projectAccessService.ensureProjectManager(currentUser, tag.getProject(), "Insufficient permissions for tag deletion");
 
         tag.setDeletedAt(OffsetDateTime.now());
         tag.setUpdatedAt(OffsetDateTime.now());
@@ -134,8 +140,7 @@ public class TagService {
         Tag tag = tagRepository.findByIdAndDeletedAtIsNull(tagId)
             .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
 
-        if (tag.getProject() == null || tag.getProject().getOrganization() == null
-            || !organizationId.equals(tag.getProject().getOrganization().getId())) {
+        if (!belongsToOrganization(tag, organizationId)) {
             throw new AccessDeniedException("Tag does not belong to current organization");
         }
 
@@ -143,10 +148,10 @@ public class TagService {
     }
 
     private Project getProjectInOrganization(UUID projectId, UUID organizationId) {
-        Project project = projectRepository.findWithMembersByIdAndDeletedAtIsNull(projectId)
+        Project project = projectRepository.findByIdAndDeletedAtIsNull(projectId)
             .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        if (project.getOrganization() == null || !organizationId.equals(project.getOrganization().getId())) {
+        if (!belongsToOrganization(project, organizationId)) {
             throw new AccessDeniedException("Project does not belong to current organization");
         }
 
@@ -154,41 +159,29 @@ public class TagService {
     }
 
     private Task getTaskInOrganization(UUID taskId, UUID organizationId) {
-        Task task = taskRepository.findById(taskId)
+        Task task = taskRepository.findByIdAndDeletedAtIsNull(taskId)
             .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (task.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Task not found");
-        }
-
-        if (task.getProject() == null || task.getProject().getOrganization() == null
-            || !organizationId.equals(task.getProject().getOrganization().getId())) {
+        if (!belongsToOrganization(task, organizationId)) {
             throw new AccessDeniedException("Task does not belong to current organization");
         }
 
         return task;
     }
 
-    private void ensureManagerOrProjectMemberAccess(
-        CustomUserDetails currentUser,
-        Project project,
-        String message
-    ) {
-        boolean isManager = currentUser.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
-
-        if (isManager) {
-            return;
-        }
-
-        boolean isOwner = project.getOwner() != null
-            && currentUser.getId().equals(project.getOwner().getId());
-        boolean isMember = project.getMembers().stream()
-            .anyMatch(member -> currentUser.getId().equals(member.getId()));
-
-        if (!isOwner && !isMember) {
-            throw new AccessDeniedException(message);
-        }
+    private boolean belongsToOrganization(Tag tag, UUID organizationId) {
+        return tag.getProject() != null
+            && belongsToOrganization(tag.getProject(), organizationId);
     }
+
+    private boolean belongsToOrganization(Task task, UUID organizationId) {
+        return task.getProject() != null
+            && belongsToOrganization(task.getProject(), organizationId);
+    }
+
+    private boolean belongsToOrganization(Project project, UUID organizationId) {
+        return project.getOrganization() != null
+            && organizationId.equals(project.getOrganization().getId());
+    }
+
 }

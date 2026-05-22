@@ -2,10 +2,12 @@ package com.sprintly.backend.mapper;
 
 import com.sprintly.backend.dto.tag.TagResponse;
 import com.sprintly.backend.dto.task.TaskResponse;
+import com.sprintly.backend.entity.Tag;
 import com.sprintly.backend.entity.Task;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -19,25 +21,7 @@ public class TaskMapper {
     }
 
     public TaskResponse toResponse(Task task) {
-        List<TagResponse> customTags = task.getTags().stream()
-            .filter(tag -> tag.getDeletedAt() == null)
-            .sorted(Comparator.comparing(tag -> tag.getName().toLowerCase()))
-            .map(tagMapper::toResponse)
-            .toList();
-        TagResponse boardTag = task.getBoard() == null ? null : TagResponse.builder()
-            .id(task.getBoard().getId())
-            .name(task.getBoard().getName())
-            .color("#334155")
-            .system(true)
-            .projectId(task.getProject() != null ? task.getProject().getId() : null)
-            .projectName(task.getProject() != null ? task.getProject().getName() : null)
-            .createdAt(task.getCreatedAt())
-            .updatedAt(task.getUpdatedAt())
-            .deletedAt((OffsetDateTime) null)
-            .build();
-        List<TagResponse> tags = boardTag == null
-            ? customTags
-            : java.util.stream.Stream.concat(java.util.stream.Stream.of(boardTag), customTags.stream()).toList();
+        List<TagResponse> tags = getTags(task);
 
         return TaskResponse.builder()
             .id(task.getId())
@@ -47,7 +31,6 @@ public class TaskMapper {
             .storyPoints(task.getStoryPoints())
             .priority(task.getPriority())
             .dueDate(task.getDueDate())
-            .isPrivate(task.getIsPrivate())
             .position(task.getPosition())
             .createdAt(task.getCreatedAt())
             .updatedAt(task.getUpdatedAt())
@@ -63,6 +46,56 @@ public class TaskMapper {
             .creatorId(task.getCreator() != null ? task.getCreator().getId() : null)
             .creatorEmail(task.getCreator() != null ? task.getCreator().getEmail() : null)
             .tags(tags)
+            .build();
+    }
+
+    private List<TagResponse> getTags(Task task) {
+        List<TagResponse> tags = new ArrayList<>();
+        TagResponse boardTag = getBoardTag(task);
+        if (boardTag != null) {
+            tags.add(boardTag);
+        }
+
+        for (TagResponse tag : getCustomTags(task)) {
+            tags.add(tag);
+        }
+
+        return tags;
+    }
+
+    private List<TagResponse> getCustomTags(Task task) {
+        List<Tag> tags = new ArrayList<>();
+        for (Tag tag : task.getTags()) {
+            if (tag.getDeletedAt() == null) {
+                tags.add(tag);
+            }
+        }
+
+        tags.sort(Comparator.comparing(tag -> tag.getName().toLowerCase()));
+
+        List<TagResponse> responses = new ArrayList<>();
+        for (Tag tag : tags) {
+            responses.add(tagMapper.toResponse(tag));
+        }
+
+        return responses;
+    }
+
+    private TagResponse getBoardTag(Task task) {
+        if (task.getBoard() == null) {
+            return null;
+        }
+
+        return TagResponse.builder()
+            .id(task.getBoard().getId())
+            .name(task.getBoard().getName())
+            .color("#334155")
+            .system(true)
+            .projectId(task.getProject() != null ? task.getProject().getId() : null)
+            .projectName(task.getProject() != null ? task.getProject().getName() : null)
+            .createdAt(task.getCreatedAt())
+            .updatedAt(task.getUpdatedAt())
+            .deletedAt((OffsetDateTime) null)
             .build();
     }
 }

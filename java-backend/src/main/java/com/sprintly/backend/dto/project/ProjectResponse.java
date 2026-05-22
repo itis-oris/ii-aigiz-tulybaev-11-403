@@ -25,6 +25,7 @@ public class ProjectResponse {
     private String ownerLastname;
     private String ownerMiddlename;
     private String ownerAvatarUrl;
+    private String currentUserProjectRole;
     private UUID folderId;
     private List<String> boardTabs;
     private OffsetDateTime createdAt;

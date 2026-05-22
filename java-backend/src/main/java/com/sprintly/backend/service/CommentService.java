@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,18 +29,24 @@ public class CommentService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
+    private final ProjectAccessService projectAccessService;
 
     @Transactional(readOnly = true)
     public List<CommentResponse> findAllByTask(UUID taskId, CustomUserDetails currentUser) {
         Task task = getTaskInOrganization(taskId, currentUser.getOrganizationId());
-        return commentRepository.findAllByTask_IdOrderByCreatedAtAsc(task.getId()).stream()
-            .map(commentMapper::toResponse)
-            .toList();
+        projectAccessService.ensureProjectMember(currentUser, task.getProject(), "Insufficient permissions for comment access");
+        List<CommentResponse> responses = new ArrayList<>();
+        for (Comment comment : commentRepository.findAllByTask_IdOrderByCreatedAtAsc(task.getId())) {
+            responses.add(commentMapper.toResponse(comment));
+        }
+
+        return responses;
     }
 
     @Transactional
     public CommentResponse create(CreateCommentRequest request, CustomUserDetails currentUser) {
         Task task = getTaskInOrganization(request.getTaskId(), currentUser.getOrganizationId());
+        projectAccessService.ensureProjectMember(currentUser, task.getProject(), "Insufficient permissions for comment creation");
         User user = getUserInOrganization(currentUser.getId(), currentUser.getOrganizationId());
 
         Comment comment = commentRepository.save(Comment.builder()
@@ -57,34 +64,20 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
 
-        if (comment.getTask() == null || comment.getTask().getProject() == null
-            || comment.getTask().getProject().getOrganization() == null
-            || !currentUser.getOrganizationId().equals(comment.getTask().getProject().getOrganization().getId())) {
+        if (!belongsToOrganization(comment, currentUser.getOrganizationId())) {
             throw new AccessDeniedException("Comment does not belong to current organization");
         }
 
-        boolean isOwner = comment.getUser() != null && currentUser.getId().equals(comment.getUser().getId());
-        boolean isManager = currentUser.getAuthorities().stream()
-            .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN")
-                || authority.getAuthority().equals("ROLE_MANAGER"));
-
-        if (!isOwner && !isManager) {
-            throw new AccessDeniedException("Недостаточно прав для удаления комментария");
-        }
+        projectAccessService.ensureCommentDeletable(currentUser, comment, "Недостаточно прав для удаления комментария");
 
         commentRepository.delete(comment);
     }
 
     private Task getTaskInOrganization(UUID taskId, UUID organizationId) {
-        Task task = taskRepository.findById(taskId)
+        Task task = taskRepository.findByIdAndDeletedAtIsNull(taskId)
             .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        if (task.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Task not found");
-        }
-
-        if (task.getProject() == null || task.getProject().getOrganization() == null
-            || !organizationId.equals(task.getProject().getOrganization().getId())) {
+        if (!belongsToOrganization(task, organizationId)) {
             throw new AccessDeniedException("Task does not belong to current organization");
         }
 
@@ -92,13 +85,20 @@ public class CommentService {
     }
 
     private User getUserInOrganization(UUID userId, UUID organizationId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndOrganizations_Id(userId, organizationId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getOrganization() == null || !organizationId.equals(user.getOrganization().getId())) {
-            throw new AccessDeniedException("User does not belong to current organization");
-        }
-
         return user;
+    }
+
+    private boolean belongsToOrganization(Comment comment, UUID organizationId) {
+        return comment.getTask() != null
+            && belongsToOrganization(comment.getTask(), organizationId);
+    }
+
+    private boolean belongsToOrganization(Task task, UUID organizationId) {
+        return task.getProject() != null
+            && task.getProject().getOrganization() != null
+            && organizationId.equals(task.getProject().getOrganization().getId());
     }
 }

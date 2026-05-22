@@ -4,8 +4,10 @@ import com.sprintly.backend.dto.project.CreateProjectRequest;
 import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
 import com.sprintly.backend.dto.project.AddProjectMembersRequest;
+import com.sprintly.backend.dto.project.UpdateProjectMemberRoleRequest;
 import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.security.CustomUserDetails;
+import com.sprintly.backend.service.ProjectMemberService;
 import com.sprintly.backend.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -37,6 +39,7 @@ import java.util.UUID;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final ProjectMemberService projectMemberService;
 
     @GetMapping
     @Operation(summary = "List projects", description = "Returns all active projects in current organization")
@@ -99,7 +102,7 @@ public class ProjectController {
         @PathVariable UUID projectId,
         @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
-        return projectService.findMembers(projectId, currentUser);
+        return projectMemberService.findMembers(projectId, currentUser);
     }
 
     @PostMapping("/{projectId}/members")
@@ -109,6 +112,27 @@ public class ProjectController {
         @Valid @RequestBody AddProjectMembersRequest request,
         @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
-        return projectService.addMembers(projectId, request, currentUser);
+        return projectMemberService.addMembers(projectId, request, currentUser);
+    }
+
+    @PutMapping("/{projectId}/members/{userId}/role")
+    @Operation(summary = "Update project member role")
+    public List<UserResponse> updateMemberRole(
+        @PathVariable UUID projectId,
+        @PathVariable UUID userId,
+        @Valid @RequestBody UpdateProjectMemberRoleRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return projectMemberService.updateMemberRole(projectId, userId, request, currentUser);
+    }
+
+    @DeleteMapping("/{projectId}/members/{userId}")
+    @Operation(summary = "Remove project member")
+    public List<UserResponse> removeMember(
+        @PathVariable UUID projectId,
+        @PathVariable UUID userId,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return projectMemberService.removeMember(projectId, userId, currentUser);
     }
 }

@@ -29,7 +29,6 @@ public class UpdateTaskRequest {
     private Integer priority;
 
     private OffsetDateTime dueDate;
-    private Boolean isPrivate;
 
     private UUID projectId;
     private UUID boardId;

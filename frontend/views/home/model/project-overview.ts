@@ -1,12 +1,19 @@
 import type { ProjectStatus, UserResponse } from '@/shared/api';
+import {
+    ORG_ADMIN_ROLE,
+    PROJECT_MANAGER_ROLE,
+    PROJECT_MEMBER_ROLE,
+} from '@/shared/lib';
 
 export type ProjectParticipant = {
     id: string;
     name: string;
     role: string;
+    roleCode: string;
     initials: string;
     accentClassName: string;
     avatarUrl?: string | null;
+    isOwner?: boolean;
 };
 
 export type WorkspaceMember = ProjectParticipant & {
@@ -38,7 +45,11 @@ const projectStatusLabelMap: Record<ProjectStatus, string> = {
     COMPLETED: 'Завершен',
 };
 
-const rolePriority = ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_USER'] as const;
+const rolePriority = [
+    ORG_ADMIN_ROLE,
+    PROJECT_MANAGER_ROLE,
+    PROJECT_MEMBER_ROLE,
+] as const;
 
 export const getParticipantAccentClassName = (index: number) =>
     memberAccentPalette[index % memberAccentPalette.length];
@@ -75,12 +86,12 @@ export const getUserRoleLabel = (roles: string[]) => {
     const primaryRole =
         rolePriority.find((role) => roles.includes(role)) ??
         roles[0] ??
-        'ROLE_USER';
+        PROJECT_MEMBER_ROLE;
 
     switch (primaryRole) {
-        case 'ROLE_ADMIN':
+        case ORG_ADMIN_ROLE:
             return 'Администратор';
-        case 'ROLE_MANAGER':
+        case PROJECT_MANAGER_ROLE:
             return 'Менеджер';
         default:
             return 'Участник';
@@ -97,6 +108,9 @@ export const mapUserToWorkspaceMember = (
         id: user.id,
         name,
         role: getUserRoleLabel(user.roles),
+        roleCode:
+            rolePriority.find((role) => user.roles.includes(role)) ??
+            PROJECT_MEMBER_ROLE,
         initials: getParticipantInitials(name),
         accentClassName: getParticipantAccentClassName(index),
         email: user.email,
@@ -115,15 +129,19 @@ export const projectOverview = {
             id: 'member-1',
             name: 'Alex Johnson',
             role: 'Владелец проекта',
+            roleCode: PROJECT_MANAGER_ROLE,
             initials: 'AJ',
             accentClassName: getParticipantAccentClassName(0),
+            isOwner: true,
         },
         {
             id: 'member-2',
             name: 'Mia Harper',
             role: 'Менеджер',
+            roleCode: PROJECT_MANAGER_ROLE,
             initials: 'MH',
             accentClassName: getParticipantAccentClassName(1),
+            isOwner: false,
         },
     ],
 };

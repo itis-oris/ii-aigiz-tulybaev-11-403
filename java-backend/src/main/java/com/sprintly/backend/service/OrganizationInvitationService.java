@@ -17,7 +17,6 @@ import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import com.sprintly.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +36,7 @@ public class OrganizationInvitationService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final OrganizationRoleService organizationRoleService;
+    private final ProjectAccessService projectAccessService;
 
     @Transactional
     public List<OrganizationInvitationResponse> createInvitations(
@@ -44,10 +44,9 @@ public class OrganizationInvitationService {
         CreateOrganizationInvitationsRequest request,
         CustomUserDetails currentUser
     ) {
-        ensureManagerAccess(currentUser);
-
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
+        projectAccessService.ensureOrgAdmin(currentUser, organization, "Insufficient permissions for invitations");
         User invitedByUser = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -74,9 +73,12 @@ public class OrganizationInvitationService {
             throw new IllegalArgumentException("At least one invite link or email is required");
         }
 
-        return organizationInvitationRepository.saveAll(invitations).stream()
-            .map(this::toResponse)
-            .toList();
+        List<OrganizationInvitationResponse> responses = new ArrayList<>();
+        for (OrganizationInvitation invitation : organizationInvitationRepository.saveAll(invitations)) {
+            responses.add(toResponse(invitation));
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
@@ -106,7 +108,6 @@ public class OrganizationInvitationService {
         user.getOrganizations().add(invitation.getOrganization());
         user.setOrganization(invitation.getOrganization());
         userRepository.save(user);
-        organizationRoleService.assignRole(user, invitation.getOrganization(), RoleName.USER);
 
         if (invitation.getAcceptedAt() == null) {
             invitation.setAcceptedAt(OffsetDateTime.now());
@@ -228,21 +229,16 @@ public class OrganizationInvitationService {
     }
 
     private void ensureOrganizationMembership(User user, UUID organizationId) {
-        boolean isMember = user.getOrganizations().stream()
-            .anyMatch(organization -> organizationId.equals(organization.getId()));
+        boolean isMember = false;
+        for (Organization organization : user.getOrganizations()) {
+            if (organizationId.equals(organization.getId())) {
+                isMember = true;
+                break;
+            }
+        }
 
         if (!isMember && (user.getOrganization() == null || !organizationId.equals(user.getOrganization().getId()))) {
             throw new AccessDeniedException("User is not a member of this organization");
-        }
-    }
-
-    private void ensureManagerAccess(CustomUserDetails currentUser) {
-        boolean hasAccess = currentUser.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
-
-        if (!hasAccess) {
-            throw new AccessDeniedException("Insufficient permissions for invitations");
         }
     }
 

@@ -29,7 +29,6 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
         UUID projectId,
         UUID assigneeId,
         UUID creatorId,
-        Boolean isPrivate,
         TaskStatus status,
         Integer priority,
         String search
@@ -66,10 +65,6 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
 
         if (creatorId != null) {
             predicates.add(cb.equal(task.get("creator").get("id"), creatorId));
-        }
-
-        if (isPrivate != null) {
-            predicates.add(cb.equal(task.get("isPrivate"), isPrivate));
         }
 
         if (status != null) {

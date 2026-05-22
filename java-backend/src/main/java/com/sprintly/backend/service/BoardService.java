@@ -14,12 +14,11 @@ import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,37 +26,41 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BoardService {
 
-    private static final String PROJECTS_BY_ORGANIZATION_CACHE = "projectsByOrganization";
-
     private final BoardRepository boardRepository;
     private final BoardColumnRepository boardColumnRepository;
     private final ProjectRepository projectRepository;
     private final BoardMapper boardMapper;
+    private final ProjectAccessService projectAccessService;
 
     @Transactional
     public List<BoardResponse> findAllByProject(UUID projectId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
+        projectAccessService.ensureProjectMember(currentUser, project, "Insufficient permissions for board access");
         List<Board> boards = boardRepository.findAllByProject_IdAndDeletedAtIsNullOrderByPositionAsc(project.getId());
 
         if (boards.isEmpty()) {
             boards = List.of(createDefaultBoard(project));
         }
 
-        return boards.stream()
-            .map(boardMapper::toResponse)
-            .toList();
+        List<BoardResponse> responses = new ArrayList<>();
+        for (Board board : boards) {
+            responses.add(boardMapper.toResponse(board));
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
     public BoardResponse findById(UUID boardId, CustomUserDetails currentUser) {
-        return boardMapper.toResponse(getBoardInOrganization(boardId, currentUser.getOrganizationId()));
+        Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
+        projectAccessService.ensureProjectMember(currentUser, board.getProject(), "Insufficient permissions for board access");
+        return boardMapper.toResponse(board);
     }
 
     @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public BoardResponse create(CreateBoardRequest request, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(request.getProjectId(), currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, project);
+        projectAccessService.ensureProjectManager(currentUser, project, "Insufficient permissions for board modification");
         String normalizedName = request.getName().trim();
         ensureUniqueBoardName(project.getId(), normalizedName);
 
@@ -72,10 +75,9 @@ public class BoardService {
     }
 
     @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public BoardResponse update(UUID boardId, UpdateBoardRequest request, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, board.getProject());
+        projectAccessService.ensureProjectManager(currentUser, board.getProject(), "Insufficient permissions for board modification");
         String normalizedName = request.getName().trim();
         ensureUniqueBoardName(board.getProject().getId(), normalizedName, board.getId());
         board.setName(normalizedName);
@@ -84,27 +86,18 @@ public class BoardService {
     }
 
     @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public void delete(UUID boardId, CustomUserDetails currentUser) {
         Board board = getBoardInOrganization(boardId, currentUser.getOrganizationId());
-        ensureManagerOrProjectMemberAccess(currentUser, board.getProject());
-        if (board.getDeletedAt() != null) {
-            throw new IllegalStateException("Board already deleted");
-        }
+        projectAccessService.ensureProjectManager(currentUser, board.getProject(), "Insufficient permissions for board modification");
         board.setDeletedAt(OffsetDateTime.now());
         boardRepository.save(board);
     }
 
     private Board getBoardInOrganization(UUID boardId, UUID organizationId) {
-        Board board = boardRepository.findById(boardId)
+        Board board = boardRepository.findByIdAndDeletedAtIsNull(boardId)
             .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
 
-        if (board.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Board not found");
-        }
-
-        if (board.getProject() == null || board.getProject().getOrganization() == null
-            || !organizationId.equals(board.getProject().getOrganization().getId())) {
+        if (!belongsToOrganization(board, organizationId)) {
             throw new AccessDeniedException("Board does not belong to current organization");
         }
 
@@ -112,37 +105,24 @@ public class BoardService {
     }
 
     private Project getProjectInOrganization(UUID projectId, UUID organizationId) {
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findByIdAndDeletedAtIsNull(projectId)
             .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        if (project.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Project not found");
-        }
-
-        if (project.getOrganization() == null || !organizationId.equals(project.getOrganization().getId())) {
+        if (!belongsToOrganization(project, organizationId)) {
             throw new AccessDeniedException("Project does not belong to current organization");
         }
 
         return project;
     }
 
-    private void ensureManagerOrProjectMemberAccess(CustomUserDetails currentUser, Project project) {
-        boolean isManager = currentUser.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
+    private boolean belongsToOrganization(Board board, UUID organizationId) {
+        return board.getProject() != null
+            && belongsToOrganization(board.getProject(), organizationId);
+    }
 
-        if (isManager) {
-            return;
-        }
-
-        boolean isOwner = project.getOwner() != null
-            && currentUser.getId().equals(project.getOwner().getId());
-        boolean isMember = project.getMembers().stream()
-            .anyMatch(member -> currentUser.getId().equals(member.getId()));
-
-        if (!isOwner && !isMember) {
-            throw new AccessDeniedException("Недостаточно прав для изменения досок");
-        }
+    private boolean belongsToOrganization(Project project, UUID organizationId) {
+        return project.getOrganization() != null
+            && organizationId.equals(project.getOrganization().getId());
     }
 
     private void ensureUniqueBoardName(UUID projectId, String name) {
@@ -157,7 +137,7 @@ public class BoardService {
         }
     }
 
-    private Board createDefaultBoard(Project project) {
+    public Board createDefaultBoard(Project project) {
         Board board = boardRepository.save(Board.builder()
             .name("Main")
             .position(0L)
@@ -165,22 +145,18 @@ public class BoardService {
             .project(project)
             .build());
 
-        boardColumnRepository.save(BoardColumn.builder()
-            .name("Backlog")
-            .position(0L)
-            .board(board)
-            .build());
-        boardColumnRepository.save(BoardColumn.builder()
-            .name("In Progress")
-            .position(1000L)
-            .board(board)
-            .build());
-        boardColumnRepository.save(BoardColumn.builder()
-            .name("Done")
-            .position(2000L)
-            .board(board)
-            .build());
+        createDefaultColumn(board, "Backlog", 0L);
+        createDefaultColumn(board, "In Progress", 1000L);
+        createDefaultColumn(board, "Done", 2000L);
 
         return board;
+    }
+
+    private void createDefaultColumn(Board board, String name, long position) {
+        boardColumnRepository.save(BoardColumn.builder()
+            .name(name)
+            .position(position)
+            .board(board)
+            .build());
     }
 }
