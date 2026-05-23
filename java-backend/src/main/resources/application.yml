@@ -35,7 +35,7 @@ server:
 
 springdoc:
   swagger-ui:
-    path: /doc
+    path: /swagger-ui
 
 logging:
   level:
