@@ -29,56 +29,56 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/columns")
 @RequiredArgsConstructor
-@Tag(name = "Columns", description = "Эндпоинты управления колонками")
+@Tag(name = "Columns", description = "Board column management endpoints")
 @SecurityRequirement(name = "bearerAuth")
 public class BoardColumnController {
 
     private final BoardColumnService boardColumnService;
 
     @GetMapping
-    @Operation(summary = "Получить колонки доски")
+    @Operation(summary = "List columns by board")
     public List<ColumnResponse> findAllByBoard(
-        @RequestParam UUID boardId,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @RequestParam UUID boardId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardColumnService.findAllByBoard(boardId, currentUser);
     }
 
     @GetMapping("/{columnId}")
-    @Operation(summary = "Получить колонку по id")
+    @Operation(summary = "Get column by id")
     public ColumnResponse findById(
-        @PathVariable UUID columnId,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @PathVariable UUID columnId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardColumnService.findById(columnId, currentUser);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Создать колонку")
+    @Operation(summary = "Create column")
     public ColumnResponse create(
-        @Valid @RequestBody CreateColumnRequest request,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @Valid @RequestBody CreateColumnRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardColumnService.create(request, currentUser);
     }
 
     @PutMapping("/{columnId}")
-    @Operation(summary = "Обновить колонку")
+    @Operation(summary = "Update column")
     public ColumnResponse update(
-        @PathVariable UUID columnId,
-        @Valid @RequestBody UpdateColumnRequest request,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @PathVariable UUID columnId,
+            @Valid @RequestBody UpdateColumnRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         return boardColumnService.update(columnId, request, currentUser);
     }
 
     @DeleteMapping("/{columnId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Мягко удалить колонку")
+    @Operation(summary = "Soft delete column")
     public void delete(
-        @PathVariable UUID columnId,
-        @AuthenticationPrincipal CustomUserDetails currentUser
+            @PathVariable UUID columnId,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
         boardColumnService.delete(columnId, currentUser);
     }

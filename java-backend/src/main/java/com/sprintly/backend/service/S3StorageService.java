@@ -61,20 +61,15 @@ public class S3StorageService {
                 s3Client.putObject(request, RequestBody.fromBytes(bytes));
                 return;
             } catch (S3Exception ex) {
-                if (!isRetryableUploadConflict(ex) || attempt == MAX_S3_UPLOAD_ATTEMPTS) {
+                if (ex.statusCode() != 409 || attempt == MAX_S3_UPLOAD_ATTEMPTS) {
                     throw new StorageUnavailableException(
                         "Image storage is temporarily unavailable. Try again.",
                         ex
                     );
                 }
-
                 sleepBeforeRetry();
             }
         }
-    }
-
-    private boolean isRetryableUploadConflict(S3Exception ex) {
-        return ex.statusCode() == 409;
     }
 
     private void sleepBeforeRetry() {

@@ -10,6 +10,7 @@ import { getSidebarProjectDragId } from './sidebar-project-dnd';
 
 type SidebarProjectLinkProps = {
     project: ProjectSummary;
+    canDrag?: boolean;
     activeProjectId: string;
     pathname: string;
     itemClassName: string;
@@ -19,6 +20,7 @@ type SidebarProjectLinkProps = {
 
 export function SidebarProjectLink({
     project,
+    canDrag = false,
     activeProjectId,
     pathname,
     itemClassName,
@@ -42,9 +44,14 @@ export function SidebarProjectLink({
             >
                 <Link href="/" onClick={() => onProjectSelect(project.id)}>
                     <span
-                        ref={handleRef}
+                        ref={canDrag ? handleRef : undefined}
                         aria-hidden="true"
-                        className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-sidebar-foreground/0 transition-colors group-hover/project:text-sidebar-foreground/45 hover:bg-sidebar-accent hover:text-sidebar-foreground/75 active:cursor-grabbing"
+                        className={cn(
+                            'flex size-5 shrink-0 items-center justify-center rounded transition-colors group-data-[collapsible=icon]:hidden',
+                            canDrag
+                                ? 'cursor-grab text-sidebar-foreground/0 group-hover/project:text-sidebar-foreground/45 hover:bg-sidebar-accent hover:text-sidebar-foreground/75 active:cursor-grabbing'
+                                : 'pointer-events-none text-sidebar-foreground/0',
+                        )}
                     >
                         <GripVertical className="size-3.5" />
                     </span>

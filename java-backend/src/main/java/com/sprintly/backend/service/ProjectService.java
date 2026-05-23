@@ -1,13 +1,9 @@
 package com.sprintly.backend.service;
 
-import com.sprintly.backend.dto.project.AddProjectMembersRequest;
 import com.sprintly.backend.dto.project.CreateProjectRequest;
 import com.sprintly.backend.dto.project.ProjectResponse;
 import com.sprintly.backend.dto.project.UpdateProjectRequest;
-import com.sprintly.backend.dto.user.UserResponse;
 import com.sprintly.backend.entity.Organization;
-import com.sprintly.backend.entity.Board;
-import com.sprintly.backend.entity.BoardColumn;
 import com.sprintly.backend.entity.Project;
 import com.sprintly.backend.entity.ProjectFolder;
 import com.sprintly.backend.entity.User;
@@ -15,64 +11,59 @@ import com.sprintly.backend.entity.enums.ProjectStatus;
 import com.sprintly.backend.exception.AccessDeniedException;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.mapper.ProjectMapper;
-import com.sprintly.backend.mapper.UserMapper;
 import com.sprintly.backend.repository.OrganizationRepository;
-import com.sprintly.backend.repository.BoardColumnRepository;
-import com.sprintly.backend.repository.BoardRepository;
 import com.sprintly.backend.repository.ProjectFolderRepository;
 import com.sprintly.backend.repository.ProjectRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
 
-    private static final String PROJECTS_BY_ORGANIZATION_CACHE = "projectsByOrganization";
-
     private final ProjectRepository projectRepository;
-    private final BoardRepository boardRepository;
-    private final BoardColumnRepository boardColumnRepository;
     private final ProjectFolderRepository projectFolderRepository;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final ProjectMapper projectMapper;
-    private final UserMapper userMapper;
-    private final OrganizationRoleService organizationRoleService;
+    private final ProjectAccessService projectAccessService;
+    private final ProjectMemberService projectMemberService;
+    private final BoardService boardService;
     private final S3StorageService s3StorageService;
 
     @Transactional(readOnly = true)
-    @Cacheable(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public List<ProjectResponse> findAll(CustomUserDetails currentUser) {
-        return projectRepository.findAllByOrganization_IdAndDeletedAtIsNull(currentUser.getOrganizationId()).stream()
-            .map(projectMapper::toResponse)
-            .toList();
+        List<ProjectResponse> responses = new ArrayList<>();
+        for (Project project : projectRepository.findAllByOrganization_IdAndDeletedAtIsNull(currentUser.getOrganizationId())) {
+            if (projectAccessService.isProjectMember(currentUser, project)) {
+                responses.add(toResponse(project, currentUser));
+            }
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
     public ProjectResponse findById(UUID projectId, CustomUserDetails currentUser) {
-        return projectMapper.toResponse(getProjectInOrganization(projectId, currentUser.getOrganizationId()));
+        Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
+        projectAccessService.ensureProjectMember(currentUser, project, "Insufficient permissions for project access");
+        return toResponse(project, currentUser);
     }
 
     @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse create(CreateProjectRequest request, CustomUserDetails currentUser) {
         Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
+        projectAccessService.ensureOrgAdmin(currentUser, organization, "Insufficient permissions for project creation");
 
         User owner = resolveProjectOwner(
             request.getOwnerId(),
@@ -92,20 +83,28 @@ public class ProjectService {
                 .organization(organization)
                 .owner(owner)
                 .folder(folder)
-                .members(new HashSet<>(Set.of(owner)))
                 .createdAt(OffsetDateTime.now())
                 .build()
         );
-        ensureDefaultBoardSetup(project);
+        projectMemberService.ensureProjectMembership(project, owner);
+        boardService.createDefaultBoard(project);
 
-        return projectMapper.toResponse(project);
+        return toResponse(project, currentUser);
     }
 
     @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse update(UUID projectId, UpdateProjectRequest request, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        ensureManagerOrProjectOwnerAccess(currentUser, project);
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
+
+        updateProjectFields(project, request);
+        updateProjectOwner(project, request, currentUser);
+        project.setFolder(resolveProjectFolder(request.getFolderId(), currentUser.getOrganizationId()));
+
+        return toResponse(projectRepository.save(project), currentUser);
+    }
+
+    private void updateProjectFields(Project project, UpdateProjectRequest request) {
         if (request.getName() != null) {
             project.setName(request.getName().trim());
         }
@@ -115,6 +114,9 @@ public class ProjectService {
         if (request.getStatus() != null) {
             project.setStatus(request.getStatus());
         }
+    }
+
+    private void updateProjectOwner(Project project, UpdateProjectRequest request, CustomUserDetails currentUser) {
         if (request.getOwnerId() != null) {
             User owner = resolveProjectOwner(
                 request.getOwnerId(),
@@ -122,115 +124,35 @@ public class ProjectService {
                 currentUser.getOrganizationId()
             );
             project.setOwner(owner);
-            project.getMembers().add(owner);
+            projectMemberService.ensureProjectMembership(project, owner);
         }
-        project.setFolder(
-            resolveProjectFolder(request.getFolderId(), currentUser.getOrganizationId())
-        );
-
-        return projectMapper.toResponse(projectRepository.save(project));
     }
 
     @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public void delete(UUID projectId, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        ensureManagerOrProjectOwnerAccess(currentUser, project);
-
-        if (project.getDeletedAt() != null) {
-            throw new IllegalStateException("Project already deleted");
-        }
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
 
         project.setDeletedAt(OffsetDateTime.now());
         projectRepository.save(project);
     }
 
     @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
     public ProjectResponse uploadImage(UUID projectId, MultipartFile file, CustomUserDetails currentUser) {
         Project project = getProjectInOrganization(projectId, currentUser.getOrganizationId());
-        ensureManagerOrProjectOwnerAccess(currentUser, project);
+        projectAccessService.ensureProjectOwner(currentUser, project, "Insufficient permissions for project modification");
         String imageUrl = s3StorageService.uploadImage(file, "projects/" + project.getId() + "/image");
         project.setImageUrl(imageUrl);
 
-        return projectMapper.toResponse(projectRepository.save(project));
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserResponse> findMembers(UUID projectId, CustomUserDetails currentUser) {
-        Project project = getProjectWithMembersInOrganization(projectId, currentUser.getOrganizationId());
-
-        return project.getMembers().stream()
-            .sorted((left, right) -> left.getEmail().compareToIgnoreCase(right.getEmail()))
-            .map(user -> userMapper.toResponse(
-                user,
-                organizationRoleService.getRoleNamesInOrganization(
-                    user,
-                    currentUser.getOrganizationId()
-                )
-            ))
-            .toList();
-    }
-
-    @Transactional
-    @CacheEvict(value = PROJECTS_BY_ORGANIZATION_CACHE, key = "#currentUser.organizationId")
-    public List<UserResponse> addMembers(
-        UUID projectId,
-        AddProjectMembersRequest request,
-        CustomUserDetails currentUser
-    ) {
-        Project project = getProjectWithMembersInOrganization(projectId, currentUser.getOrganizationId());
-        ensureManagerOrProjectOwnerAccess(currentUser, project);
-        Set<UUID> userIds = Set.copyOf(request.getUserIds());
-        List<User> users = userRepository.findAllByIdInAndOrganizations_Id(
-            userIds,
-            currentUser.getOrganizationId()
-        );
-
-        if (users.size() != userIds.size()) {
-            throw new ResourceNotFoundException("Some users were not found in current organization");
-        }
-
-        project.getMembers().addAll(users);
-        if (project.getOwner() != null) {
-            project.getMembers().add(project.getOwner());
-        }
-
-        Project savedProject = projectRepository.save(project);
-
-        return savedProject.getMembers().stream()
-            .sorted((left, right) -> left.getEmail().compareToIgnoreCase(right.getEmail()))
-            .map(user -> userMapper.toResponse(
-                user,
-                organizationRoleService.getRoleNamesInOrganization(
-                    user,
-                    currentUser.getOrganizationId()
-                )
-            ))
-            .toList();
+        return toResponse(projectRepository.save(project), currentUser);
     }
 
     private Project getProjectInOrganization(UUID projectId, UUID organizationId) {
         Project project = projectRepository.findByIdAndDeletedAtIsNull(projectId)
             .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
-        if (project.getOrganization() == null || !organizationId.equals(project.getOrganization().getId())) {
+        if (!belongsToOrganization(project, organizationId)) {
             throw new AccessDeniedException("Project does not belong to current organization");
-        }
-
-        return project;
-    }
-
-    private Project getProjectWithMembersInOrganization(UUID projectId, UUID organizationId) {
-        Project project = projectRepository.findWithMembersByIdAndDeletedAtIsNull(projectId)
-            .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-
-        if (project.getOrganization() == null || !organizationId.equals(project.getOrganization().getId())) {
-            throw new AccessDeniedException("Project does not belong to current organization");
-        }
-
-        if (project.getOwner() != null) {
-            project.getMembers().add(project.getOwner());
         }
 
         return project;
@@ -241,10 +163,7 @@ public class ProjectService {
         User owner = userRepository.findWithOrganizationsById(ownerId)
             .orElseThrow(() -> new ResourceNotFoundException("Project owner not found"));
 
-        boolean belongsToOrganization = owner.getOrganizations().stream()
-            .anyMatch(organization -> organizationId.equals(organization.getId()));
-
-        if (!belongsToOrganization) {
+        if (!belongsToOrganization(owner, organizationId)) {
             throw new AccessDeniedException("Project owner must be a member of current organization");
         }
 
@@ -259,38 +178,31 @@ public class ProjectService {
         ProjectFolder folder = projectFolderRepository.findByIdAndDeletedAtIsNull(folderId)
             .orElseThrow(() -> new ResourceNotFoundException("Project folder not found"));
 
-        if (folder.getOrganization() == null || !organizationId.equals(folder.getOrganization().getId())) {
+        if (!belongsToOrganization(folder, organizationId)) {
             throw new AccessDeniedException("Project folder does not belong to current organization");
         }
 
         return folder;
     }
 
-    private void ensureManagerAccess(CustomUserDetails currentUser) {
-        boolean hasAccess = currentUser.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
-
-        if (!hasAccess) {
-            throw new AccessDeniedException("Insufficient permissions for project modification");
-        }
+    private boolean belongsToOrganization(Project project, UUID organizationId) {
+        return project.getOrganization() != null
+            && organizationId.equals(project.getOrganization().getId());
     }
 
-    private void ensureManagerOrProjectOwnerAccess(CustomUserDetails currentUser, Project project) {
-        boolean isManager = currentUser.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
-
-        if (isManager) {
-            return;
+    private boolean belongsToOrganization(User user, UUID organizationId) {
+        for (Organization organization : user.getOrganizations()) {
+            if (organizationId.equals(organization.getId())) {
+                return true;
+            }
         }
 
-        boolean isOwner = project.getOwner() != null
-            && currentUser.getId().equals(project.getOwner().getId());
+        return false;
+    }
 
-        if (!isOwner) {
-            throw new AccessDeniedException("Insufficient permissions for project modification");
-        }
+    private boolean belongsToOrganization(ProjectFolder folder, UUID organizationId) {
+        return folder.getOrganization() != null
+            && organizationId.equals(folder.getOrganization().getId());
     }
 
     private String normalizeDescription(String description) {
@@ -302,36 +214,13 @@ public class ProjectService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private void ensureDefaultBoardSetup(Project project) {
-        Board board = boardRepository.save(
-            Board.builder()
-                .name("Main")
-                .position(0L)
-                .createdAt(OffsetDateTime.now())
-                .project(project)
-                .build()
-        );
-
-        boardColumnRepository.save(
-            BoardColumn.builder()
-                .name("Backlog")
-                .position(0L)
-                .board(board)
-                .build()
-        );
-        boardColumnRepository.save(
-            BoardColumn.builder()
-                .name("In Progress")
-                .position(1000L)
-                .board(board)
-                .build()
-        );
-        boardColumnRepository.save(
-            BoardColumn.builder()
-                .name("Done")
-                .position(2000L)
-                .board(board)
-                .build()
+    private ProjectResponse toResponse(Project project, CustomUserDetails currentUser) {
+        return projectMapper.toResponse(
+            project,
+            projectAccessService.isProjectOwner(currentUser, project)
+                ? "OWNER"
+                : "MEMBER"
         );
     }
+
 }

@@ -24,26 +24,29 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(
-    name = "organization_member_roles",
+    name = "project_members",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uq_organization_member_roles", columnNames = {"organization_id", "user_id", "role_id"})
+        @UniqueConstraint(name = "uk_project_members_project_user", columnNames = {"project_id", "user_id"})
     }
 )
-public class OrganizationMemberRole {
+public class ProjectMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id", nullable = false)
-    private Organization organization;
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "role_id", nullable = false)
-    private Role role;
+    public static ProjectMember create(Project project, User user) {
+        ProjectMember projectMember = new ProjectMember();
+        projectMember.setProject(project);
+        projectMember.setUser(user);
+        return projectMember;
+    }
 }

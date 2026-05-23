@@ -4,7 +4,9 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import {
+    hasOrgAdminRole,
     useI18n,
+    useCurrentUser,
     useProjectFolderDndController,
     useProjectFolderTree,
     useWorkspaceProjectsController,
@@ -54,6 +56,7 @@ const sidebarActionIconClassName = 'size-4.5 text-sidebar-foreground/75';
 export function AppSidebar() {
     const pathname = usePathname();
     const { t } = useI18n();
+    const { data: currentUser } = useCurrentUser();
     const {
         activeProjectId,
         collapsedFolderIds,
@@ -65,15 +68,18 @@ export function AppSidebar() {
         selectProject,
         toggleFolder,
     } = useWorkspaceProjectsController();
+    const canManageWorkspace = hasOrgAdminRole(currentUser?.roles);
     const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
     const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] =
         useState(false);
     const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] =
         useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const { groupedFolders: projectsByFolder, rootProjects } =
         useProjectFolderTree({
             folders,
             projects,
+            query: searchQuery,
         });
     const {
         draggedProjectId,
@@ -127,6 +133,10 @@ export function AppSidebar() {
                         <div className="relative group-data-[collapsible=icon]:hidden">
                             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                             <SidebarInput
+                                value={searchQuery}
+                                onChange={(event) =>
+                                    setSearchQuery(event.target.value)
+                                }
                                 placeholder={t('sidebar.searchProjects')}
                                 className="h-10 rounded-xl border-sidebar-border bg-sidebar pl-9 text-sm"
                             />
@@ -189,28 +199,40 @@ export function AppSidebar() {
                                     {t('sidebar.projects')}
                                 </SidebarGroupLabel>
                                 <div className="flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        aria-label={t('sidebar.addFolder')}
-                                        className="size-7 rounded-md text-sidebar-foreground/70"
-                                        onClick={() =>
-                                            setIsCreateFolderDialogOpen(true)
-                                        }
-                                    >
-                                        <FolderPlus className="size-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        aria-label={t('sidebar.addProject')}
-                                        className="size-7 rounded-md text-sidebar-foreground/70"
-                                        onClick={() =>
-                                            setIsCreateProjectDialogOpen(true)
-                                        }
-                                    >
-                                        <Plus className="size-4" />
-                                    </Button>
+                                    {canManageWorkspace ? (
+                                        <>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                aria-label={t(
+                                                    'sidebar.addFolder',
+                                                )}
+                                                className="size-7 rounded-md text-sidebar-foreground/70"
+                                                onClick={() =>
+                                                    setIsCreateFolderDialogOpen(
+                                                        true,
+                                                    )
+                                                }
+                                            >
+                                                <FolderPlus className="size-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                aria-label={t(
+                                                    'sidebar.addProject',
+                                                )}
+                                                className="size-7 rounded-md text-sidebar-foreground/70"
+                                                onClick={() =>
+                                                    setIsCreateProjectDialogOpen(
+                                                        true,
+                                                    )
+                                                }
+                                            >
+                                                <Plus className="size-4" />
+                                            </Button>
+                                        </>
+                                    ) : null}
                                 </div>
                             </SidebarGroupContent>
                             <SidebarGroupContent>
@@ -260,6 +282,9 @@ export function AppSidebar() {
                                                                                 project={
                                                                                     project
                                                                                 }
+                                                                                canDrag={
+                                                                                    canManageWorkspace
+                                                                                }
                                                                                 activeProjectId={
                                                                                     activeProjectId
                                                                                 }
@@ -299,6 +324,9 @@ export function AppSidebar() {
                                                 >
                                                     <SidebarProjectLink
                                                         project={project}
+                                                        canDrag={
+                                                            canManageWorkspace
+                                                        }
                                                         activeProjectId={
                                                             activeProjectId
                                                         }
@@ -331,27 +359,49 @@ export function AppSidebar() {
                                             </div>
                                         </SidebarRootDropZone>
                                     ) : null}
+
+                                    {!projectsByFolder.length &&
+                                    !rootProjects.length &&
+                                    searchQuery.trim() ? (
+                                        <div className="px-2 pt-1 pb-2 group-data-[collapsible=icon]:hidden">
+                                            <div className="rounded-xl border border-dashed border-sidebar-border/80 bg-sidebar-accent/30 px-3 py-3 text-xs text-sidebar-foreground/60">
+                                                <div className="font-medium text-sidebar-foreground/72">
+                                                    Ничего не найдено
+                                                </div>
+                                                <div className="mt-1 leading-relaxed">
+                                                    Попробуй изменить запрос для
+                                                    поиска проектов или папок.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </SidebarMenu>
                             </SidebarGroupContent>
                         </SidebarGroup>
                     </SidebarContent>
-                    <SidebarFooter className="relative z-10 mt-auto gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    tooltip={t('sidebar.invite')}
-                                    className={sidebarMenuItemClassName}
-                                    onClick={() => setIsInviteDialogOpen(true)}
-                                >
-                                    <UserPlus
-                                        className={sidebarActionIconClassName}
-                                    />
-                                    <span>{t('sidebar.invite')}</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
+                    <SidebarFooter className="relative z-10 mt-auto gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-2">
+                        {canManageWorkspace ? (
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton
+                                        tooltip={t('sidebar.invite')}
+                                        className={sidebarMenuItemClassName}
+                                        onClick={() =>
+                                            setIsInviteDialogOpen(true)
+                                        }
+                                    >
+                                        <UserPlus
+                                            className={
+                                                sidebarActionIconClassName
+                                            }
+                                        />
+                                        <span>{t('sidebar.invite')}</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        ) : null}
 
-                        <div className="w-full rounded-xl px-1 py-1">
+                        <div className="w-full rounded-xl px-1 py-1 group-data-[collapsible=icon]:px-0">
                             <SidebarProfileMenu
                                 email="artem@sprintly.app"
                                 initials="AR"
@@ -364,22 +414,26 @@ export function AppSidebar() {
                 </Sidebar>
             </DragDropProvider>
 
-            <InviteWorkspaceDialog
-                open={isInviteDialogOpen}
-                onOpenChange={setIsInviteDialogOpen}
-            />
-            <CreateProjectDialog
-                open={isCreateProjectDialogOpen}
-                onOpenChange={setIsCreateProjectDialogOpen}
-                projectCount={projects.length}
-                folders={folders}
-                onSubmit={createProject}
-            />
-            <CreateProjectFolderDialog
-                open={isCreateFolderDialogOpen}
-                onOpenChange={setIsCreateFolderDialogOpen}
-                onSubmit={createFolder}
-            />
+            {canManageWorkspace ? (
+                <>
+                    <InviteWorkspaceDialog
+                        open={isInviteDialogOpen}
+                        onOpenChange={setIsInviteDialogOpen}
+                    />
+                    <CreateProjectDialog
+                        open={isCreateProjectDialogOpen}
+                        onOpenChange={setIsCreateProjectDialogOpen}
+                        projectCount={projects.length}
+                        folders={folders}
+                        onSubmit={createProject}
+                    />
+                    <CreateProjectFolderDialog
+                        open={isCreateFolderDialogOpen}
+                        onOpenChange={setIsCreateFolderDialogOpen}
+                        onSubmit={createFolder}
+                    />
+                </>
+            ) : null}
         </>
     );
 }

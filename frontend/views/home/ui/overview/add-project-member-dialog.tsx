@@ -21,14 +21,17 @@ const toProjectParticipant = ({
     id,
     name,
     role,
+    roleCode,
     initials,
     accentClassName,
 }: WorkspaceMember): ProjectParticipant => ({
     id,
     name,
     role,
+    roleCode,
     initials,
     accentClassName,
+    isOwner: false,
 });
 
 const AddProjectMemberDialog = ({

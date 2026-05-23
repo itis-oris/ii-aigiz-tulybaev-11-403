@@ -60,7 +60,6 @@ export const mapTaskResponseToTask = (task: TaskResponse): Task => {
         storyPoints: task.storyPoints ?? undefined,
         priority: task.priority ?? undefined,
         dueDate: task.dueDate ?? undefined,
-        isPrivate: task.isPrivate ?? undefined,
         columnId: task.columnId ?? task.status,
         position:
             task.position !== null && task.position !== undefined

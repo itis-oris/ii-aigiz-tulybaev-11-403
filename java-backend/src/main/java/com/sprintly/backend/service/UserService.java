@@ -12,16 +12,14 @@ import com.sprintly.backend.mapper.UserMapper;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,35 +34,22 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<UserResponse> findAllInCurrentOrganization(CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
+        List<User> users = userRepository.findAllByOrganizations_Id(currentUser.getOrganizationId());
 
-        List<com.sprintly.backend.entity.User> users = userRepository.findAllByOrganizations_Id(currentUser.getOrganizationId());
-        Map<UUID, Set<String>> roleNamesByUserId = new LinkedHashMap<>(
-            organizationRoleService.getRoleNamesByUserIdsInOrganization(
-                currentUser.getOrganizationId(),
-                users.stream().map(com.sprintly.backend.entity.User::getId).toList()
-            )
-        );
-
-        return users.stream()
-            .map(user -> userMapper.toResponse(
+        List<UserResponse> responses = new ArrayList<>();
+        for (User user : users) {
+            responses.add(userMapper.toResponse(
                 user,
-                roleNamesByUserId.getOrDefault(
-                    user.getId(),
-                    organizationRoleService.getRoleNamesInOrganization(
-                        user,
-                        currentUser.getOrganizationId()
-                    )
-                )
-            ))
-            .toList();
+                organizationRoleService.getRoleNamesInOrganization(user, currentUser.getOrganizationId())
+            ));
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
     public UserResponse findById(UUID userId, CustomUserDetails currentUser) {
-        ensureManagerAccess(currentUser);
-
-        var user = userRepository.findByIdAndOrganizations_Id(userId, currentUser.getOrganizationId())
+        User user = userRepository.findByIdAndOrganizations_Id(userId, currentUser.getOrganizationId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return userMapper.toResponse(
@@ -78,7 +63,7 @@ public class UserService {
         UpdateCurrentUserRequest request,
         CustomUserDetails currentUser
     ) {
-        var user = userRepository.findWithOrganizationsById(currentUser.getId())
+        User user = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setFirstname(normalizeText(request.getFirstname()));
@@ -91,7 +76,7 @@ public class UserService {
 
     @Transactional
     public UserResponse uploadAvatar(MultipartFile file, CustomUserDetails currentUser) {
-        var user = userRepository.findWithOrganizationsById(currentUser.getId())
+        User user = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getOrganization() == null || !currentUser.getOrganizationId().equals(user.getOrganization().getId())) {
@@ -113,7 +98,7 @@ public class UserService {
         );
     }
 
-    private CurrentUserResponse toCurrentUserResponse(com.sprintly.backend.entity.User user) {
+    private CurrentUserResponse toCurrentUserResponse(User user) {
         Organization activeOrganization = getActiveOrganization(user);
         Set<Organization> organizations = new HashSet<>(user.getOrganizations());
 
@@ -130,21 +115,7 @@ public class UserService {
             .middlename(user.getMiddlename())
             .avatarUrl(user.getAvatarUrl())
             .organizationName(activeOrganization != null ? activeOrganization.getName() : null)
-            .organizations(
-                organizations.stream()
-                    .filter(organization -> organization.getDeletedAt() == null)
-                    .map(organization -> OrganizationResponse.builder()
-                        .id(organization.getId())
-                        .name(organization.getName())
-                        .ownerId(organization.getOwnerId())
-                        .createdAt(organization.getCreatedAt())
-                        .active(
-                            activeOrganization != null
-                                && organization.getId().equals(activeOrganization.getId())
-                        )
-                        .build())
-                    .toList()
-            )
+            .organizations(toOrganizationResponses(organizations, activeOrganization))
             .roles(
                 activeOrganization != null
                     ? organizationRoleService.getRoleNamesInOrganization(
@@ -156,7 +127,29 @@ public class UserService {
             .build();
     }
 
-    private Organization getActiveOrganization(com.sprintly.backend.entity.User user) {
+    private List<OrganizationResponse> toOrganizationResponses(
+        Set<Organization> organizations,
+        Organization activeOrganization
+    ) {
+        List<OrganizationResponse> responses = new ArrayList<>();
+        for (Organization organization : organizations) {
+            if (organization.getDeletedAt() != null) {
+                continue;
+            }
+
+            responses.add(OrganizationResponse.builder()
+                .id(organization.getId())
+                .name(organization.getName())
+                .ownerId(organization.getOwnerId())
+                .createdAt(organization.getCreatedAt())
+                .active(activeOrganization != null && organization.getId().equals(activeOrganization.getId()))
+                .build());
+        }
+
+        return responses;
+    }
+
+    private Organization getActiveOrganization(User user) {
         if (user.getOrganization() == null || user.getOrganization().getDeletedAt() != null) {
             return null;
         }
@@ -173,13 +166,4 @@ public class UserService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private void ensureManagerAccess(CustomUserDetails currentUser) {
-        boolean hasAccess = currentUser.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(authority -> authority.equals("ROLE_ADMIN") || authority.equals("ROLE_MANAGER"));
-
-        if (!hasAccess) {
-            throw new AccessDeniedException("Insufficient permissions for user management");
-        }
-    }
 }

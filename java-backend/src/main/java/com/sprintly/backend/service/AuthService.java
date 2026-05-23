@@ -8,7 +8,6 @@ import com.sprintly.backend.dto.organization.OrganizationResponse;
 import com.sprintly.backend.entity.OrganizationInvitation;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.User;
-import com.sprintly.backend.entity.enums.RoleName;
 import com.sprintly.backend.exception.ResourceNotFoundException;
 import com.sprintly.backend.repository.OrganizationRepository;
 import com.sprintly.backend.repository.UserRepository;
@@ -18,16 +17,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -78,7 +79,6 @@ public class AuthService {
             organization = invitation.getOrganization();
             user.getOrganizations().add(organization);
             user = userRepository.save(user);
-            organizationRoleService.assignRole(user, organization, RoleName.USER);
             organizationInvitationService.markInvitationAccepted(invitation, user);
         } else {
             organization = organizationRepository.save(
@@ -92,14 +92,11 @@ public class AuthService {
             user.setOrganization(organization);
             user.getOrganizations().add(organization);
             user = userRepository.save(user);
-            organizationRoleService.assignRole(user, organization, RoleName.ADMIN);
         }
 
         Set<SimpleGrantedAuthority> authorities =
             organizationRoleService.getAuthoritiesInOrganization(user, organization.getId());
-        Set<String> roleNames = authorities.stream()
-            .map(authority -> authority.getAuthority().replace("ROLE_", ""))
-            .collect(Collectors.toSet());
+        Set<String> roleNames = extractRoleNames(authorities);
 
         CustomUserDetails userDetails = new CustomUserDetails(
             user.getId(),
@@ -134,9 +131,7 @@ public class AuthService {
             .userId(userDetails.getId())
             .organizationId(userDetails.getOrganizationId())
             .email(userDetails.getEmail())
-            .roles(userDetails.getAuthorities().stream()
-                .map(authority -> authority.getAuthority().replace("ROLE_", ""))
-                .collect(Collectors.toSet()))
+            .roles(extractRoleNames(userDetails.getAuthorities()))
             .accessToken(jwtService.generateAccessToken(userDetails))
             .build();
     }
@@ -175,9 +170,13 @@ public class AuthService {
             organizations.add(activeOrganization);
         }
 
-        return organizations.stream()
-            .filter(organization -> organization.getDeletedAt() == null)
-            .map(organization -> OrganizationResponse.builder()
+        List<OrganizationResponse> responses = new ArrayList<>();
+        for (Organization organization : organizations) {
+            if (organization.getDeletedAt() != null) {
+                continue;
+            }
+
+            responses.add(OrganizationResponse.builder()
                 .id(organization.getId())
                 .name(organization.getName())
                 .ownerId(organization.getOwnerId())
@@ -186,8 +185,10 @@ public class AuthService {
                     activeOrganization != null
                         && organization.getId().equals(activeOrganization.getId())
                 )
-                .build())
-            .toList();
+                .build());
+        }
+
+        return responses;
     }
 
     private Organization getActiveOrganization(User user) {
@@ -214,5 +215,14 @@ public class AuthService {
 
         String normalized = invitationToken.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private Set<String> extractRoleNames(Collection<? extends GrantedAuthority> authorities) {
+        Set<String> roleNames = new HashSet<>();
+        for (GrantedAuthority authority : authorities) {
+            roleNames.add(authority.getAuthority().replace("ROLE_", ""));
+        }
+
+        return roleNames;
     }
 }

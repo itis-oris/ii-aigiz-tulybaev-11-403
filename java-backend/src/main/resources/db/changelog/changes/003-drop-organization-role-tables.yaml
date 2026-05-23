@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-01-drop-organization-member-roles-table
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: HALT
+        - tableExists:
+            tableName: organization_member_roles
+      changes:
+        - dropTable:
+            tableName: organization_member_roles
+
+  - changeSet:
+      id: 003-02-drop-roles-table
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: HALT
+        - tableExists:
+            tableName: roles
+      changes:
+        - dropTable:
+            tableName: roles

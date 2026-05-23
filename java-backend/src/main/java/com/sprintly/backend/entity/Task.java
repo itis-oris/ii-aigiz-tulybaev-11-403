@@ -60,10 +60,6 @@ public class Task {
     @Column(name = "due_date")
     private OffsetDateTime dueDate;
 
-    @Builder.Default
-    @Column(name = "is_private", nullable = false)
-    private Boolean isPrivate = false;
-
     private Long position;
 
     @Column(name = "created_at", nullable = false)

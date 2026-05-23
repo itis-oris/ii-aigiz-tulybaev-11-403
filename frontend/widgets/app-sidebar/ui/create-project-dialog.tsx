@@ -6,6 +6,7 @@ import { ChevronsUpDown, FolderPlus, ImageUp, X } from 'lucide-react';
 import { ApiError, getUsers, type ProjectStatus } from '@/shared/api';
 import { Button, Input } from '@/shared/ui';
 import {
+    hasOrgAdminRole,
     useCurrentUser,
     useI18n,
     type ProjectFolder,
@@ -62,11 +63,7 @@ const CreateProjectDialog = ({
 }: CreateProjectDialogProps) => {
     const { t } = useI18n();
     const { data: currentUser } = useCurrentUser();
-    const canManageUsers = Boolean(
-        currentUser?.roles.some(
-            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
-        ),
-    );
+    const canManageUsers = hasOrgAdminRole(currentUser?.roles);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [folderId, setFolderId] = useState('none');

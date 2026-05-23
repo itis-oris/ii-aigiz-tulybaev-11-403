@@ -20,7 +20,6 @@ public class TaskResponse {
     private Integer storyPoints;
     private Integer priority;
     private OffsetDateTime dueDate;
-    private Boolean isPrivate;
     private Long position;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;

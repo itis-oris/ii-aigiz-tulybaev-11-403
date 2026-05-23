@@ -35,7 +35,4 @@ export type TaskGroup = {
     rows: TaskRow[];
 };
 
-export type MyTasksFilter =
-    | 'Назначенные мне'
-    | 'Порученные мной'
-    | 'Мои приватные задачи';
+export type MyTasksFilter = 'Назначенные мне' | 'Порученные мной';

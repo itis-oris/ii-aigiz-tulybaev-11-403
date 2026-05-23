@@ -12,6 +12,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Configuration
 @EnableCaching
@@ -24,6 +25,7 @@ public class CacheConfig {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+            .disableCachingNullValues()
             .entryTtl(Duration.ofMinutes(10))
             .serializeValuesWith(
                 RedisSerializationContext.SerializationPair.fromSerializer(
@@ -31,8 +33,20 @@ public class CacheConfig {
                 )
             );
 
+        Map<String, RedisCacheConfiguration> cacheConfigurations = Map.of(
+            CacheNames.PROJECT_TAGS, cacheConfiguration.entryTtl(Duration.ofMinutes(15)),
+            CacheNames.TAGS, cacheConfiguration.entryTtl(Duration.ofMinutes(15)),
+            CacheNames.PROJECT_FOLDERS, cacheConfiguration.entryTtl(Duration.ofMinutes(15)),
+            CacheNames.PROJECT_BOARDS, cacheConfiguration.entryTtl(Duration.ofMinutes(10)),
+            CacheNames.BOARDS, cacheConfiguration.entryTtl(Duration.ofMinutes(10)),
+            CacheNames.BOARD_COLUMNS, cacheConfiguration.entryTtl(Duration.ofMinutes(10)),
+            CacheNames.COLUMNS, cacheConfiguration.entryTtl(Duration.ofMinutes(10))
+        );
+
         return RedisCacheManager.builder(connectionFactory)
+            .transactionAware()
             .cacheDefaults(cacheConfiguration)
+            .withInitialCacheConfigurations(cacheConfigurations)
             .build();
     }
 }

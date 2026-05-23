@@ -26,18 +26,18 @@ public class OrganizationInvitationController {
     @GetMapping("/{token}")
     @Operation(summary = "Get invitation details")
     public OrganizationInvitationDetailsResponse getInvitationDetails(
-        @PathVariable String token
+        @PathVariable("token") com.sprintly.backend.entity.OrganizationInvitation invitation
     ) {
-        return organizationInvitationService.getInvitationDetails(token);
+        return organizationInvitationService.getInvitationDetails(invitation);
     }
 
     @PostMapping("/{token}/accept")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Accept invitation")
     public OrganizationSessionResponse acceptInvitation(
-        @PathVariable String token,
+        @PathVariable("token") com.sprintly.backend.entity.OrganizationInvitation invitation,
         @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
-        return organizationInvitationService.acceptInvitation(token, currentUser);
+        return organizationInvitationService.acceptInvitation(invitation, currentUser);
     }
 }

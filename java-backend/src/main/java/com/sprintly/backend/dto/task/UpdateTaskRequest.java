@@ -29,10 +29,7 @@ public class UpdateTaskRequest {
     private Integer priority;
 
     private OffsetDateTime dueDate;
-    private Boolean isPrivate;
 
-    private UUID projectId;
-    private UUID boardId;
     private UUID columnId;
     private UUID assigneeId;
     private List<UUID> tagIds;

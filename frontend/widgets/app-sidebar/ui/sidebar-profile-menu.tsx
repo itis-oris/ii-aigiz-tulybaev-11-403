@@ -119,7 +119,7 @@ function SidebarProfileMenuContent({
                 onClick={() => setIsOpen((open) => !open)}
                 aria-expanded={isOpen}
                 aria-label={t('sidebar.openProfileMenu')}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:px-0"
             >
                 <Avatar
                     size="md"

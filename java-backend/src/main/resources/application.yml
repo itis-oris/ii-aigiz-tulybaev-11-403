@@ -5,17 +5,22 @@ spring:
       - optional:file:java-backend/.env[.properties]
   application:
     name: sprintly-java-backend
+  cache:
+    type: redis
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sprintly}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
     open-in-view: false
     properties:
       hibernate:
         format_sql: ${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL:true}
+  liquibase:
+    enabled: ${SPRING_LIQUIBASE_ENABLED:true}
+    change-log: classpath:db/changelog/db.changelog-master.yaml
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
@@ -30,7 +35,7 @@ server:
 
 springdoc:
   swagger-ui:
-    path: /doc
+    path: /swagger-ui
 
 logging:
   level:

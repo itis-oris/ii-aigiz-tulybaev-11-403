@@ -33,8 +33,6 @@ public class CreateTaskRequest {
 
     private OffsetDateTime dueDate;
 
-    private Boolean isPrivate;
-
     @NotNull
     private UUID projectId;
 

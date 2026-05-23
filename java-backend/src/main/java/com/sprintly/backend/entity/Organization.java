@@ -48,10 +48,6 @@ public class Organization {
     private OffsetDateTime deletedAt;
 
     @Builder.Default
-    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL)
-    private List<User> users = new ArrayList<>();
-
-    @Builder.Default
     @ManyToMany(mappedBy = "organizations")
     private Set<User> members = new HashSet<>();
 

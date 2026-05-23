@@ -17,6 +17,7 @@ export type ProjectResponse = {
     ownerLastname: string | null;
     ownerMiddlename: string | null;
     ownerAvatarUrl: string | null;
+    currentUserAccessLevel: 'OWNER' | 'MEMBER' | null;
     folderId: string | null;
     boardTabs?: string[];
     createdAt: string;
@@ -92,4 +93,13 @@ export function addProjectMembers(
         method: 'POST',
         body: payload,
     });
+}
+
+export function removeProjectMember(projectId: string, userId: string) {
+    return apiClient<UserResponse[]>(
+        `/api/projects/${projectId}/members/${userId}`,
+        {
+            method: 'DELETE',
+        },
+    );
 }

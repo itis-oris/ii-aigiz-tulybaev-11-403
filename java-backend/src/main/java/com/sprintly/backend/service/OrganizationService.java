@@ -18,11 +18,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,9 +38,12 @@ public class OrganizationService {
         User user = getCurrentUser(currentUser.getId());
         UUID activeOrganizationId = getActiveOrganizationId(user);
 
-        return getOrganizationsWithLegacyMembership(user).stream()
-            .map(organization -> toResponse(organization, activeOrganizationId))
-            .toList();
+        List<OrganizationResponse> responses = new ArrayList<>();
+        for (Organization organization : getUserOrganizations(user)) {
+            responses.add(toResponse(organization, activeOrganizationId));
+        }
+
+        return responses;
     }
 
     @Transactional
@@ -58,7 +61,6 @@ public class OrganizationService {
         user.getOrganizations().add(organization);
         user.setOrganization(organization);
         userRepository.save(user);
-        organizationRoleService.assignRole(user, organization, com.sprintly.backend.entity.enums.RoleName.ADMIN);
 
         return buildSessionResponse(user, organization);
     }
@@ -69,12 +71,9 @@ public class OrganizationService {
         CustomUserDetails currentUser
     ) {
         User user = getCurrentUser(currentUser.getId());
-        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(request.getOrganizationId())
-            .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
+        Organization organization = getOrganization(request.getOrganizationId());
 
-        if (getOrganizationsWithLegacyMembership(user).stream().noneMatch(item -> item.getId().equals(organization.getId()))) {
-            throw new AccessDeniedException("User is not a member of this organization");
-        }
+        ensureOrganizationMember(user, organization);
 
         user.setOrganization(organization);
         userRepository.save(user);
@@ -89,16 +88,9 @@ public class OrganizationService {
         CustomUserDetails currentUser
     ) {
         User user = getCurrentUser(currentUser.getId());
-        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
-            .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
-
-        if (getOrganizationsWithLegacyMembership(user).stream().noneMatch(item -> item.getId().equals(organization.getId()))) {
-            throw new AccessDeniedException("User is not a member of this organization");
-        }
-
-        if (organization.getOwnerId() == null || !organization.getOwnerId().equals(user.getId())) {
-            throw new AccessDeniedException("Only organization owner can update organization");
-        }
+        Organization organization = getOrganization(organizationId);
+        ensureOrganizationMember(user, organization);
+        ensureOrganizationOwner(user, organization, "Only organization owner can update organization");
 
         organization.setName(request.getName().trim());
         organizationRepository.save(organization);
@@ -109,30 +101,20 @@ public class OrganizationService {
     @Transactional
     public OrganizationSessionResponse delete(UUID organizationId, CustomUserDetails currentUser) {
         User user = getCurrentUser(currentUser.getId());
-        Organization organization = organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
-            .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
+        Organization organization = getOrganization(organizationId);
 
-        Set<Organization> currentUserOrganizations = getOrganizationsWithLegacyMembership(user);
-
-        if (currentUserOrganizations.stream().noneMatch(item -> item.getId().equals(organization.getId()))) {
-            throw new AccessDeniedException("User is not a member of this organization");
-        }
-
-        if (organization.getOwnerId() == null || !organization.getOwnerId().equals(user.getId())) {
-            throw new AccessDeniedException("Only organization owner can delete organization");
-        }
+        Set<Organization> currentUserOrganizations = getUserOrganizations(user);
+        ensureOrganizationMember(user, organization, currentUserOrganizations);
+        ensureOrganizationOwner(user, organization, "Only organization owner can delete organization");
 
         if (currentUserOrganizations.size() <= 1) {
             throw new IllegalStateException("You cannot delete your last organization");
         }
 
-        Organization fallbackOrganization = currentUserOrganizations.stream()
-            .filter(item -> !item.getId().equals(organization.getId()))
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("Replacement organization not found"));
+        Organization fallbackOrganization = getFallbackOrganization(currentUserOrganizations, organization);
 
         Set<User> impactedUsers = new HashSet<>(organization.getMembers());
-        impactedUsers.addAll(organization.getUsers());
+        impactedUsers.addAll(userRepository.findAllByOrganization_Id(organization.getId()));
 
         for (User impactedUser : impactedUsers) {
             if (
@@ -158,37 +140,84 @@ public class OrganizationService {
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private Set<Organization> getOrganizationsWithLegacyMembership(User user) {
+    private Organization getOrganization(UUID organizationId) {
+        return organizationRepository.findByIdAndDeletedAtIsNull(organizationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
+    }
+
+    private void ensureOrganizationMember(User user, Organization organization) {
+        ensureOrganizationMember(user, organization, getUserOrganizations(user));
+    }
+
+    private void ensureOrganizationMember(
+        User user,
+        Organization organization,
+        Set<Organization> userOrganizations
+    ) {
+        if (!hasOrganization(userOrganizations, organization.getId())) {
+            throw new AccessDeniedException("User is not a member of this organization");
+        }
+    }
+
+    private void ensureOrganizationOwner(User user, Organization organization, String message) {
+        if (organization.getOwnerId() == null || !organization.getOwnerId().equals(user.getId())) {
+            throw new AccessDeniedException(message);
+        }
+    }
+
+    private Set<Organization> getUserOrganizations(User user) {
         Set<Organization> organizations = new HashSet<>(user.getOrganizations());
 
         if (user.getOrganization() != null) {
             organizations.add(user.getOrganization());
         }
 
-        return organizations.stream()
-            .filter(organization -> organization.getDeletedAt() == null)
-            .collect(Collectors.toSet());
+        Set<Organization> activeOrganizations = new HashSet<>();
+        for (Organization organization : organizations) {
+            if (organization.getDeletedAt() == null) {
+                activeOrganizations.add(organization);
+            }
+        }
+
+        return activeOrganizations;
     }
 
     private UUID getActiveOrganizationId(User user) {
-        return getActiveOrganization(user)
-            .map(Organization::getId)
-            .orElse(null);
+        if (user.getOrganization() == null || user.getOrganization().getDeletedAt() != null) {
+            return null;
+        }
+
+        return user.getOrganization().getId();
     }
 
     private Organization getFirstAvailableOrganization(User user, UUID excludedOrganizationId) {
-        return getOrganizationsWithLegacyMembership(user).stream()
-            .filter(organization -> !organization.getId().equals(excludedOrganizationId))
-            .findFirst()
-            .orElse(null);
-    }
-
-    private java.util.Optional<Organization> getActiveOrganization(User user) {
-        if (user.getOrganization() == null || user.getOrganization().getDeletedAt() != null) {
-            return java.util.Optional.empty();
+        for (Organization organization : getUserOrganizations(user)) {
+            if (!organization.getId().equals(excludedOrganizationId)) {
+                return organization;
+            }
         }
 
-        return java.util.Optional.of(user.getOrganization());
+        return null;
+    }
+
+    private Organization getFallbackOrganization(Set<Organization> organizations, Organization deletedOrganization) {
+        for (Organization organization : organizations) {
+            if (!organization.getId().equals(deletedOrganization.getId())) {
+                return organization;
+            }
+        }
+
+        throw new IllegalStateException("Replacement organization not found");
+    }
+
+    private boolean hasOrganization(Set<Organization> organizations, UUID organizationId) {
+        for (Organization organization : organizations) {
+            if (organization.getId().equals(organizationId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private OrganizationSessionResponse buildSessionResponse(User user, Organization organization) {

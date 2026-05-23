@@ -34,8 +34,10 @@ export const TaskSheetBody = ({
     onSaveTags,
     isSavingTask,
     isSavingTags,
+    isDeletingTask,
     saveTaskError,
     saveTagsError,
+    deleteTaskError,
     availableTags,
     isTagsRefreshing,
     tagsError,
@@ -56,6 +58,7 @@ export const TaskSheetBody = ({
     isCommentSubmitDisabled,
     isCreatingComment,
     onSubmitComment,
+    onDeleteTask,
     currentUserId,
 }: TaskSheetBodyProps) => {
     const descriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -75,9 +78,6 @@ export const TaskSheetBody = ({
         resolvedTask.priority !== undefined
             ? String(resolvedTask.priority)
             : '',
-    );
-    const [isPrivateDraft, setIsPrivateDraft] = useState(
-        Boolean(resolvedTask.isPrivate),
     );
     const [selectedTagIds, setSelectedTagIds] = useState(
         resolvedTask.tags.filter((tag) => !tag.system).map((tag) => tag.id),
@@ -104,7 +104,6 @@ export const TaskSheetBody = ({
             (resolvedTask.priority !== undefined
                 ? String(resolvedTask.priority)
                 : '') ||
-        isPrivateDraft !== Boolean(resolvedTask.isPrivate) ||
         initialTagIds.join(',') !== normalizedSelectedTagIds.join(',');
 
     const handleReset = () => {
@@ -121,7 +120,6 @@ export const TaskSheetBody = ({
                 ? String(resolvedTask.priority)
                 : '',
         );
-        setIsPrivateDraft(Boolean(resolvedTask.isPrivate));
         setSelectedTagIds(initialTagIds);
     };
 
@@ -169,11 +167,6 @@ export const TaskSheetBody = ({
                             <Badge variant="accent" size="sm">
                                 {draftDueDateLabel}
                             </Badge>
-                            {isPrivateDraft ? (
-                                <Badge variant="outline" size="sm">
-                                    Приватная
-                                </Badge>
-                            ) : null}
                             {isTaskRefreshing ? (
                                 <Badge variant="outline" size="sm">
                                     <LoaderCircle className="size-3.5 animate-spin" />
@@ -211,8 +204,29 @@ export const TaskSheetBody = ({
                     <div className="flex shrink-0 gap-2">
                         <Button
                             type="button"
+                            variant="destructive"
+                            disabled={isDeletingTask}
+                            onClick={() => {
+                                if (
+                                    window.confirm(
+                                        'Удалить эту задачу? Действие нельзя отменить.',
+                                    )
+                                ) {
+                                    onDeleteTask();
+                                }
+                            }}
+                        >
+                            {isDeletingTask ? (
+                                <LoaderCircle className="size-4 animate-spin" />
+                            ) : null}
+                            Удалить
+                        </Button>
+                        <Button
+                            type="button"
                             variant="outline"
-                            disabled={!hasChanges || isSavingTask}
+                            disabled={
+                                !hasChanges || isSavingTask || isDeletingTask
+                            }
                             onClick={handleReset}
                         >
                             Сбросить
@@ -220,7 +234,10 @@ export const TaskSheetBody = ({
                         <Button
                             type="button"
                             disabled={
-                                !normalizedTitle || !hasChanges || isSavingTask
+                                !normalizedTitle ||
+                                !hasChanges ||
+                                isSavingTask ||
+                                isDeletingTask
                             }
                             onClick={() =>
                                 onSaveTask({
@@ -234,7 +251,6 @@ export const TaskSheetBody = ({
                                     priority: normalizedPriority
                                         ? Number(normalizedPriority)
                                         : undefined,
-                                    isPrivate: isPrivateDraft,
                                     tagIds: normalizedSelectedTagIds,
                                 })
                             }
@@ -265,6 +281,12 @@ export const TaskSheetBody = ({
                 {saveTagsError ? (
                     <TaskSheetErrorNotice>
                         Не удалось сохранить теги: {saveTagsError.message}
+                    </TaskSheetErrorNotice>
+                ) : null}
+
+                {deleteTaskError ? (
+                    <TaskSheetErrorNotice>
+                        Не удалось удалить задачу: {deleteTaskError.message}
                     </TaskSheetErrorNotice>
                 ) : null}
 
@@ -387,20 +409,6 @@ export const TaskSheetBody = ({
                                 )}
                             </span>
                         </div>
-                    </TaskSheetMetaRow>
-
-                    <TaskSheetMetaRow label="Приватность">
-                        <label className="flex h-9 items-center gap-2 rounded-md border border-input bg-input/20 px-3 text-sm text-foreground">
-                            <input
-                                type="checkbox"
-                                checked={isPrivateDraft}
-                                onChange={(event) =>
-                                    setIsPrivateDraft(event.target.checked)
-                                }
-                                className="size-4 rounded border-border"
-                            />
-                            <span>Приватная задача</span>
-                        </label>
                     </TaskSheetMetaRow>
 
                     <TaskSheetMetaRow label="Создатель">

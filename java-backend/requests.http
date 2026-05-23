@@ -1,7 +1,7 @@
 @baseUrl = http://localhost:8080
 @email = admin.sprintly.local
 @password = 12345678
-@captchaToken = replace-with-real-captcha-token
+@captchaToken = 6LcmHuwsAAAAALXvEBXKwhlM7OoJ3xrgeGkrMliR
 
 ### Register admin and organization
 POST {{baseUrl}}/api/auth/register

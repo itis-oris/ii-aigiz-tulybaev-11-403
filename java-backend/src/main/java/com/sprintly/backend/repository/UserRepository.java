@@ -13,8 +13,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmail(String email);
 
-    Optional<User> findByEmail(String email);
-
     @EntityGraph(attributePaths = {"organization", "organizations"})
     Optional<User> findWithOrganizationsByEmail(String email);
 
@@ -23,6 +21,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @EntityGraph(attributePaths = {"organization", "organizations"})
     List<User> findAllByOrganizations_Id(UUID organizationId);
+
+    @EntityGraph(attributePaths = {"organization", "organizations"})
+    List<User> findAllByOrganization_Id(UUID organizationId);
 
     @EntityGraph(attributePaths = {"organization", "organizations"})
     Optional<User> findByIdAndOrganizations_Id(UUID userId, UUID organizationId);

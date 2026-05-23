@@ -14,6 +14,7 @@ import {
     type TaskTag,
 } from '@/views/my-tasks/model';
 import { mapTaskResponseToTask, type Task } from '@/views/home/model/task';
+import { TaskSheet } from '@/views/home/ui/task-sheet';
 import MyTasksFilterTabs from './my-tasks-filter-tabs';
 import MyTasksTable from './my-tasks-table';
 
@@ -209,10 +210,6 @@ const buildGroups = (tasks: Task[], filter: MyTasksFilter, userId?: string) => {
     tasks.forEach((task) => {
         const filters = getTaskFilters(task, userId);
 
-        if (filter === 'Мои приватные задачи') {
-            return;
-        }
-
         if (!filters.includes(filter)) {
             return;
         }
@@ -234,13 +231,6 @@ const getTaskQueryFilters = (filter: MyTasksFilter, userId?: string) => {
         return {};
     }
 
-    if (filter === 'Мои приватные задачи') {
-        return {
-            creatorId: userId,
-            isPrivate: true,
-        };
-    }
-
     if (filter === 'Назначенные мне') {
         return { assigneeId: userId };
     }
@@ -259,6 +249,7 @@ const MyTasksPage = () => {
         'other',
     ]);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
 
     const tasksQuery = useQuery({
         queryKey: ['tasks', 'my-tasks', activeFilter, user?.userId],
@@ -298,8 +289,9 @@ const MyTasksPage = () => {
     );
     const selectedTask = useMemo(
         () =>
-            allVisibleTasks.find((task) => task.id === selectedTaskId) ?? null,
-        [allVisibleTasks, selectedTaskId],
+            liveTasks.find((task) => String(task.id) === selectedTaskId) ??
+            null,
+        [liveTasks, selectedTaskId],
     );
 
     const completedCount = allVisibleTasks.filter(
@@ -322,6 +314,7 @@ const MyTasksPage = () => {
                             onFilterChange={(filter) => {
                                 setActiveFilter(filter);
                                 setSelectedTaskId(null);
+                                setIsTaskSheetOpen(false);
                             }}
                         />
                     </div>
@@ -394,7 +387,10 @@ const MyTasksPage = () => {
                                     : [...current, groupId],
                             )
                         }
-                        onSelectTask={(_, taskId) => setSelectedTaskId(taskId)}
+                        onSelectTask={(_, taskId) => {
+                            setSelectedTaskId(taskId);
+                            setIsTaskSheetOpen(true);
+                        }}
                         onToggleTaskComplete={(_, taskId) => {
                             const targetTask = liveTasks.find(
                                 (task) => String(task.id) === taskId,
@@ -413,6 +409,14 @@ const MyTasksPage = () => {
                     />
                 </div>
             </section>
+            <TaskSheet
+                isOpen={isTaskSheetOpen}
+                selectedTask={selectedTask}
+                setIsOpen={setIsTaskSheetOpen}
+                setSelectedTask={(task) => {
+                    setSelectedTaskId(task ? String(task.id) : null);
+                }}
+            />
         </div>
     );
 };

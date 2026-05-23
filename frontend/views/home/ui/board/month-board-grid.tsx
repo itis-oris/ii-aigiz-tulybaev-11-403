@@ -24,7 +24,7 @@ type MonthBoardGridProps = {
     overTaskId: string | null;
     dropPosition: DropPosition;
     onOpen: (task: Task) => void;
-    onCreateTask?: (dateKey: string, title: string, isPrivate: boolean) => void;
+    onCreateTask?: (dateKey: string, title: string) => void;
     onDragStart: React.ComponentProps<typeof DragDropProvider>['onDragStart'];
     onDragMove: React.ComponentProps<typeof DragDropProvider>['onDragMove'];
     onDragOver: React.ComponentProps<typeof DragDropProvider>['onDragOver'];
@@ -127,7 +127,7 @@ type MonthDayCellProps = {
     overDateKey: string | null;
     overTaskId: string | null;
     onOpen: (task: Task) => void;
-    onCreateTask?: (dateKey: string, title: string, isPrivate: boolean) => void;
+    onCreateTask?: (dateKey: string, title: string) => void;
     settings?: HomeHeaderSettingsValue;
 };
 
@@ -145,7 +145,6 @@ const MonthDayCell = ({
         id: getMonthDayDropId(cell.dateKey),
     });
     const [newTaskTitle, setNewTaskTitle] = React.useState('');
-    const [isPrivate, setIsPrivate] = React.useState(false);
 
     const handleCreateTask = () => {
         const trimmedTitle = newTaskTitle.trim();
@@ -154,9 +153,8 @@ const MonthDayCell = ({
             return;
         }
 
-        onCreateTask?.(cell.dateKey, trimmedTitle, isPrivate);
+        onCreateTask?.(cell.dateKey, trimmedTitle);
         setNewTaskTitle('');
-        setIsPrivate(false);
     };
 
     return (
@@ -211,17 +209,6 @@ const MonthDayCell = ({
                             Добавить
                         </Button>
                     </div>
-                    <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <input
-                            type="checkbox"
-                            checked={isPrivate}
-                            onChange={(event) =>
-                                setIsPrivate(event.target.checked)
-                            }
-                            className="size-4 rounded border-border"
-                        />
-                        <span>Приватная</span>
-                    </label>
                 </div>
             ) : null}
             <div className="space-y-1">

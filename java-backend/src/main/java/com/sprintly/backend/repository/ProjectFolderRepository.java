@@ -16,5 +16,4 @@ public interface ProjectFolderRepository extends JpaRepository<ProjectFolder, UU
     @EntityGraph(attributePaths = {"organization", "owner"})
     Optional<ProjectFolder> findByIdAndDeletedAtIsNull(UUID id);
 
-    boolean existsByIdAndOrganization_IdAndDeletedAtIsNull(UUID id, UUID organizationId);
 }

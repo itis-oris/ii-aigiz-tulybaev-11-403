@@ -121,6 +121,7 @@ const mapProjectResponseToSummary = (
         ownerName: getOwnerName(project),
         ownerEmail: project.ownerEmail ?? undefined,
         ownerAvatarUrl: project.ownerAvatarUrl,
+        currentUserAccessLevel: project.currentUserAccessLevel,
         folderId: project.folderId ?? undefined,
     };
 };
@@ -224,11 +225,7 @@ const ProjectTabShell = ({ children }: ProjectTabShellProps) => {
         projects.find((project) => project.id === activeProjectId) ??
         projects[0] ??
         emptyProject;
-    const effectiveActiveBoardId = activeProject.boardTabs.includes(
-        activeBoardId,
-    )
-        ? activeBoardId
-        : activeProject.boardTabs[0];
+    const effectiveActiveBoardId = activeBoardId || activeProject.boardTabs[0];
 
     useEffect(() => {
         if (

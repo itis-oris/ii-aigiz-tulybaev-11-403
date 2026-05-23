@@ -73,30 +73,32 @@ export function ProjectRow({
                     {project.name}
                 </Link>
 
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="ml-auto rounded-md text-muted-foreground"
-                            aria-label={`Действия с проектом ${project.name}`}
-                        >
-                            <EllipsisVertical className="size-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-48 p-2">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start"
-                            onClick={() => onManageProject(project)}
-                        >
-                            Настройки проекта
-                        </Button>
-                    </PopoverContent>
-                </Popover>
+                {project.currentUserAccessLevel === 'OWNER' ? (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="ml-auto rounded-md text-muted-foreground"
+                                aria-label={`Действия с проектом ${project.name}`}
+                            >
+                                <EllipsisVertical className="size-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-48 p-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start"
+                                onClick={() => onManageProject(project)}
+                            >
+                                Настройки проекта
+                            </Button>
+                        </PopoverContent>
+                    </Popover>
+                ) : null}
             </div>
 
             <div className="flex items-center gap-2 text-sm text-foreground">

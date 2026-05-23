@@ -47,14 +47,15 @@ export type TaskSheetBodyProps = {
         storyPoints?: number;
         priority?: number;
         dueDate?: string;
-        isPrivate: boolean;
         tagIds: string[];
     }) => void;
     onSaveTags: (tagIds: string[]) => void;
     isSavingTask: boolean;
     isSavingTags: boolean;
+    isDeletingTask: boolean;
     saveTaskError: Error | null;
     saveTagsError: Error | null;
+    deleteTaskError: Error | null;
     availableTags: TaskSheetTagOption[];
     isTagsRefreshing: boolean;
     tagsError: Error | null;
@@ -78,5 +79,6 @@ export type TaskSheetBodyProps = {
     isCommentSubmitDisabled: boolean;
     isCreatingComment: boolean;
     onSubmitComment: () => void;
+    onDeleteTask: () => void;
     currentUserId?: string;
 };

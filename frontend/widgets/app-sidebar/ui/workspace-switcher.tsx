@@ -46,6 +46,7 @@ export default function WorkspaceSwitcher({
     const canEditActiveOrganization =
         Boolean(activeOrganization) &&
         activeOrganization?.ownerId === user?.userId;
+    const canInviteToActiveOrganization = canEditActiveOrganization;
     const canDeleteActiveOrganization =
         canEditActiveOrganization && organizations.length > 1;
 
@@ -185,7 +186,10 @@ export default function WorkspaceSwitcher({
 
     return (
         <>
-            <div ref={containerRef} className="relative min-w-0 flex-1">
+            <div
+                ref={containerRef}
+                className="relative min-w-0 flex-1 group-data-[collapsible=icon]:flex-none"
+            >
                 <button
                     type="button"
                     onClick={() => setIsOpen((open) => !open)}
@@ -235,33 +239,40 @@ export default function WorkspaceSwitcher({
                         </div>
                     </div>
 
-                    <div className="flex gap-2 pb-3">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 rounded-xl border-sidebar-border bg-sidebar px-3 text-sm"
-                            onClick={() => {
-                                setSubmitError(null);
-                                setEditOpen(true);
-                            }}
-                            disabled={!canEditActiveOrganization || isPending}
-                        >
-                            <Settings2 className="size-4" />
-                            <span>{t('sidebar.settings')}</span>
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 rounded-xl border-sidebar-border bg-sidebar px-3 text-sm"
-                            onClick={() => {
-                                setIsOpen(false);
-                                onInviteClick();
-                            }}
-                        >
-                            <UserPlus className="size-4" />
-                            <span>{t('sidebar.invite')}</span>
-                        </Button>
-                    </div>
+                    {canEditActiveOrganization ||
+                    canInviteToActiveOrganization ? (
+                        <div className="flex gap-2 pb-3">
+                            {canEditActiveOrganization ? (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 rounded-xl border-sidebar-border bg-sidebar px-3 text-sm"
+                                    onClick={() => {
+                                        setSubmitError(null);
+                                        setEditOpen(true);
+                                    }}
+                                    disabled={isPending}
+                                >
+                                    <Settings2 className="size-4" />
+                                    <span>{t('sidebar.settings')}</span>
+                                </Button>
+                            ) : null}
+                            {canInviteToActiveOrganization ? (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 rounded-xl border-sidebar-border bg-sidebar px-3 text-sm"
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        onInviteClick();
+                                    }}
+                                >
+                                    <UserPlus className="size-4" />
+                                    <span>{t('sidebar.invite')}</span>
+                                </Button>
+                            ) : null}
+                        </div>
+                    ) : null}
 
                     <div className="border-t border-sidebar-border pt-3">
                         <div className="space-y-1">

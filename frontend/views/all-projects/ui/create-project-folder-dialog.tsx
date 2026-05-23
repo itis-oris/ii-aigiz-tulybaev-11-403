@@ -4,7 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FolderPlus, X } from 'lucide-react';
 import { getUsers } from '@/shared/api';
-import { useCurrentUser, useI18n, type ProjectFolder } from '@/shared/lib';
+import {
+    hasOrgAdminRole,
+    useCurrentUser,
+    useI18n,
+    type ProjectFolder,
+} from '@/shared/lib';
 import { Button, Input } from '@/shared/ui';
 
 type CreateProjectFolderDialogProps = {
@@ -20,11 +25,7 @@ const CreateProjectFolderDialog = ({
 }: CreateProjectFolderDialogProps) => {
     const { t } = useI18n();
     const { data: currentUser } = useCurrentUser();
-    const canManageUsers = Boolean(
-        currentUser?.roles.some(
-            (role) => role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER',
-        ),
-    );
+    const canManageUsers = hasOrgAdminRole(currentUser?.roles);
     const [name, setName] = useState('');
     const [ownerId, setOwnerId] = useState('');
     const usersQuery = useQuery({
