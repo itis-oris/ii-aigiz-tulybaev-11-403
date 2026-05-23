@@ -79,6 +79,7 @@ const Header = ({
     const queryClient = useQueryClient();
     const { activeBoardId, setActiveBoardId, updateProject } =
         useActiveProject();
+    const canManageProject = project.currentUserAccessLevel === 'OWNER';
     const [projectTab, setProjectTab] = useState<ProjectTab>('Задачи');
     const [newBoardName, setNewBoardName] = useState('');
     const [newTagName, setNewTagName] = useState('');
@@ -353,64 +354,79 @@ const Header = ({
                                 <div className="truncate text-base font-semibold leading-none">
                                     {project.name}
                                 </div>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className="cursor-pointer"
-                                            aria-label="Изменить статус проекта"
-                                        >
-                                            <Badge
-                                                size="sm"
-                                                className="bg-sidebar-accent text-sidebar-foreground/80 hover:bg-sidebar-accent/80"
+                                {canManageProject ? (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="cursor-pointer"
+                                                aria-label="Изменить статус проекта"
                                             >
-                                                <span
-                                                    className={cn(
-                                                        'size-1.5 rounded-full',
-                                                        activeStatus.dotClassName,
-                                                    )}
-                                                />
-                                                {activeStatus.label}
-                                            </Badge>
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        align="start"
-                                        className="w-48 border-sidebar-border bg-sidebar p-2 text-sidebar-foreground"
-                                    >
-                                        <div className="space-y-1">
-                                            {projectStatusOptions.map(
-                                                (status) => (
-                                                    <button
-                                                        key={status.value}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleStatusChange(
-                                                                status.value,
-                                                            )
-                                                        }
+                                                <Badge
+                                                    size="sm"
+                                                    className="bg-sidebar-accent text-sidebar-foreground/80 hover:bg-sidebar-accent/80"
+                                                >
+                                                    <span
                                                         className={cn(
-                                                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sidebar-accent',
-                                                            project.status ===
-                                                                status.value &&
-                                                                'bg-sidebar-accent',
+                                                            'size-1.5 rounded-full',
+                                                            activeStatus.dotClassName,
                                                         )}
-                                                    >
-                                                        <span
+                                                    />
+                                                    {activeStatus.label}
+                                                </Badge>
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            align="start"
+                                            className="w-48 border-sidebar-border bg-sidebar p-2 text-sidebar-foreground"
+                                        >
+                                            <div className="space-y-1">
+                                                {projectStatusOptions.map(
+                                                    (status) => (
+                                                        <button
+                                                            key={status.value}
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleStatusChange(
+                                                                    status.value,
+                                                                )
+                                                            }
                                                             className={cn(
-                                                                'size-2 rounded-full',
-                                                                status.dotClassName,
+                                                                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sidebar-accent',
+                                                                project.status ===
+                                                                    status.value &&
+                                                                    'bg-sidebar-accent',
                                                             )}
-                                                        />
-                                                        <span>
-                                                            {status.label}
-                                                        </span>
-                                                    </button>
-                                                ),
+                                                        >
+                                                            <span
+                                                                className={cn(
+                                                                    'size-2 rounded-full',
+                                                                    status.dotClassName,
+                                                                )}
+                                                            />
+                                                            <span>
+                                                                {status.label}
+                                                            </span>
+                                                        </button>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                ) : (
+                                    <Badge
+                                        size="sm"
+                                        className="bg-sidebar-accent text-sidebar-foreground/80"
+                                    >
+                                        <span
+                                            className={cn(
+                                                'size-1.5 rounded-full',
+                                                activeStatus.dotClassName,
                                             )}
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
+                                        />
+                                        {activeStatus.label}
+                                    </Badge>
+                                )}
                             </div>
                             <div className="mt-1 truncate text-xs leading-none text-sidebar-foreground/60">
                                 {project.description}
@@ -473,46 +489,48 @@ const Header = ({
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/60 p-2">
-                                        <Input
-                                            value={newTagName}
-                                            onChange={(event) =>
-                                                setNewTagName(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            onKeyDown={(event) => {
-                                                if (event.key === 'Enter') {
-                                                    handleCreateTag();
+                                    {canManageProject ? (
+                                        <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/60 p-2">
+                                            <Input
+                                                value={newTagName}
+                                                onChange={(event) =>
+                                                    setNewTagName(
+                                                        event.target.value,
+                                                    )
                                                 }
-                                            }}
-                                            placeholder="Новый тег"
-                                            uiSize="md"
-                                            className="border-sidebar-border bg-sidebar text-sidebar-foreground placeholder:text-sidebar-foreground/45"
-                                        />
-                                        <input
-                                            type="color"
-                                            value={newTagColor}
-                                            onChange={(event) =>
-                                                setNewTagColor(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="h-9 w-11 cursor-pointer rounded-md border border-sidebar-border bg-transparent p-1"
-                                            aria-label="Цвет нового тега"
-                                        />
-                                        <Button
-                                            type="button"
-                                            onClick={handleCreateTag}
-                                            disabled={
-                                                !newTagName.trim() ||
-                                                createTagMutation.isPending
-                                            }
-                                            className="bg-sidebar text-sidebar-foreground hover:bg-sidebar/80"
-                                        >
-                                            <Plus className="size-4" />
-                                        </Button>
-                                    </div>
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter') {
+                                                        handleCreateTag();
+                                                    }
+                                                }}
+                                                placeholder="Новый тег"
+                                                uiSize="md"
+                                                className="border-sidebar-border bg-sidebar text-sidebar-foreground placeholder:text-sidebar-foreground/45"
+                                            />
+                                            <input
+                                                type="color"
+                                                value={newTagColor}
+                                                onChange={(event) =>
+                                                    setNewTagColor(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                className="h-9 w-11 cursor-pointer rounded-md border border-sidebar-border bg-transparent p-1"
+                                                aria-label="Цвет нового тега"
+                                            />
+                                            <Button
+                                                type="button"
+                                                onClick={handleCreateTag}
+                                                disabled={
+                                                    !newTagName.trim() ||
+                                                    createTagMutation.isPending
+                                                }
+                                                className="bg-sidebar text-sidebar-foreground hover:bg-sidebar/80"
+                                            >
+                                                <Plus className="size-4" />
+                                            </Button>
+                                        </div>
+                                    ) : null}
 
                                     {createTagMutation.error instanceof
                                     Error ? (
@@ -634,37 +652,39 @@ const Header = ({
                                                             >
                                                                 {tag.name}
                                                             </Badge>
-                                                            <div className="flex items-center gap-1">
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    size="icon-sm"
-                                                                    className="text-sidebar-foreground/70 hover:bg-sidebar hover:text-sidebar-foreground"
-                                                                    onClick={() =>
-                                                                        handleStartEditTag(
-                                                                            tag,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <PencilLine className="size-3.5" />
-                                                                </Button>
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    size="icon-sm"
-                                                                    className="text-destructive hover:bg-sidebar hover:text-destructive"
-                                                                    onClick={() =>
-                                                                        deleteTagMutation.mutate(
-                                                                            tag.id,
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        deleteTagMutation.isPending
-                                                                    }
-                                                                >
-                                                                    <Trash2 className="size-3.5" />
-                                                                </Button>
-                                                            </div>
+                                                            {canManageProject ? (
+                                                                <div className="flex items-center gap-1">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon-sm"
+                                                                        className="text-sidebar-foreground/70 hover:bg-sidebar hover:text-sidebar-foreground"
+                                                                        onClick={() =>
+                                                                            handleStartEditTag(
+                                                                                tag,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <PencilLine className="size-3.5" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon-sm"
+                                                                        className="text-destructive hover:bg-sidebar hover:text-destructive"
+                                                                        onClick={() =>
+                                                                            deleteTagMutation.mutate(
+                                                                                tag.id,
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            deleteTagMutation.isPending
+                                                                        }
+                                                                    >
+                                                                        <Trash2 className="size-3.5" />
+                                                                    </Button>
+                                                                </div>
+                                                            ) : null}
                                                         </div>
                                                     )}
                                                 </div>
@@ -706,8 +726,9 @@ const Header = ({
                                 >
                                     <span>{board.name}</span>
                                 </button>
-                                {activeBoardId === board.id ||
-                                activeBoardId === board.name ? (
+                                {canManageProject &&
+                                (activeBoardId === board.id ||
+                                    activeBoardId === board.name) ? (
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <button
@@ -741,72 +762,79 @@ const Header = ({
                                 ) : null}
                             </div>
                         ))}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="size-7 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                                    aria-label="Создать таблицу"
-                                >
-                                    <Plus className="size-4" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                align="end"
-                                className="w-72 border-sidebar-border bg-sidebar p-3 text-sidebar-foreground"
-                            >
-                                <div className="space-y-3">
-                                    <div>
-                                        <div className="text-sm font-medium">
-                                            Новая таблица
-                                        </div>
-                                        <div className="mt-1 text-xs text-sidebar-foreground/60">
-                                            Добавьте новую таблицу в текущий
-                                            проект.
-                                        </div>
-                                    </div>
-                                    <Input
-                                        value={newBoardName}
-                                        onChange={(event) =>
-                                            setNewBoardName(event.target.value)
-                                        }
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Enter') {
-                                                handleCreateBoard();
-                                            }
-                                        }}
-                                        placeholder="Например, SUPPORT"
-                                        uiSize="md"
-                                        className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-sidebar-foreground/45"
-                                    />
-                                    {hasDuplicateBoardName ? (
-                                        <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
-                                            Таблица с таким именем уже
-                                            существует в проекте.
-                                        </div>
-                                    ) : null}
-                                    {createBoardMutation.error instanceof
-                                    Error ? (
-                                        <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
-                                            {createBoardMutation.error.message}
-                                        </div>
-                                    ) : null}
+                        {canManageProject ? (
+                            <Popover>
+                                <PopoverTrigger asChild>
                                     <Button
                                         type="button"
-                                        className="w-full bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"
-                                        onClick={handleCreateBoard}
-                                        disabled={
-                                            !newBoardName.trim() ||
-                                            hasDuplicateBoardName
-                                        }
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        className="size-7 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                        aria-label="Создать таблицу"
                                     >
-                                        Создать таблицу
+                                        <Plus className="size-4" />
                                     </Button>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="end"
+                                    className="w-72 border-sidebar-border bg-sidebar p-3 text-sidebar-foreground"
+                                >
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="text-sm font-medium">
+                                                Новая таблица
+                                            </div>
+                                            <div className="mt-1 text-xs text-sidebar-foreground/60">
+                                                Добавьте новую таблицу в текущий
+                                                проект.
+                                            </div>
+                                        </div>
+                                        <Input
+                                            value={newBoardName}
+                                            onChange={(event) =>
+                                                setNewBoardName(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter') {
+                                                    handleCreateBoard();
+                                                }
+                                            }}
+                                            placeholder="Например, SUPPORT"
+                                            uiSize="md"
+                                            className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-sidebar-foreground/45"
+                                        />
+                                        {hasDuplicateBoardName ? (
+                                            <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                                Таблица с таким именем уже
+                                                существует в проекте.
+                                            </div>
+                                        ) : null}
+                                        {createBoardMutation.error instanceof
+                                        Error ? (
+                                            <div className="rounded-md border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                                                {
+                                                    createBoardMutation.error
+                                                        .message
+                                                }
+                                            </div>
+                                        ) : null}
+                                        <Button
+                                            type="button"
+                                            className="w-full bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"
+                                            onClick={handleCreateBoard}
+                                            disabled={
+                                                !newBoardName.trim() ||
+                                                hasDuplicateBoardName
+                                            }
+                                        >
+                                            Создать таблицу
+                                        </Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        ) : null}
                     </div>
                 </div>
 

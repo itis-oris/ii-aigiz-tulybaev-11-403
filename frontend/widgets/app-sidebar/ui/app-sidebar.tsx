@@ -4,7 +4,9 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import {
+    hasOrgAdminRole,
     useI18n,
+    useCurrentUser,
     useProjectFolderDndController,
     useProjectFolderTree,
     useWorkspaceProjectsController,
@@ -54,6 +56,7 @@ const sidebarActionIconClassName = 'size-4.5 text-sidebar-foreground/75';
 export function AppSidebar() {
     const pathname = usePathname();
     const { t } = useI18n();
+    const { data: currentUser } = useCurrentUser();
     const {
         activeProjectId,
         collapsedFolderIds,
@@ -65,6 +68,7 @@ export function AppSidebar() {
         selectProject,
         toggleFolder,
     } = useWorkspaceProjectsController();
+    const canManageWorkspace = hasOrgAdminRole(currentUser?.roles);
     const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
     const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] =
         useState(false);
@@ -195,28 +199,40 @@ export function AppSidebar() {
                                     {t('sidebar.projects')}
                                 </SidebarGroupLabel>
                                 <div className="flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        aria-label={t('sidebar.addFolder')}
-                                        className="size-7 rounded-md text-sidebar-foreground/70"
-                                        onClick={() =>
-                                            setIsCreateFolderDialogOpen(true)
-                                        }
-                                    >
-                                        <FolderPlus className="size-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        aria-label={t('sidebar.addProject')}
-                                        className="size-7 rounded-md text-sidebar-foreground/70"
-                                        onClick={() =>
-                                            setIsCreateProjectDialogOpen(true)
-                                        }
-                                    >
-                                        <Plus className="size-4" />
-                                    </Button>
+                                    {canManageWorkspace ? (
+                                        <>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                aria-label={t(
+                                                    'sidebar.addFolder',
+                                                )}
+                                                className="size-7 rounded-md text-sidebar-foreground/70"
+                                                onClick={() =>
+                                                    setIsCreateFolderDialogOpen(
+                                                        true,
+                                                    )
+                                                }
+                                            >
+                                                <FolderPlus className="size-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                aria-label={t(
+                                                    'sidebar.addProject',
+                                                )}
+                                                className="size-7 rounded-md text-sidebar-foreground/70"
+                                                onClick={() =>
+                                                    setIsCreateProjectDialogOpen(
+                                                        true,
+                                                    )
+                                                }
+                                            >
+                                                <Plus className="size-4" />
+                                            </Button>
+                                        </>
+                                    ) : null}
                                 </div>
                             </SidebarGroupContent>
                             <SidebarGroupContent>
@@ -266,6 +282,9 @@ export function AppSidebar() {
                                                                                 project={
                                                                                     project
                                                                                 }
+                                                                                canDrag={
+                                                                                    canManageWorkspace
+                                                                                }
                                                                                 activeProjectId={
                                                                                     activeProjectId
                                                                                 }
@@ -305,6 +324,9 @@ export function AppSidebar() {
                                                 >
                                                     <SidebarProjectLink
                                                         project={project}
+                                                        canDrag={
+                                                            canManageWorkspace
+                                                        }
                                                         activeProjectId={
                                                             activeProjectId
                                                         }
@@ -358,20 +380,26 @@ export function AppSidebar() {
                         </SidebarGroup>
                     </SidebarContent>
                     <SidebarFooter className="relative z-10 mt-auto gap-3 px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-2">
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    tooltip={t('sidebar.invite')}
-                                    className={sidebarMenuItemClassName}
-                                    onClick={() => setIsInviteDialogOpen(true)}
-                                >
-                                    <UserPlus
-                                        className={sidebarActionIconClassName}
-                                    />
-                                    <span>{t('sidebar.invite')}</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
+                        {canManageWorkspace ? (
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton
+                                        tooltip={t('sidebar.invite')}
+                                        className={sidebarMenuItemClassName}
+                                        onClick={() =>
+                                            setIsInviteDialogOpen(true)
+                                        }
+                                    >
+                                        <UserPlus
+                                            className={
+                                                sidebarActionIconClassName
+                                            }
+                                        />
+                                        <span>{t('sidebar.invite')}</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        ) : null}
 
                         <div className="w-full rounded-xl px-1 py-1 group-data-[collapsible=icon]:px-0">
                             <SidebarProfileMenu
@@ -386,22 +414,26 @@ export function AppSidebar() {
                 </Sidebar>
             </DragDropProvider>
 
-            <InviteWorkspaceDialog
-                open={isInviteDialogOpen}
-                onOpenChange={setIsInviteDialogOpen}
-            />
-            <CreateProjectDialog
-                open={isCreateProjectDialogOpen}
-                onOpenChange={setIsCreateProjectDialogOpen}
-                projectCount={projects.length}
-                folders={folders}
-                onSubmit={createProject}
-            />
-            <CreateProjectFolderDialog
-                open={isCreateFolderDialogOpen}
-                onOpenChange={setIsCreateFolderDialogOpen}
-                onSubmit={createFolder}
-            />
+            {canManageWorkspace ? (
+                <>
+                    <InviteWorkspaceDialog
+                        open={isInviteDialogOpen}
+                        onOpenChange={setIsInviteDialogOpen}
+                    />
+                    <CreateProjectDialog
+                        open={isCreateProjectDialogOpen}
+                        onOpenChange={setIsCreateProjectDialogOpen}
+                        projectCount={projects.length}
+                        folders={folders}
+                        onSubmit={createProject}
+                    />
+                    <CreateProjectFolderDialog
+                        open={isCreateFolderDialogOpen}
+                        onOpenChange={setIsCreateFolderDialogOpen}
+                        onSubmit={createFolder}
+                    />
+                </>
+            ) : null}
         </>
     );
 }

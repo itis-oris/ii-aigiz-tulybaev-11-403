@@ -280,34 +280,32 @@ const AllProjectsPage = () => {
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <Button
-                                            size="md"
-                                            disabled={
-                                                !canManageOrganizationProjects
-                                            }
-                                            onClick={() =>
-                                                setIsCreateProjectDialogOpen(
-                                                    true,
-                                                )
-                                            }
-                                        >
-                                            Добавить проект
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="md"
-                                            disabled={
-                                                !canManageOrganizationProjects
-                                            }
-                                            onClick={() =>
-                                                setIsCreateFolderDialogOpen(
-                                                    true,
-                                                )
-                                            }
-                                        >
-                                            <FolderPlus className="size-4" />
-                                            Добавить папку
-                                        </Button>
+                                        {canManageOrganizationProjects ? (
+                                            <>
+                                                <Button
+                                                    size="md"
+                                                    onClick={() =>
+                                                        setIsCreateProjectDialogOpen(
+                                                            true,
+                                                        )
+                                                    }
+                                                >
+                                                    Добавить проект
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="md"
+                                                    onClick={() =>
+                                                        setIsCreateFolderDialogOpen(
+                                                            true,
+                                                        )
+                                                    }
+                                                >
+                                                    <FolderPlus className="size-4" />
+                                                    Добавить папку
+                                                </Button>
+                                            </>
+                                        ) : null}
                                     </div>
                                 </div>
                             </div>
@@ -338,6 +336,9 @@ const AllProjectsPage = () => {
                                             isCollapsed={collapsedFolderIds.includes(
                                                 folder.id,
                                             )}
+                                            canManageFolder={
+                                                canManageOrganizationProjects
+                                            }
                                             onToggle={() =>
                                                 toggleFolder(folder.id)
                                             }
@@ -419,19 +420,23 @@ const AllProjectsPage = () => {
                 </div>
             </DragDropProvider>
 
-            <CreateProjectDialog
-                open={isCreateProjectDialogOpen}
-                onOpenChange={setIsCreateProjectDialogOpen}
-                projectCount={projects.length}
-                folders={folders}
-                onSubmit={createProject}
-            />
+            {canManageOrganizationProjects ? (
+                <>
+                    <CreateProjectDialog
+                        open={isCreateProjectDialogOpen}
+                        onOpenChange={setIsCreateProjectDialogOpen}
+                        projectCount={projects.length}
+                        folders={folders}
+                        onSubmit={createProject}
+                    />
 
-            <CreateProjectFolderDialog
-                open={isCreateFolderDialogOpen}
-                onOpenChange={setIsCreateFolderDialogOpen}
-                onSubmit={createFolder}
-            />
+                    <CreateProjectFolderDialog
+                        open={isCreateFolderDialogOpen}
+                        onOpenChange={setIsCreateFolderDialogOpen}
+                        onSubmit={createFolder}
+                    />
+                </>
+            ) : null}
 
             <ManageProjectDialog
                 key={`manage-${managedProject?.id ?? 'none'}-${managedProject?.name ?? ''}-${managedProject ? 'open' : 'closed'}`}
@@ -447,18 +452,20 @@ const AllProjectsPage = () => {
                 onDelete={deleteProject}
             />
 
-            <ManageProjectFolderDialog
-                key={`manage-folder-${managedFolder?.id ?? 'none'}-${managedFolder?.name ?? ''}-${managedFolder ? 'open' : 'closed'}`}
-                open={Boolean(managedFolder)}
-                folder={managedFolder}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setManagedFolder(null);
-                    }
-                }}
-                onSubmit={updateFolder}
-                onDelete={deleteFolder}
-            />
+            {canManageOrganizationProjects ? (
+                <ManageProjectFolderDialog
+                    key={`manage-folder-${managedFolder?.id ?? 'none'}-${managedFolder?.name ?? ''}-${managedFolder ? 'open' : 'closed'}`}
+                    open={Boolean(managedFolder)}
+                    folder={managedFolder}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setManagedFolder(null);
+                        }
+                    }}
+                    onSubmit={updateFolder}
+                    onDelete={deleteFolder}
+                />
+            ) : null}
         </>
     );
 };

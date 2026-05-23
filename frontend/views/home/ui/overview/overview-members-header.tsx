@@ -30,16 +30,16 @@ const OverviewMembersHeader = ({
                     {description}
                 </p>
             </div>
-            <Button
-                size="md"
-                onClick={onAddMember}
-                disabled={
-                    !canManageMembers || isUsersLoading || isAddingMembers
-                }
-            >
-                <Plus className="size-4" />
-                {addMemberLabel}
-            </Button>
+            {canManageMembers ? (
+                <Button
+                    size="md"
+                    onClick={onAddMember}
+                    disabled={isUsersLoading || isAddingMembers}
+                >
+                    <Plus className="size-4" />
+                    {addMemberLabel}
+                </Button>
+            ) : null}
         </div>
     );
 };

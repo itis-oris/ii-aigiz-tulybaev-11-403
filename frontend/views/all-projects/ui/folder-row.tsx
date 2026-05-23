@@ -80,6 +80,7 @@ type FolderRowProps = {
     folder: ProjectFolder;
     childrenCount: number;
     isCollapsed: boolean;
+    canManageFolder?: boolean;
     onToggle: () => void;
     onManageFolder: (folder: ProjectFolder) => void;
 };
@@ -88,6 +89,7 @@ export function FolderRow({
     folder,
     childrenCount,
     isCollapsed,
+    canManageFolder = false,
     onToggle,
     onManageFolder,
 }: FolderRowProps) {
@@ -147,31 +149,33 @@ export function FolderRow({
                             : 'Перетащите проект сюда'}
                     </div>
                 </div>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="ml-auto rounded-md text-muted-foreground"
-                            aria-label={`Действия с папкой ${folder.name}`}
-                            onClick={(event) => event.stopPropagation()}
-                        >
-                            <EllipsisVertical className="size-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-44 p-2">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start"
-                            onClick={() => onManageFolder(folder)}
-                        >
-                            Настройки папки
-                        </Button>
-                    </PopoverContent>
-                </Popover>
+                {canManageFolder ? (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="ml-auto rounded-md text-muted-foreground"
+                                aria-label={`Действия с папкой ${folder.name}`}
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <EllipsisVertical className="size-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-44 p-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start"
+                                onClick={() => onManageFolder(folder)}
+                            >
+                                Настройки папки
+                            </Button>
+                        </PopoverContent>
+                    </Popover>
+                ) : null}
             </div>
 
             <div className="flex items-center gap-2 text-sm text-foreground">
