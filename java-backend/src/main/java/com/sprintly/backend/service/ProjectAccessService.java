@@ -75,19 +75,6 @@ public class ProjectAccessService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isProjectOwner(User user, Project project) {
-        if (project == null || user == null) {
-            return false;
-        }
-
-        if (isProjectOwner(user.getId(), project)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    @Transactional(readOnly = true)
     public boolean canEditTask(CustomUserDetails currentUser, Task task) {
         if (task == null || task.getProject() == null) {
             return false;

@@ -3,6 +3,12 @@ databaseChangeLog:
       id: 004-01-project-members-add-id-column
       author: aigiz
       comment: Add UUID id column for project_members.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
       changes:
         - addColumn:
             tableName: project_members
@@ -34,6 +40,20 @@ databaseChangeLog:
       id: 004-03-project-members-id-not-null
       author: aigiz
       comment: Require UUID id for project_members.
+      preConditions:
+        - onFail: MARK_RAN
+        - columnExists:
+            tableName: project_members
+            columnName: id
+        - sqlCheck:
+            expectedResult: "1"
+            sql: |
+              SELECT COUNT(*)
+              FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = 'project_members'
+                AND column_name = 'id'
+                AND is_nullable = 'YES'
       changes:
         - addNotNullConstraint:
             tableName: project_members
@@ -44,6 +64,23 @@ databaseChangeLog:
       id: 004-04-project-members-switch-primary-key
       author: aigiz
       comment: Replace composite primary key with UUID primary key.
+      preConditions:
+        - onFail: MARK_RAN
+        - columnExists:
+            tableName: project_members
+            columnName: id
+        - sqlCheck:
+            expectedResult: "0"
+            sql: |
+              SELECT COUNT(*)
+              FROM information_schema.table_constraints tc
+              JOIN information_schema.key_column_usage kcu
+                ON tc.constraint_name = kcu.constraint_name
+               AND tc.table_schema = kcu.table_schema
+              WHERE tc.table_schema = 'public'
+                AND tc.table_name = 'project_members'
+                AND tc.constraint_type = 'PRIMARY KEY'
+                AND kcu.column_name = 'id'
       changes:
         - dropPrimaryKey:
             tableName: project_members
@@ -56,6 +93,12 @@ databaseChangeLog:
       id: 004-05-project-members-project-user-unique
       author: aigiz
       comment: Preserve unique membership per project and user.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            uniqueConstraintExists:
+              tableName: project_members
+              constraintName: uk_project_members_project_user
       changes:
         - addUniqueConstraint:
             tableName: project_members

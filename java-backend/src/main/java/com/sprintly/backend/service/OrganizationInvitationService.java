@@ -100,22 +100,22 @@ public class OrganizationInvitationService {
     ) {
         User user = userRepository.findWithOrganizationsById(currentUser.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        invitation = requireActiveInvitation(invitation);
+        OrganizationInvitation activeInvitation = requireActiveInvitation(invitation);
 
-        ensureInvitationAcceptable(invitation, user);
-        validateInvitationEmail(invitation, user.getEmail());
+        ensureInvitationAcceptable(activeInvitation, user);
+        validateInvitationEmail(activeInvitation, user.getEmail());
 
-        user.getOrganizations().add(invitation.getOrganization());
-        user.setOrganization(invitation.getOrganization());
+        user.getOrganizations().add(activeInvitation.getOrganization());
+        user.setOrganization(activeInvitation.getOrganization());
         userRepository.save(user);
 
-        if (invitation.getAcceptedAt() == null) {
-            invitation.setAcceptedAt(OffsetDateTime.now());
-            invitation.setAcceptedByUser(user);
-            organizationInvitationRepository.save(invitation);
+        if (activeInvitation.getAcceptedAt() == null) {
+            activeInvitation.setAcceptedAt(OffsetDateTime.now());
+            activeInvitation.setAcceptedByUser(user);
+            organizationInvitationRepository.save(activeInvitation);
         }
 
-        return buildSessionResponse(user, invitation.getOrganization());
+        return buildSessionResponse(user, activeInvitation.getOrganization());
     }
 
     @Transactional(readOnly = true)
@@ -174,10 +174,6 @@ public class OrganizationInvitationService {
     private OrganizationInvitation getInvitation(String token) {
         return organizationInvitationRepository.findByToken(token)
             .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
-    }
-
-    private OrganizationInvitation getActiveInvitation(String token) {
-        return requireActiveInvitation(getInvitation(token));
     }
 
     private OrganizationInvitation requireActiveInvitation(OrganizationInvitation invitation) {

@@ -3,6 +3,11 @@ databaseChangeLog:
       id: 005-01-drop-project-members-role-index
       author: aigiz
       comment: Drop project_members role index because project role is no longer stored separately.
+      preConditions:
+        - onFail: MARK_RAN
+        - indexExists:
+            tableName: project_members
+            indexName: idx_project_members_project_role
       changes:
         - dropIndex:
             tableName: project_members
@@ -24,6 +29,11 @@ databaseChangeLog:
       id: 005-03-drop-project-members-role-column
       author: aigiz
       comment: Drop role column from project_members because project access is now owner or member only.
+      preConditions:
+        - onFail: MARK_RAN
+        - columnExists:
+            tableName: project_members
+            columnName: role
       changes:
         - dropColumn:
             tableName: project_members
