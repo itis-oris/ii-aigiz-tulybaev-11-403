@@ -2,9 +2,5 @@ databaseChangeLog:
   - changeSet:
       id: 000-baseline-placeholder
       author: aigiz
-      comment: >
-        Placeholder changelog. Replace this file with a proper Liquibase baseline
-        generated from the current schema before enabling Liquibase in runtime
-        environments.
       changes:
         - empty:

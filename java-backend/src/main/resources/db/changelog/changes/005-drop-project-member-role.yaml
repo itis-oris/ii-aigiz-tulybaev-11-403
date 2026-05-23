@@ -2,7 +2,6 @@ databaseChangeLog:
   - changeSet:
       id: 005-01-drop-project-members-role-index
       author: aigiz
-      comment: Drop project_members role index because project role is no longer stored separately.
       preConditions:
         - onFail: MARK_RAN
         - indexExists:
@@ -16,7 +15,6 @@ databaseChangeLog:
   - changeSet:
       id: 005-02-drop-project-members-role-check
       author: aigiz
-      comment: Drop old project_members role check constraint.
       changes:
         - sql:
             splitStatements: false
@@ -28,7 +26,6 @@ databaseChangeLog:
   - changeSet:
       id: 005-03-drop-project-members-role-column
       author: aigiz
-      comment: Drop role column from project_members because project access is now owner or member only.
       preConditions:
         - onFail: MARK_RAN
         - columnExists:

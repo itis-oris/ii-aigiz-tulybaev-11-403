@@ -2,7 +2,6 @@ databaseChangeLog:
   - changeSet:
       id: 004-01-project-members-add-id-column
       author: aigiz
-      comment: Add UUID id column for project_members.
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -20,7 +19,6 @@ databaseChangeLog:
   - changeSet:
       id: 004-02-project-members-backfill-id
       author: aigiz
-      comment: Backfill UUID ids for existing project_members rows.
       changes:
         - sql:
             splitStatements: false
@@ -39,7 +37,6 @@ databaseChangeLog:
   - changeSet:
       id: 004-03-project-members-id-not-null
       author: aigiz
-      comment: Require UUID id for project_members.
       preConditions:
         - onFail: MARK_RAN
         - columnExists:
@@ -63,7 +60,6 @@ databaseChangeLog:
   - changeSet:
       id: 004-04-project-members-switch-primary-key
       author: aigiz
-      comment: Replace composite primary key with UUID primary key.
       preConditions:
         - onFail: MARK_RAN
         - columnExists:
@@ -92,7 +88,6 @@ databaseChangeLog:
   - changeSet:
       id: 004-05-project-members-project-user-unique
       author: aigiz
-      comment: Preserve unique membership per project and user.
       preConditions:
         - onFail: MARK_RAN
         - not:

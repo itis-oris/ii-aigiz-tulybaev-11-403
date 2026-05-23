@@ -2,7 +2,6 @@ databaseChangeLog:
   - changeSet:
       id: 002-01-drop-task-privacy-column
       author: aigiz
-      comment: Remove task privacy from the schema as private tasks are no longer supported.
       preConditions:
         - columnExists:
             tableName: tasks

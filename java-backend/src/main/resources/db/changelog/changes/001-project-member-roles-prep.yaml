@@ -2,7 +2,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-01-project-members-role-column
       author: aigiz
-      comment: Add explicit project-scoped role storage to project_members.
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -24,7 +23,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-02-project-members-ensure-owner-membership
       author: aigiz
-      comment: Ensure every project owner is present in project_members before role backfill.
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -50,7 +48,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-03-project-members-backfill-manager-role
       author: aigiz
-      comment: Mark project owners as project managers.
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -76,7 +73,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-04-project-members-backfill-member-role
       author: aigiz
-      comment: Mark remaining project members as project members.
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -98,7 +94,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-05-project-members-role-not-null
       author: aigiz
-      comment: Require role for all project memberships.
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -126,7 +121,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-06-project-members-role-check
       author: aigiz
-      comment: Limit project membership roles to the supported values.
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -154,7 +148,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-07-project-members-role-index
       author: aigiz
-      comment: Add index to support lookups by project and role.
       preConditions:
         - onFail: MARK_RAN
         - not:
