@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-01-drop-project-members-role-index
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - indexExists:
+            tableName: project_members
+            indexName: idx_project_members_project_role
+      changes:
+        - dropIndex:
+            tableName: project_members
+            indexName: idx_project_members_project_role
+
+  - changeSet:
+      id: 005-02-drop-project-members-role-check
+      author: aigiz
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              ALTER TABLE project_members
+              DROP CONSTRAINT IF EXISTS chk_project_members_role;
+
+  - changeSet:
+      id: 005-03-drop-project-members-role-column
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - columnExists:
+            tableName: project_members
+            columnName: role
+      changes:
+        - dropColumn:
+            tableName: project_members
+            columnName: role

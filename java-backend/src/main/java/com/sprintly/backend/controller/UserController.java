@@ -1,0 +1,68 @@
+package com.sprintly.backend.controller;
+
+import com.sprintly.backend.dto.auth.CurrentUserResponse;
+import com.sprintly.backend.dto.user.UpdateCurrentUserRequest;
+import com.sprintly.backend.dto.user.UserResponse;
+import com.sprintly.backend.security.CustomUserDetails;
+import com.sprintly.backend.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+@Tag(name = "Users", description = "Эндпоинты пользователей организации")
+@SecurityRequirement(name = "bearerAuth")
+public class UserController {
+
+    private final UserService userService;
+
+    @GetMapping
+    @Operation(summary = "Получить пользователей текущей организации")
+    public List<UserResponse> findAll(@AuthenticationPrincipal CustomUserDetails currentUser) {
+        return userService.findAllInCurrentOrganization(currentUser);
+    }
+
+    @GetMapping("/{userId}")
+    @Operation(summary = "Получить пользователя по id")
+    public UserResponse findById(
+        @PathVariable UUID userId,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return userService.findById(userId, currentUser);
+    }
+
+    @PutMapping("/me")
+    @Operation(summary = "Update current user profile")
+    public CurrentUserResponse updateCurrentUser(
+        @Valid @RequestBody UpdateCurrentUserRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return userService.updateCurrentUser(request, currentUser);
+    }
+
+    @PostMapping("/me/avatar")
+    @Operation(summary = "Upload current user avatar")
+    public UserResponse uploadAvatar(
+        @RequestParam("file") MultipartFile file,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return userService.uploadAvatar(file, currentUser);
+    }
+}

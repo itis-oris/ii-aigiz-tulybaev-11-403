@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/000-baseline-placeholder.yaml
+  - include:
+      file: db/changelog/changes/001-project-member-roles-prep.yaml
+  - include:
+      file: db/changelog/changes/002-drop-task-privacy.yaml
+  - include:
+      file: db/changelog/changes/003-drop-organization-role-tables.yaml
+  - include:
+      file: db/changelog/changes/004-project-members-uuid-id.yaml
+  - include:
+      file: db/changelog/changes/005-drop-project-member-role.yaml

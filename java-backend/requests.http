@@ -1,0 +1,270 @@
+@baseUrl = http://localhost:8080
+@email = admin.sprintly.local
+@password = 12345678
+@captchaToken = 6LcmHuwsAAAAALXvEBXKwhlM7OoJ3xrgeGkrMliR
+
+### Register admin and organization
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "firstname": "Andrey",
+  "lastname": "Ivanov",
+  "email": "admin-{{$timestamp}}@sprintly.local",
+  "password": "{{password}}",
+  "captchaToken": "{{captchaToken}}"
+}
+
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organizationId);
+client.global.set("userId", response.body.userId);
+client.global.set("email", response.body.email);
+%}
+
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "captchaToken": "{{captchaToken}}"
+}
+
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organizationId);
+client.global.set("userId", response.body.userId);
+%}
+
+### Current user
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### List my organizations
+GET {{baseUrl}}/api/organizations
+Authorization: Bearer {{token}}
+
+### Create organization and switch to it
+POST {{baseUrl}}/api/organizations
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Sprintly Team"
+}
+
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organization.id);
+%}
+
+### Switch active organization
+POST {{baseUrl}}/api/organizations/switch
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "organizationId": "{{organizationId}}"
+}
+
+> {%
+client.global.set("token", response.body.accessToken);
+client.global.set("organizationId", response.body.organization.id);
+%}
+
+### Access protected endpoint without token, expect 401 JSON
+GET {{baseUrl}}/api/projects
+
+### Users in current organization
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+
+### Upload current user avatar
+POST {{baseUrl}}/api/users/me/avatar
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="avatar.png"
+Content-Type: image/png
+
+< ./testdata/avatar.png
+--WebAppBoundary--
+
+### Create project
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Semester Project"
+}
+
+> {%
+client.global.set("projectId", response.body.id);
+%}
+
+### Get projects
+GET {{baseUrl}}/api/projects
+Authorization: Bearer {{token}}
+
+### Get project by id
+GET {{baseUrl}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+### Upload project image
+POST {{baseUrl}}/api/projects/{{projectId}}/image
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="project-cover.png"
+Content-Type: image/png
+
+< ./testdata/project-cover.png
+--WebAppBoundary--
+
+### Update project
+PUT {{baseUrl}}/api/projects/{{projectId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Semester Project Updated"
+}
+
+### Create board
+POST {{baseUrl}}/api/boards
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Backend Board",
+  "projectId": "{{projectId}}",
+  "position": 1000
+}
+
+> {%
+client.global.set("boardId", response.body.id);
+%}
+
+### Get boards by project
+GET {{baseUrl}}/api/boards?projectId={{projectId}}
+Authorization: Bearer {{token}}
+
+### Create column
+POST {{baseUrl}}/api/columns
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "To Do",
+  "boardId": "{{boardId}}",
+  "position": 1000
+}
+
+> {%
+client.global.set("columnId", response.body.id);
+%}
+
+### Get columns by board
+GET {{baseUrl}}/api/columns?boardId={{boardId}}
+Authorization: Bearer {{token}}
+
+### Create task
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Implement task API",
+  "description": "Create controller, service and validation",
+  "storyPoints": 5,
+  "priority": 2,
+  "dueDate": "2026-12-15T10:00:00+05:00",
+  "projectId": "{{projectId}}",
+  "boardId": "{{boardId}}",
+  "columnId": "{{columnId}}",
+  "assigneeId": "{{userId}}",
+  "position": 1000
+}
+
+> {%
+client.global.set("taskId", response.body.id);
+%}
+
+### Get tasks by project with lowercase status to verify custom converter
+GET {{baseUrl}}/api/tasks?projectId={{projectId}}&status=todo
+Authorization: Bearer {{token}}
+
+### Get task by id
+GET {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+
+### Update task
+PUT {{baseUrl}}/api/tasks/{{taskId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Implement task API v2",
+  "priority": 1
+}
+
+### Assign task
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/assign
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "assigneeId": "{{userId}}"
+}
+
+### Move task
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/move
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "columnId": "{{columnId}}",
+  "position": 2000
+}
+
+### Update task status
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### Create comment
+POST {{baseUrl}}/api/comments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "taskId": "{{taskId}}",
+  "text": "Первый комментарий к задаче"
+}
+
+### Get comments by task
+GET {{baseUrl}}/api/comments?taskId={{taskId}}
+Authorization: Bearer {{token}}
+
+### Login with invalid captcha token, expect 400
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "captchaToken": "invalid-captcha-token"
+}
+
+### Delete task
+DELETE {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}

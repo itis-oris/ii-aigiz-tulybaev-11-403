@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-01-drop-task-privacy-column
+      author: aigiz
+      preConditions:
+        - columnExists:
+            tableName: tasks
+            columnName: is_private
+        - onFail: MARK_RAN
+        - onError: HALT
+      changes:
+        - dropColumn:
+            tableName: tasks
+            columnName: is_private

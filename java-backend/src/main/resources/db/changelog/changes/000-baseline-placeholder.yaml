@@ -1,0 +1,6 @@
+databaseChangeLog:
+  - changeSet:
+      id: 000-baseline-placeholder
+      author: aigiz
+      changes:
+        - empty:

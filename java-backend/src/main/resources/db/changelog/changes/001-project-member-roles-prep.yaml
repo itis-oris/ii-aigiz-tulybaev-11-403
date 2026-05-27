@@ -1,0 +1,172 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-01-project-members-role-column
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: role
+      changes:
+        - addColumn:
+            tableName: project_members
+            columns:
+              - column:
+                  name: role
+                  type: varchar(50)
+
+  - changeSet:
+      id: 001-02-project-members-ensure-owner-membership
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              INSERT INTO project_members (project_id, user_id)
+              SELECT p.id, p.owner_id
+              FROM projects p
+              WHERE p.owner_id IS NOT NULL
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM project_members pm
+                  WHERE pm.project_id = p.id
+                    AND pm.user_id = p.owner_id
+                );
+
+  - changeSet:
+      id: 001-03-project-members-backfill-manager-role
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
+        - columnExists:
+            tableName: project_members
+            columnName: role
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              UPDATE project_members pm
+              SET role = 'PROJECT_MANAGER'
+              FROM projects p
+              WHERE p.id = pm.project_id
+                AND p.owner_id IS NOT NULL
+                AND pm.user_id = p.owner_id
+                AND (pm.role IS NULL OR pm.role <> 'PROJECT_MANAGER');
+
+  - changeSet:
+      id: 001-04-project-members-backfill-member-role
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
+        - columnExists:
+            tableName: project_members
+            columnName: role
+      changes:
+        - update:
+            tableName: project_members
+            columns:
+              - column:
+                  name: role
+                  value: PROJECT_MEMBER
+            where: role IS NULL
+
+  - changeSet:
+      id: 001-05-project-members-role-not-null
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
+        - columnExists:
+            tableName: project_members
+            columnName: role
+        - sqlCheck:
+            expectedResult: "1"
+            sql: |
+              SELECT COUNT(*)
+              FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = 'project_members'
+                AND column_name = 'role'
+                AND is_nullable = 'YES'
+      changes:
+        - addNotNullConstraint:
+            tableName: project_members
+            columnName: role
+            columnDataType: varchar(50)
+
+  - changeSet:
+      id: 001-06-project-members-role-check
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
+        - columnExists:
+            tableName: project_members
+            columnName: role
+        - sqlCheck:
+            expectedResult: "0"
+            sql: |
+              SELECT COUNT(*)
+              FROM pg_constraint
+              WHERE conname = 'chk_project_members_role'
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              ALTER TABLE project_members
+              ADD CONSTRAINT chk_project_members_role
+              CHECK (role IN ('PROJECT_MANAGER', 'PROJECT_MEMBER'));
+
+  - changeSet:
+      id: 001-07-project-members-role-index
+      author: aigiz
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            columnExists:
+              tableName: project_members
+              columnName: id
+        - columnExists:
+            tableName: project_members
+            columnName: role
+        - not:
+            indexExists:
+              tableName: project_members
+              indexName: idx_project_members_project_role
+      changes:
+        - createIndex:
+            tableName: project_members
+            indexName: idx_project_members_project_role
+            columns:
+              - column:
+                  name: project_id
+              - column:
+                  name: role
