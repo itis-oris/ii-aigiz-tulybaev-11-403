@@ -60,6 +60,14 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnauthorized(
+        UnauthorizedException ex,
+        HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
+    }
+
     @ExceptionHandler(StorageUnavailableException.class)
     public ResponseEntity<ApiErrorResponse> handleStorageUnavailable(
         StorageUnavailableException ex,

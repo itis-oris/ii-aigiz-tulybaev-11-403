@@ -9,6 +9,7 @@ import com.sprintly.backend.entity.OrganizationInvitation;
 import com.sprintly.backend.entity.Organization;
 import com.sprintly.backend.entity.User;
 import com.sprintly.backend.exception.ResourceNotFoundException;
+import com.sprintly.backend.exception.UnauthorizedException;
 import com.sprintly.backend.repository.OrganizationRepository;
 import com.sprintly.backend.repository.UserRepository;
 import com.sprintly.backend.security.CustomUserDetails;
@@ -137,6 +138,10 @@ public class AuthService {
     }
 
     public CurrentUserResponse me(CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new UnauthorizedException("Not authenticated");
+        }
+
         User user = userRepository.findWithOrganizationsById(userDetails.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Organization activeOrganization = getActiveOrganization(user);

@@ -7,7 +7,7 @@ import {
     useContext,
     useEffect,
     useMemo,
-    useState,
+    useSyncExternalStore,
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -15,7 +15,12 @@ import {
     getCurrentUser,
     type CurrentUserResponse,
 } from '@/shared/api';
-import { clearAccessToken, getAccessToken, setAccessToken } from './storage';
+import {
+    clearAccessToken,
+    getAccessToken,
+    setAccessToken,
+    subscribeToAccessToken,
+} from './storage';
 
 type AuthContextValue = {
     token: string | null;
@@ -30,11 +35,19 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const subscribeToHydration = () => () => undefined;
 
 export function AuthProvider({ children }: PropsWithChildren) {
     const queryClient = useQueryClient();
-    const [token, setTokenState] = useState<string | null>(() =>
-        getAccessToken(),
+    const isInitialized = useSyncExternalStore(
+        subscribeToHydration,
+        () => true,
+        () => false,
+    );
+    const token = useSyncExternalStore(
+        subscribeToAccessToken,
+        getAccessToken,
+        () => null,
     );
     const currentUserQuery = useQuery({
         queryKey: ['current-user'],
@@ -48,13 +61,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const logout = useCallback(() => {
         clearAccessToken();
-        setTokenState(null);
         queryClient.removeQueries({ queryKey: ['current-user'] });
     }, [queryClient]);
 
     const persistToken = useCallback((nextToken: string) => {
         setAccessToken(nextToken);
-        setTokenState(nextToken);
     }, []);
 
     const applyToken = useCallback(
@@ -86,7 +97,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         () => ({
             token,
             user: currentUser,
-            isLoading: Boolean(token) && currentUserLoading,
+            isLoading: !isInitialized || (Boolean(token) && currentUserLoading),
             isAuthenticated: Boolean(token && currentUser),
             hasActiveOrganization: Boolean(currentUser?.organizationId),
             setToken: persistToken,
@@ -98,6 +109,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             applyToken,
             currentUser,
             currentUserLoading,
+            isInitialized,
             logout,
             persistToken,
             refetchUser,
