@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import type { ReactNode } from 'react';
 import { AppProviders } from '@/app/providers';
 import { siteConfig } from '@/shared/config';
@@ -23,8 +24,9 @@ export default function RootLayout({
     return (
         <html lang="ru" suppressHydrationWarning>
             <body className="min-h-full antialiased">
-                <script
+                <Script
                     id="theme-init"
+                    strategy="beforeInteractive"
                     dangerouslySetInnerHTML={{ __html: themeInitScript }}
                 />
                 <AppProviders>{children}</AppProviders>
