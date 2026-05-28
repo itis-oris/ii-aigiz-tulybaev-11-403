@@ -4,3 +4,140 @@ databaseChangeLog:
       author: aigiz
       changes:
         - empty:
+
+  - changeSet:
+      id: 000-01-create-current-schema
+      author: aigiz
+      changes:
+        - sql:
+            splitStatements: true
+            stripComments: true
+            sql: |
+              CREATE TABLE IF NOT EXISTS organizations (
+                  id uuid PRIMARY KEY,
+                  name varchar(255) NOT NULL,
+                  owner_id uuid,
+                  created_at timestamp with time zone NOT NULL,
+                  deleted_at timestamp with time zone
+              );
+
+              CREATE TABLE IF NOT EXISTS users (
+                  id uuid PRIMARY KEY,
+                  firstname varchar(100),
+                  lastname varchar(100),
+                  middlename varchar(100),
+                  email varchar(255) NOT NULL UNIQUE,
+                  password_hash varchar(255) NOT NULL,
+                  created_at timestamp with time zone NOT NULL,
+                  updated_at timestamp with time zone,
+                  avatar_url varchar(2048),
+                  organization_id uuid REFERENCES organizations(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS organization_members (
+                  user_id uuid NOT NULL REFERENCES users(id),
+                  organization_id uuid NOT NULL REFERENCES organizations(id),
+                  PRIMARY KEY (user_id, organization_id)
+              );
+
+              CREATE TABLE IF NOT EXISTS project_folders (
+                  id uuid PRIMARY KEY,
+                  name varchar(255) NOT NULL,
+                  created_at timestamp with time zone NOT NULL,
+                  deleted_at timestamp with time zone,
+                  organization_id uuid NOT NULL REFERENCES organizations(id),
+                  owner_id uuid REFERENCES users(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS projects (
+                  id uuid PRIMARY KEY,
+                  name varchar(255) NOT NULL,
+                  description varchar(2000),
+                  created_at timestamp with time zone NOT NULL,
+                  deleted_at timestamp with time zone,
+                  image_url varchar(2048),
+                  status varchar(50) NOT NULL,
+                  organization_id uuid NOT NULL REFERENCES organizations(id),
+                  owner_id uuid REFERENCES users(id),
+                  folder_id uuid REFERENCES project_folders(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS project_members (
+                  id uuid PRIMARY KEY,
+                  project_id uuid NOT NULL REFERENCES projects(id),
+                  user_id uuid NOT NULL REFERENCES users(id),
+                  CONSTRAINT uk_project_members_project_user UNIQUE (project_id, user_id)
+              );
+
+              CREATE TABLE IF NOT EXISTS boards (
+                  id uuid PRIMARY KEY,
+                  name varchar(255) NOT NULL,
+                  position bigint,
+                  created_at timestamp with time zone NOT NULL,
+                  deleted_at timestamp with time zone,
+                  project_id uuid NOT NULL REFERENCES projects(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS columns (
+                  id uuid PRIMARY KEY,
+                  name varchar(255) NOT NULL,
+                  position bigint,
+                  deleted_at timestamp with time zone,
+                  board_id uuid NOT NULL REFERENCES boards(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS tasks (
+                  id uuid PRIMARY KEY,
+                  title varchar(255) NOT NULL,
+                  description text,
+                  status varchar(50) NOT NULL,
+                  story_points integer,
+                  priority integer,
+                  due_date timestamp with time zone,
+                  position bigint,
+                  created_at timestamp with time zone NOT NULL,
+                  updated_at timestamp with time zone,
+                  deleted_at timestamp with time zone,
+                  project_id uuid REFERENCES projects(id),
+                  board_id uuid REFERENCES boards(id),
+                  column_id uuid NOT NULL REFERENCES columns(id),
+                  assignee_id uuid REFERENCES users(id),
+                  created_by uuid NOT NULL REFERENCES users(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS tags (
+                  id uuid PRIMARY KEY,
+                  name varchar(100) NOT NULL,
+                  color varchar(7) NOT NULL,
+                  created_at timestamp with time zone NOT NULL,
+                  updated_at timestamp with time zone,
+                  deleted_at timestamp with time zone,
+                  project_id uuid NOT NULL REFERENCES projects(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS task_tags (
+                  task_id uuid NOT NULL REFERENCES tasks(id),
+                  tag_id uuid NOT NULL REFERENCES tags(id),
+                  PRIMARY KEY (task_id, tag_id)
+              );
+
+              CREATE TABLE IF NOT EXISTS comments (
+                  id uuid PRIMARY KEY,
+                  text text NOT NULL,
+                  created_at timestamp with time zone NOT NULL,
+                  task_id uuid NOT NULL REFERENCES tasks(id),
+                  user_id uuid NOT NULL REFERENCES users(id)
+              );
+
+              CREATE TABLE IF NOT EXISTS organization_invitations (
+                  id uuid PRIMARY KEY,
+                  organization_id uuid NOT NULL REFERENCES organizations(id),
+                  invited_by_user_id uuid NOT NULL REFERENCES users(id),
+                  accepted_by_user_id uuid REFERENCES users(id),
+                  email varchar(255),
+                  token varchar(255) NOT NULL UNIQUE,
+                  created_at timestamp with time zone NOT NULL,
+                  expires_at timestamp with time zone NOT NULL,
+                  accepted_at timestamp with time zone,
+                  revoked_at timestamp with time zone
+              );
